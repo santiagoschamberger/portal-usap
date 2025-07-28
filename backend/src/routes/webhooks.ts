@@ -11,109 +11,42 @@ const router = Router();
  */
 router.post('/zoho/partner', async (req, res) => {
   try {
-    const { id, VendorName, Email, PartnerType } = req.body;
+    const { id, VendorName, Email } = req.body;
 
-    console.log('Partner webhook received:', { id, VendorName, Email, PartnerType });
+    console.log('Partner webhook received:', { id, VendorName, Email });
 
-    // Check if partner already exists
-    const { data: existingPartner } = await supabase
-      .from('partners')
-      .select('id')
-      .eq('zoho_partner_id', id)
-      .single();
-
-    if (existingPartner) {
-      return res.status(200).json({
-        success: true,
-        message: 'Partner already exists',
-        partner_id: existingPartner.id
-      });
-    }
-
-    // Create partner record
-    const { data: partner, error: partnerError } = await supabase
-      .from('partners')
-      .insert({
-        zoho_partner_id: id,
-        name: VendorName,
-        email: Email,
-        approved: true,
-        status: 'active',
-        zoho_sync_status: 'synced'
-      })
-      .select()
-      .single();
-
-    if (partnerError) {
-      console.error('Error creating partner:', partnerError);
-      return res.status(500).json({
-        error: 'Failed to create partner',
-        details: partnerError.message
-      });
-    }
-
-    // Create user in Supabase Auth
-    const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
-      email: Email,
-      email_confirm: true,
-      user_metadata: {
-        full_name: VendorName,
-        partner_id: partner.id,
-        role: 'admin'
-      }
+    // Use the security definer function to create the partner and user
+    const { data, error } = await supabase.rpc('create_partner_with_user', {
+      p_zoho_partner_id: id,
+      p_name: VendorName,
+      p_email: Email,
     });
 
-    if (authError) {
-      console.error('Error creating auth user:', authError);
-      // Clean up partner record if auth user creation fails
-      await supabase.from('partners').delete().eq('id', partner.id);
+    if (error) {
+      console.error('Error creating partner via function:', error);
       return res.status(500).json({
-        error: 'Failed to create user account',
-        details: authError.message
+        error: 'Failed to create partner',
+        details: error.message,
       });
     }
-
-    // Create user record in our users table
-    const { error: userError } = await supabase
-      .from('users')
-      .insert({
-        id: authUser.user.id,
-        partner_id: partner.id,
-        role: 'admin',
-        first_name: VendorName.split(' ')[0] || VendorName,
-        last_name: VendorName.split(' ').slice(1).join(' ') || '',
-        is_active: true
-      });
-
-    if (userError) {
-      console.error('Error creating user record:', userError);
-      // Clean up auth user and partner if user record creation fails
-      await supabase.auth.admin.deleteUser(authUser.user.id);
-      await supabase.from('partners').delete().eq('id', partner.id);
-      return res.status(500).json({
-        error: 'Failed to create user record',
-        details: userError.message
-      });
-    }
-
+    
     // Log activity
     await supabase.from('activity_log').insert({
-      partner_id: partner.id,
-      user_id: authUser.user.id,
+      partner_id: data[0].partner_id,
+      user_id: data[0].user_id,
       activity_type: 'partner_created',
       description: `Partner ${VendorName} created via Zoho webhook`,
       metadata: { zoho_partner_id: id }
     });
 
     // TODO: Send welcome email with login instructions
-    // This would typically involve sending a password reset link
     
     return res.status(201).json({
       success: true,
       message: 'Partner and user created successfully',
       data: {
-        partner_id: partner.id,
-        user_id: authUser.user.id,
+        partner_id: data[0].partner_id,
+        user_id: data[0].user_id,
         email: Email
       }
     });
