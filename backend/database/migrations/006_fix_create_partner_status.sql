@@ -1,7 +1,13 @@
 -- =====================================================
--- FUNCTION: create_partner_with_user
--- Creates a new partner and a corresponding admin user
--- securely, intended to be called from a webhook.
+-- MIGRATION 006: FIX create_partner_with_user STATUS
+-- =====================================================
+
+-- This migration corrects the status value in the 
+-- create_partner_with_user function from 'active' to 'approved'
+-- to match the CHECK constraint on the partners table.
+
+-- =====================================================
+-- FUNCTION: create_partner_with_user (Corrected)
 -- =====================================================
 CREATE OR REPLACE FUNCTION create_partner_with_user(
     p_zoho_partner_id VARCHAR,
