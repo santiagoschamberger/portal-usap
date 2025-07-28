@@ -1,0 +1,66 @@
+Partner Portal and Zoho CRM Integration
+
+Overview
+Build a partner-facing web dashboard that integrates with Zoho CRM for automated partner provisioning, lead management, and bi-directional data synchronization.
+
+Core Features
+- Automated partner provisioning when approved in Zoho CRM
+- Email invitations with portal credentials
+- Role-based access control for admin and sub-accounts
+- JWT-based authentication system
+- Lead creation and submission through portal
+- Real-time lead status tracking from Zoho CRM
+- Complete audit trail of lead status changes
+- Public lead capture form for external submissions
+- Dashboard with performance analytics
+- Real-time status updates via WebSocket
+
+Technical Stack
+Frontend: Next.js 14+ with TypeScript and Tailwind CSS
+Backend: Node.js Express with TypeScript
+Database: Supabase PostgreSQL with Row Level Security
+Integration: Zoho CRM NodeJS SDK 8.0
+Authentication: JWT tokens with refresh strategy
+Email: SendGrid for notifications
+Real-time: Socket.IO for live updates
+
+Database Schema
+Partners table with Zoho partner ID, name, email, approval status
+Users table with partner relationships and role-based permissions
+Leads table with partner associations and Zoho lead ID mapping
+Lead status history table for complete audit trail
+
+API Requirements
+Authentication endpoints for login, registration, and token refresh
+Partner management for profiles and sub-account creation
+Lead management for creation, listing, and status updates
+Dashboard endpoints for analytics and metrics
+Webhook endpoints for Zoho CRM event processing
+Public endpoints for external lead form submissions
+
+Security Requirements
+JWT authentication with secure token signing
+Role-based access control with permission validation
+Supabase Row Level Security for data protection
+Input validation and API rate limiting
+Webhook signature verification for CRM events
+
+Integration Requirements
+Zoho CRM OAuth2 authentication with refresh tokens
+Lead creation and status synchronization
+Webhook processing for real-time CRM updates
+Custom field mapping between portal and CRM
+Error handling with retry mechanisms for API failures
+
+Performance Targets
+API response times under 200ms
+Dashboard load times under 2 seconds
+Real-time updates delivered under 100ms
+Support for 500+ concurrent users with scalable architecture
+
+Success Metrics
+Partner onboarding completed within 24 hours
+Lead processing time under 5 minutes
+90% partner portal adoption rate
+99.9% data synchronization accuracy between systems
+Partner satisfaction score above 8.5 out of 10 

@@ -1,0 +1,241 @@
+
+# Partner Portal and Zoho CRM Integration
+
+## Overview
+Build a partner-facing web dashboard that integrates with Zoho CRM for automated partner provisioning, lead management, and bi-directional data synchronization.
+
+## Core Features
+
+### Partner Management
+- Automatic partner provisioning when approved in Zoho CRM
+- Email invitations with portal credentials
+- Role-based access control (admin and sub-accounts)
+- JWT-based authentication
+
+### Lead Management System
+- Partners can create and submit leads through the portal
+- Real-time lead status tracking from Zoho CRM
+- Complete audit trail of lead status changes
+- Public lead capture form for external submissions
+
+### Dashboard and Analytics
+- Lead conversion metrics and performance tracking
+- Real-time status updates via WebSocket
+- Activity feeds and notifications
+- Partner performance insights
+
+## Technical Stack
+
+### Frontend
+- Next.js 14+ with TypeScript
+- React 18+ with Tailwind CSS
+- Zustand for state management
+- React Hook Form with validation
+- Socket.IO for real-time updates
+
+### Backend
+- Node.js with Express and TypeScript
+- Supabase PostgreSQL with Row Level Security
+- JWT authentication with refresh tokens
+- Socket.IO server for WebSocket connections
+- SendGrid for email services
+
+### Integration
+- Zoho CRM NodeJS SDK 8.0
+- Webhook endpoints for CRM events
+- Event-driven architecture
+- Error handling with retry logic
+
+## Database Schema
+
+### Partners Table
+- id (UUID, Primary Key)
+- zoho_partner_id (Text, Unique)
+- name (Text, Not Null)
+- email (Text, Not Null)
+- approved (Boolean, Default false)
+- created_at, updated_at (Timestamp)
+
+### Users Table
+- id (UUID, Primary Key)
+- partner_id (UUID, Foreign Key)
+- email (Text, Unique, Not Null)
+- password_hash (Text)
+- role (Text: admin or sub)
+- created_at, last_login (Timestamp)
+
+### Leads Table
+- id (UUID, Primary Key)
+- partner_id (UUID, Foreign Key)
+- zoho_lead_id (Text, Unique)
+- first_name, last_name (Text, Not Null)
+- email, phone, company (Text)
+- status, source (Text)
+- created_by (UUID, Foreign Key)
+- created_at, updated_at (Timestamp)
+
+### Lead Status History
+- id (UUID, Primary Key)
+- lead_id (UUID, Foreign Key)
+- old_status, new_status (Text)
+- changed_by (Text)
+- changed_at (Timestamp)
+
+## API Endpoints
+
+### Authentication
+- POST /auth/login - Partner login
+- POST /auth/refresh - Token refresh
+- POST /auth/register - Password setup
+- POST /auth/logout - Session invalidation
+
+### Partners
+- GET /partners/profile - Current partner info
+- PUT /partners/profile - Update partner details
+- GET /partners/sub-accounts - List sub-accounts
+- POST /partners/sub-accounts - Create sub-account
+
+### Leads
+- POST /leads - Create new lead
+- GET /leads - List leads with filters
+- GET /leads/:id - Get lead details
+- PATCH /leads/:id/status - Update status
+- GET /leads/:id/history - Status history
+
+### Dashboard
+- GET /dashboard/stats - Metrics and analytics
+- GET /dashboard/activities - Activity feed
+- GET /dashboard/notifications - Notifications
+
+### Webhooks
+- POST /webhooks/zoho/partner - Partner events
+- POST /webhooks/zoho/lead-status - Status changes
+- POST /webhooks/zoho/record-update - Record updates
+
+### Public
+- POST /public/leads - Public form submission
+- GET /public/partners/:id/form - Form config
+
+## User Stories
+
+### Partner Onboarding
+- CRM admin approves partner in Zoho CRM
+- Partner receives portal credentials via email
+- Partner sets password on first login
+- Partner accesses dashboard immediately
+
+### Lead Management
+- Partner creates leads through portal
+- Leads sync automatically to Zoho CRM
+- Partner tracks lead status in real-time
+- Partner views complete lead history
+- Public users submit leads via external form
+
+### Team Collaboration
+- Main partner creates sub-accounts for team
+- Sub-accounts can create and track leads
+- Main partner monitors all team activities
+- Role-based permissions enforce access control
+
+### Analytics and Reporting
+- Partners view conversion metrics
+- Real-time dashboard updates
+- Lead filtering by status and date
+- Performance tracking and insights
+
+## Integration Requirements
+
+### Zoho CRM
+- OAuth2 authentication with refresh tokens
+- Lead creation and status synchronization
+- Webhook processing for real-time updates
+- Custom field mapping between systems
+- Error handling and retry mechanisms
+
+### Email Services
+- Partner invitation emails
+- Lead status notification emails
+- Sub-account creation notifications
+- System alert emails for administrators
+
+### Real-Time Features
+- WebSocket connections for live updates
+- Push notifications for status changes
+- Activity feed streaming
+- Online presence indicators
+
+## Security Requirements
+
+### Authentication
+- JWT tokens with secure signing
+- Role-based access control
+- Session management with refresh tokens
+- Strong password policies with bcrypt
+
+### Data Protection
+- Supabase Row Level Security
+- Input validation and sanitization
+- API rate limiting
+- Webhook signature verification
+
+### Compliance
+- Data encryption in transit and at rest
+- Complete audit logging
+- GDPR-compliant data handling
+- Principle of least privilege access
+
+## Performance Targets
+
+### Response Times
+- API endpoints under 200ms
+- Dashboard load under 2 seconds
+- Real-time updates under 100ms
+- CRM sync under 5 seconds
+
+### Scalability
+- 500+ concurrent users
+- 10,000+ leads per day
+- 1,000+ active partners
+- Efficient database indexing
+
+### Reliability
+- 99.9% uptime target
+- Automatic error recovery
+- Graceful CRM failure handling
+- Data consistency maintenance
+
+## Success Metrics
+
+### Business
+- Partner onboarding under 24 hours
+- Lead processing under 5 minutes
+- 90% partner portal adoption
+- 99.9% data synchronization accuracy
+- 8.5/10 partner satisfaction score
+
+### Technical
+- 95% API requests under 200ms
+- Less than 0.1% API error rate
+- 99.5% successful CRM sync
+- 99% real-time message delivery
+
+## Deployment Strategy
+
+### Environments
+- Development with local Supabase
+- Staging for production testing
+- Production on Vercel and Railway
+
+### CI/CD Pipeline
+- Code quality checks
+- Automated testing
+- Environment-specific deployments
+- Error monitoring and logging
+
+### Launch Phases
+- Phase 1: Core partner and lead management
+- Phase 2: Advanced analytics and sub-accounts
+- Phase 3: Mobile optimization
+- Phase 4: Advanced reporting features
+
+This document establishes the foundation for a scalable partner portal that integrates seamlessly with Zoho CRM while providing excellent user experience and robust security. 
