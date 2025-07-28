@@ -28,3 +28,12 @@ node_modules/
 # Task files
 tasks.json
 tasks/ 
+
+# sveltekit
+.svelte-kit/
+
+# Lockfiles
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+bun.lockb 
