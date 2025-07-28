@@ -1,7 +1,12 @@
 -- =====================================================
--- FUNCTION: create_partner_with_user
--- Creates a new partner and a corresponding admin user
--- securely, intended to be called from a webhook.
+-- MIGRATION 011: ADD EMAIL TO USERS INSERT
+-- =====================================================
+
+-- This migration corrects the user creation logic
+-- by adding the email to the public.users insert.
+
+-- =====================================================
+-- FUNCTION: create_partner_with_user (Corrected)
 -- =====================================================
 CREATE OR REPLACE FUNCTION create_partner_with_user(
     p_zoho_partner_id VARCHAR,
@@ -48,7 +53,8 @@ BEGIN
     
     -- Insert into public.users table
     INSERT INTO public.users (id, partner_id, email, role, first_name, last_name, is_active)
-    VALUES (new_user_id, new_partner_id, p_email, 'admin', split_part(p_name, ' ', 1), split_part(p_name, ' ', 2), true);
+    VALUES (new_user_id, new_partner_id, p_email, 'admin', split_part(p_name, ' ', 1), split_part(p_name, ' ', 2), true)
+    ON CONFLICT (id) DO NOTHING;
 
     -- Return the new IDs
     RETURN QUERY SELECT new_partner_id, new_user_id;
