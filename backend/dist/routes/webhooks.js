@@ -5,78 +5,23 @@ const database_1 = require("../config/database");
 const router = (0, express_1.Router)();
 router.post('/zoho/partner', async (req, res) => {
     try {
-        const { id, VendorName, Email, PartnerType } = req.body;
-        console.log('Partner webhook received:', { id, VendorName, Email, PartnerType });
-        const { data: existingPartner } = await database_1.supabase
-            .from('partners')
-            .select('id')
-            .eq('zoho_partner_id', id)
-            .single();
-        if (existingPartner) {
-            return res.status(200).json({
-                success: true,
-                message: 'Partner already exists',
-                partner_id: existingPartner.id
-            });
-        }
-        const { data: partner, error: partnerError } = await database_1.supabase
-            .from('partners')
-            .insert({
-            zoho_partner_id: id,
-            name: VendorName,
-            email: Email,
-            approved: true,
-            status: 'active',
-            zoho_sync_status: 'synced'
-        })
-            .select()
-            .single();
-        if (partnerError) {
-            console.error('Error creating partner:', partnerError);
+        const { id, VendorName, Email } = req.body;
+        console.log('Partner webhook received:', { id, VendorName, Email });
+        const { data, error } = await database_1.supabase.rpc('create_partner_with_user', {
+            p_zoho_partner_id: id,
+            p_name: VendorName,
+            p_email: Email,
+        });
+        if (error) {
+            console.error('Error creating partner via function:', error);
             return res.status(500).json({
                 error: 'Failed to create partner',
-                details: partnerError.message
-            });
-        }
-        const { data: authUser, error: authError } = await database_1.supabase.auth.admin.createUser({
-            email: Email,
-            email_confirm: true,
-            user_metadata: {
-                full_name: VendorName,
-                partner_id: partner.id,
-                role: 'admin'
-            }
-        });
-        if (authError) {
-            console.error('Error creating auth user:', authError);
-            await database_1.supabase.from('partners').delete().eq('id', partner.id);
-            return res.status(500).json({
-                error: 'Failed to create user account',
-                details: authError.message
-            });
-        }
-        const { error: userError } = await database_1.supabase
-            .from('users')
-            .insert({
-            id: authUser.user.id,
-            partner_id: partner.id,
-            role: 'admin',
-            first_name: VendorName.split(' ')[0] || VendorName,
-            last_name: VendorName.split(' ').slice(1).join(' ') || '',
-            is_active: true
-        });
-        if (userError) {
-            console.error('Error creating user record:', userError);
-            await database_1.supabase.auth.admin.deleteUser(authUser.user.id);
-            await database_1.supabase.from('partners').delete().eq('id', partner.id);
-            return res.status(500).json({
-                error: 'Failed to create user record',
-                details: userError.message
+                details: error.message,
             });
         }
         await database_1.supabase.from('activity_log').insert({
-            partner_id: partner.id,
-            user_id: authUser.user.id,
+            partner_id: data[0].partner_id,
+            user_id: data[0].user_id,
             activity_type: 'partner_created',
             description: `Partner ${VendorName} created via Zoho webhook`,
             metadata: { zoho_partner_id: id }
@@ -85,8 +30,8 @@ router.post('/zoho/partner', async (req, res) => {
             success: true,
             message: 'Partner and user created successfully',
             data: {
-                partner_id: partner.id,
-                user_id: authUser.user.id,
+                partner_id: data[0].partner_id,
+                user_id: data[0].user_id,
                 email: Email
             }
         });

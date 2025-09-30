@@ -7,14 +7,14 @@ interface AuthStore {
   user: User | null
   loading: boolean
   isAuthenticated: boolean
-  signIn: (email: string, password: string) => Promise<{ error: any }>
+  signIn: (email: string, password: string) => Promise<{ error: unknown }>
   signOut: () => Promise<void>
   initialize: () => Promise<void>
 }
 
 export const useAuthStore = create<AuthStore>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       user: null,
       loading: true,
       isAuthenticated: false,
@@ -60,7 +60,7 @@ export const useAuthStore = create<AuthStore>()(
               })
             }
           )
-        } catch (error) {
+        } catch {
           set({ loading: false, isAuthenticated: false })
         }
       }

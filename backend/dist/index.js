@@ -50,8 +50,8 @@ app.get('/health', async (req, res) => {
     let databaseStatus = 'disconnected';
     let zohoStatus = 'disconnected';
     try {
-        const { data, error } = await database_1.supabase.from('partners').select('id').limit(1);
-        if (!error) {
+        const { data, error } = await database_1.supabase.from('health_check').select('id').limit(1);
+        if (!error && data.length > 0) {
             databaseStatus = 'connected';
         }
     }

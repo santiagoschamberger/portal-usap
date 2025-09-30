@@ -90,13 +90,13 @@ export const leadService = {
   async createLead(leadData: CreateLeadData): Promise<{
     zoho_lead_id: string
     local_lead: Lead
-    zoho_response: any
+    zoho_response: Record<string, unknown>
   }> {
     try {
       const response = await api.post<{
         zoho_lead_id: string
         local_lead: Lead
-        zoho_response: any
+        zoho_response: Record<string, unknown>
       }>('/api/leads', leadData)
       return response.data
     } catch (error) {
@@ -148,9 +148,9 @@ export const leadService = {
       }
 
       return stats
-    } catch (error) {
-      console.error('Error calculating lead stats:', error)
-      throw error
+    } catch (err) {
+      console.error('Error calculating lead stats:', err)
+      throw err
     }
   },
 
@@ -161,9 +161,9 @@ export const leadService = {
     try {
       const { local_leads } = await this.getLeads()
       return local_leads.slice(0, 10)
-    } catch (error) {
-      console.error('Error fetching recent leads:', error)
-      throw error
+    } catch (err) {
+      console.error('Error fetching recent leads:', err)
+      throw err
     }
   },
 }

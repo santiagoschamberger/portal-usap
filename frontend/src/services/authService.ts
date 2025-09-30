@@ -130,7 +130,7 @@ export class AuthService {
     try {
       const response = await api.post('/auth/verify-reset-token', { token })
       return response.success
-    } catch (error) {
+    } catch {
       return false
     }
   }

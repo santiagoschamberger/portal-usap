@@ -32,11 +32,12 @@ apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
     return response
   },
-  async (error: any) => {
-    const originalRequest = error.config
+  async (error: unknown) => {
+    const axiosError = error as { config?: { _retry?: boolean }; response?: { status?: number } }
+    const originalRequest = axiosError.config
 
     // Handle 401 errors (token expired)
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (axiosError.response?.status === 401 && originalRequest && !originalRequest._retry) {
       originalRequest._retry = true
       
       try {
@@ -50,7 +51,8 @@ apiClient.interceptors.response.use(
           localStorage.setItem('token', token)
           
           // Retry original request with new token
-          originalRequest.headers.Authorization = `Bearer ${token}`
+          const reqConfig = originalRequest as { headers: { Authorization: string } }
+          reqConfig.headers.Authorization = `Bearer ${token}`
           return apiClient(originalRequest)
         }
       } catch (refreshError) {
@@ -72,26 +74,29 @@ export const api = {
     try {
       const response = await apiClient.get(url, config)
       return response.data
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || error.message)
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string }
+      throw new Error(err.response?.data?.message || err.message || 'An error occurred')
     }
   },
 
-  post: async <T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> => {
+  post: async <T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<ApiResponse<T>> => {
     try {
       const response = await apiClient.post(url, data, config)
       return response.data
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || error.message)
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string }
+      throw new Error(err.response?.data?.message || err.message || 'An error occurred')
     }
   },
 
-  put: async <T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> => {
+  put: async <T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<ApiResponse<T>> => {
     try {
       const response = await apiClient.put(url, data, config)
       return response.data
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || error.message)
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string }
+      throw new Error(err.response?.data?.message || err.message || 'An error occurred')
     }
   },
 
@@ -99,17 +104,19 @@ export const api = {
     try {
       const response = await apiClient.delete(url, config)
       return response.data
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || error.message)
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string }
+      throw new Error(err.response?.data?.message || err.message || 'An error occurred')
     }
   },
 
-  patch: async <T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> => {
+  patch: async <T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<ApiResponse<T>> => {
     try {
       const response = await apiClient.patch(url, data, config)
       return response.data
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || error.message)
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string }
+      throw new Error(err.response?.data?.message || err.message || 'An error occurred')
     }
   }
 }
