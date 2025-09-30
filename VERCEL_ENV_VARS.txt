@@ -1,0 +1,40 @@
+===========================================
+VERCEL ENVIRONMENT VARIABLES
+For Frontend (Next.js) Deployment
+===========================================
+
+Copy and paste these into Vercel Dashboard:
+Project Settings → Environment Variables
+
+-------------------------------------------
+PRODUCTION ENVIRONMENT VARIABLES
+-------------------------------------------
+
+NEXT_PUBLIC_SUPABASE_URL=https://cvzadrvtncnjanoehzhj.supabase.co
+
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN2emFkcnZ0bmNuamFub2VoemhqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwOTk3OTQsImV4cCI6MjA2NTY3NTc5NH0.4lJMgOpNBH6TDQJt6lNbm6gUeueXqc65Liw64sdnHj8
+
+NEXT_PUBLIC_API_URL=REPLACE_WITH_YOUR_BACKEND_URL_AFTER_DEPLOYMENT
+
+-------------------------------------------
+IMPORTANT NOTES:
+-------------------------------------------
+
+1. ROOT DIRECTORY: Set to "frontend" in Vercel
+2. FRAMEWORK: Next.js (auto-detected)
+3. BUILD COMMAND: npm run build
+4. OUTPUT DIRECTORY: .next
+
+5. NEXT_PUBLIC_API_URL: 
+   - Leave as placeholder initially
+   - After deploying backend to Heroku/Railway
+   - Update this to: https://your-backend.herokuapp.com
+   - Then trigger a Vercel redeploy
+
+6. These are PUBLIC variables (NEXT_PUBLIC prefix)
+   - Safe to expose in browser
+   - Will be bundled into frontend code
+   - Used for client-side API calls
+
+===========================================
+
