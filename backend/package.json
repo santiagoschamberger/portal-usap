@@ -4,12 +4,14 @@
   "description": "Partner Portal Backend API",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "dev": "nodemon",
     "start": "node dist/index.js",
-    "dev": "nodemon src/index.ts",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "eslint src/**/*.ts",
-    "lint:fix": "eslint src/**/*.ts --fix"
+    "build": "tsc",
+    "test:zoho:health": "ts-node test-zoho-health.ts",
+    "test:zoho:simple": "node test-zoho-simple.js",
+    "test:zoho:basic": "ts-node test-zoho.ts",
+    "test:zoho:comprehensive": "ts-node test-zoho-comprehensive.ts",
+    "test:zoho:all": "npm run test:zoho:health && npm run test:zoho:basic"
   },
   "keywords": [
     "partner",
@@ -23,6 +25,8 @@
   "dependencies": {
     "@sendgrid/mail": "^8.1.0",
     "@supabase/supabase-js": "^2.38.4",
+    "asynckit": "^0.4.0",
+    "axios": "^1.11.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
