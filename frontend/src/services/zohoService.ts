@@ -8,12 +8,13 @@ import { leadService } from './leadService'
 export const zohoService = {
   // Lead Management
   leads: {
-    getAll: leadService.getLeads,
-    getById: leadService.getLeadById,
-    create: leadService.createLead,
-    updateStatus: leadService.updateLeadStatus,
-    getStats: leadService.getLeadStats,
-    getRecent: leadService.getRecentLeads,
+    getAll: () => leadService.getLeads(),
+    getById: (id: string) => leadService.getLeadById(id),
+    create: (data: any) => leadService.createLead(data),
+    updateStatus: (id: string, status: string, notes?: string) => 
+      leadService.updateLeadStatus(id, status, notes),
+    getStats: () => leadService.getLeadStats(),
+    getRecent: () => leadService.getRecentLeads(),
   },
 }
 
