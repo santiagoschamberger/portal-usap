@@ -60,6 +60,23 @@ try {
     console.error('❌ Zoho CRM configuration error:', error instanceof Error ? error.message : error);
 }
 
+// Root endpoint
+app.get('/', (req, res) => {
+    res.status(200).json({
+        name: 'USA Payments Partner Portal API',
+        version: '1.0.0',
+        status: 'running',
+        environment: NODE_ENV,
+        endpoints: {
+            health: '/health',
+            auth: '/api/auth',
+            leads: '/api/leads',
+            webhooks: '/api/webhooks'
+        },
+        documentation: 'See README.md for API documentation'
+    });
+});
+
 // Health check endpoint with database and Zoho connectivity
 app.get('/health', async (req, res) => {
     let databaseStatus = 'disconnected';
