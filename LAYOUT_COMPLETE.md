@@ -277,3 +277,4 @@ Tailwind config or CSS variables in `globals.css`
 cd frontend && npm install && npm run dev
 ```
 
+

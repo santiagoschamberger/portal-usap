@@ -130,3 +130,4 @@ async function verifyTables() {
 // Run the schema application
 applySchema().catch(console.error);
 
+
