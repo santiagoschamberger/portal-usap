@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 import { zohoService } from '../services/zohoService';
-import { supabase } from '../config/database';
+import { supabase, supabaseAdmin } from '../config/database';
 
 const router = Router();
 
@@ -76,14 +76,15 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
       });
     }
 
-    // Get partner information
-    const { data: partner, error: partnerError } = await supabase
+    // Get partner information using admin client to bypass RLS
+    const { data: partner, error: partnerError } = await supabaseAdmin
       .from('partners')
       .select('zoho_partner_id, name')
       .eq('id', req.user.partner_id)
       .single();
 
     if (partnerError || !partner) {
+      console.error('Partner fetch error:', partnerError);
       return res.status(400).json({
         error: 'Partner not found',
         message: 'Unable to find partner information'
@@ -136,8 +137,8 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
       }
     }
 
-    // Save lead to local database
-    const { data: localLead, error: localError } = await supabase
+    // Save lead to local database using admin client to bypass RLS
+    const { data: localLead, error: localError } = await supabaseAdmin
       .from('leads')
       .insert({
         partner_id: req.user.partner_id,
@@ -162,7 +163,7 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
     }
 
     // Log activity
-    await supabase.from('activity_log').insert({
+    await supabaseAdmin.from('activity_log').insert({
       partner_id: req.user.partner_id,
       user_id: req.user.id,
       lead_id: localLead?.id,
