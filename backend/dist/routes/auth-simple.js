@@ -48,6 +48,19 @@ router.post('/forgot-password', async (req, res) => {
             });
         }
         console.log('Password reset requested for:', email);
+        const { data: userData, error: userError } = await database_1.supabase
+            .from('users')
+            .select('id, email')
+            .eq('email', email)
+            .single();
+        if (userError || !userData) {
+            console.log('User not found:', email);
+            return res.status(404).json({
+                success: false,
+                error: 'No account found with that email address'
+            });
+        }
+        console.log('User found, sending reset email:', email);
         console.log('Frontend URL:', process.env.FRONTEND_URL);
         const { data, error } = await database_1.supabase.auth.resetPasswordForEmail(email, {
             redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/reset-password`
