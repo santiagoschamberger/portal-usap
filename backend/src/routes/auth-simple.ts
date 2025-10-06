@@ -98,7 +98,7 @@ router.post('/forgot-password', async (req, res) => {
 
 /**
  * POST /auth/reset-password
- * Reset password with token
+ * Reset password with access token from Supabase email
  */
 router.post('/reset-password', async (req, res) => {
   try {
@@ -111,18 +111,33 @@ router.post('/reset-password', async (req, res) => {
       });
     }
 
-    // Verify the token and update password
-    const { error } = await supabase.auth.updateUser({
-      password: password
-    });
+    // The token is actually an access_token from Supabase's password reset email
+    // We need to verify it and get the user, then update their password
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
 
-    if (error) {
-      console.error('Password reset error:', error);
+    if (userError || !userData.user) {
+      console.error('Invalid or expired token:', userError);
       return res.status(400).json({
         success: false,
-        error: error.message
+        error: 'Invalid or expired reset token'
       });
     }
+
+    // Use admin API to update the user's password
+    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+      userData.user.id,
+      { password: password }
+    );
+
+    if (updateError) {
+      console.error('Password update error:', updateError);
+      return res.status(400).json({
+        success: false,
+        error: updateError.message
+      });
+    }
+
+    console.log('Password reset successful for user:', userData.user.email);
 
     return res.json({
       success: true,

@@ -83,16 +83,23 @@ router.post('/reset-password', async (req, res) => {
                 error: 'Token and password are required'
             });
         }
-        const { error } = await database_1.supabase.auth.updateUser({
-            password: password
-        });
-        if (error) {
-            console.error('Password reset error:', error);
+        const { data: userData, error: userError } = await database_1.supabase.auth.getUser(token);
+        if (userError || !userData.user) {
+            console.error('Invalid or expired token:', userError);
             return res.status(400).json({
                 success: false,
-                error: error.message
+                error: 'Invalid or expired reset token'
             });
         }
+        const { error: updateError } = await database_1.supabaseAdmin.auth.admin.updateUserById(userData.user.id, { password: password });
+        if (updateError) {
+            console.error('Password update error:', updateError);
+            return res.status(400).json({
+                success: false,
+                error: updateError.message
+            });
+        }
+        console.log('Password reset successful for user:', userData.user.email);
         return res.json({
             success: true,
             message: 'Password has been reset successfully'
