@@ -35,7 +35,7 @@ export class AuthService {
    */
   static async logout(): Promise<void> {
     try {
-      await api.post('/auth/logout')
+      await api.post('/api/auth/logout')
     } catch (error) {
       // Continue with logout even if API call fails
       console.warn('Logout API call failed:', error)
@@ -102,7 +102,7 @@ export class AuthService {
    * Initiate forgot password process
    */
   static async forgotPassword(data: ForgotPasswordFormData): Promise<void> {
-    const response = await api.post('/auth/forgot-password', data)
+    const response = await api.post('/api/auth/forgot-password', data)
     
     if (!response.success) {
       throw new Error(response.error || 'Failed to send reset email')
@@ -113,7 +113,7 @@ export class AuthService {
    * Reset password with token
    */
   static async resetPassword(data: ResetPasswordFormData): Promise<void> {
-    const response = await api.post('/auth/reset-password', {
+    const response = await api.post('/api/auth/reset-password', {
       token: data.token,
       password: data.password
     })
@@ -128,7 +128,7 @@ export class AuthService {
    */
   static async verifyResetToken(token: string): Promise<boolean> {
     try {
-      const response = await api.post('/auth/verify-reset-token', { token })
+      const response = await api.post('/api/auth/verify-reset-token', { token })
       return response.success
     } catch {
       return false
@@ -169,7 +169,7 @@ export class AuthService {
    * Change password
    */
   static async changePassword(currentPassword: string, newPassword: string): Promise<void> {
-    const response = await api.post('/auth/change-password', {
+    const response = await api.post('/api/auth/change-password', {
       currentPassword,
       newPassword
     })
