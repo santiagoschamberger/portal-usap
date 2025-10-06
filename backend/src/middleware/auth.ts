@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { supabase } from '../config/database';
+import { supabase, supabaseAdmin } from '../config/database';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -43,8 +43,8 @@ export const authenticateToken = async (
       return;
     }
 
-    // Get user data from our custom users table
-    const { data: userData, error: userError } = await supabase
+    // Get user data from our custom users table using admin client to bypass RLS
+    const { data: userData, error: userError } = await supabaseAdmin
       .from('users')
       .select(`
         partner_id,
