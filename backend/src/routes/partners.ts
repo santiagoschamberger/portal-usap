@@ -273,7 +273,7 @@ router.get('/sub-accounts/:id', authenticateToken, requireAdmin, async (req: Aut
     const { data: leads } = await supabaseAdmin
       .from('leads')
       .select('id, status')
-      .eq('created_by_user_id', req.params.id);
+      .eq('created_by', req.params.id);
 
     const stats = {
       total_leads: leads?.length || 0,

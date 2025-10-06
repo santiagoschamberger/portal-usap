@@ -142,7 +142,7 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
       .from('leads')
       .insert({
         partner_id: req.user.partner_id,
-        created_by_user_id: req.user.id,
+        created_by: req.user.id,
         zoho_lead_id: zohoLeadId,
         first_name,
         last_name,
@@ -150,7 +150,7 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
         phone,
         company,
         status: 'new',
-        source: 'portal',
+        lead_source: 'portal',
         notes: description,
         zoho_sync_status: 'synced'
       })
