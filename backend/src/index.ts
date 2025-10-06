@@ -14,6 +14,7 @@ import { zohoService } from './services/zohoService';
 import authRoutes from './routes/auth-simple';
 import leadsRoutes from './routes/leads';
 import webhooksRoutes from './routes/webhooks';
+import partnersRoutes from './routes/partners';
 
 // Load environment variables
 config();
@@ -71,6 +72,7 @@ app.get('/', (req, res) => {
             health: '/health',
             auth: '/api/auth',
             leads: '/api/leads',
+            partners: '/api/partners',
             webhooks: '/api/webhooks'
         },
         documentation: 'See README.md for API documentation'
@@ -119,6 +121,7 @@ app.get('/health', async (req, res) => {
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/leads', leadsRoutes);
+app.use('/api/partners', partnersRoutes);
 app.use('/api/webhooks', webhooksRoutes);
 
 // API routes catch-all (place after specific routes)

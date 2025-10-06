@@ -17,6 +17,7 @@ const zohoService_1 = require("./services/zohoService");
 const auth_simple_1 = __importDefault(require("./routes/auth-simple"));
 const leads_1 = __importDefault(require("./routes/leads"));
 const webhooks_1 = __importDefault(require("./routes/webhooks"));
+const partners_1 = __importDefault(require("./routes/partners"));
 (0, dotenv_1.config)();
 const app = (0, express_1.default)();
 exports.app = app;
@@ -56,6 +57,7 @@ app.get('/', (req, res) => {
             health: '/health',
             auth: '/api/auth',
             leads: '/api/leads',
+            partners: '/api/partners',
             webhooks: '/api/webhooks'
         },
         documentation: 'See README.md for API documentation'
@@ -96,6 +98,7 @@ app.get('/health', async (req, res) => {
 });
 app.use('/api/auth', auth_simple_1.default);
 app.use('/api/leads', leads_1.default);
+app.use('/api/partners', partners_1.default);
 app.use('/api/webhooks', webhooks_1.default);
 app.use('/api', (req, res) => {
     res.status(404).json({

@@ -12,7 +12,7 @@ router.get('/', auth_1.authenticateToken, async (req, res) => {
         }
         const zohoResponse = await zohoService_1.zohoService.getPartnerLeads(req.user.id);
         const leads = zohoResponse.data || [];
-        const { data: localLeads, error } = await database_1.supabase
+        const { data: localLeads, error } = await database_1.supabaseAdmin
             .from('leads')
             .select('*')
             .eq('partner_id', req.user.partner_id)
@@ -49,12 +49,13 @@ router.post('/', auth_1.authenticateToken, async (req, res) => {
                 required: ['first_name', 'last_name', 'email']
             });
         }
-        const { data: partner, error: partnerError } = await database_1.supabase
+        const { data: partner, error: partnerError } = await database_1.supabaseAdmin
             .from('partners')
             .select('zoho_partner_id, name')
             .eq('id', req.user.partner_id)
             .single();
         if (partnerError || !partner) {
+            console.error('Partner fetch error:', partnerError);
             return res.status(400).json({
                 error: 'Partner not found',
                 message: 'Unable to find partner information'
@@ -97,7 +98,7 @@ router.post('/', auth_1.authenticateToken, async (req, res) => {
                 console.error('Failed to add note to lead:', noteError);
             }
         }
-        const { data: localLead, error: localError } = await database_1.supabase
+        const { data: localLead, error: localError } = await database_1.supabaseAdmin
             .from('leads')
             .insert({
             partner_id: req.user.partner_id,
@@ -118,7 +119,7 @@ router.post('/', auth_1.authenticateToken, async (req, res) => {
         if (localError) {
             console.error('Error saving lead locally:', localError);
         }
-        await database_1.supabase.from('activity_log').insert({
+        await database_1.supabaseAdmin.from('activity_log').insert({
             partner_id: req.user.partner_id,
             user_id: req.user.id,
             lead_id: localLead?.id,
@@ -149,7 +150,7 @@ router.get('/:id', auth_1.authenticateToken, async (req, res) => {
         if (!req.user) {
             return res.status(401).json({ error: 'Authentication required' });
         }
-        const { data: lead, error } = await database_1.supabase
+        const { data: lead, error } = await database_1.supabaseAdmin
             .from('leads')
             .select(`
         *,
@@ -193,7 +194,7 @@ router.patch('/:id/status', auth_1.authenticateToken, async (req, res) => {
                 error: 'Status is required'
             });
         }
-        const { data: currentLead, error: fetchError } = await database_1.supabase
+        const { data: currentLead, error: fetchError } = await database_1.supabaseAdmin
             .from('leads')
             .select('status')
             .eq('id', req.params.id)
@@ -204,7 +205,7 @@ router.patch('/:id/status', auth_1.authenticateToken, async (req, res) => {
                 error: 'Lead not found'
             });
         }
-        const { data: updatedLead, error: updateError } = await database_1.supabase
+        const { data: updatedLead, error: updateError } = await database_1.supabaseAdmin
             .from('leads')
             .update({
             status,
@@ -220,14 +221,14 @@ router.patch('/:id/status', auth_1.authenticateToken, async (req, res) => {
                 details: updateError.message
             });
         }
-        await database_1.supabase.from('lead_status_history').insert({
+        await database_1.supabaseAdmin.from('lead_status_history').insert({
             lead_id: req.params.id,
             old_status: currentLead.status,
             new_status: status,
             changed_by_user_id: req.user.id,
             notes
         });
-        await database_1.supabase.from('activity_log').insert({
+        await database_1.supabaseAdmin.from('activity_log').insert({
             partner_id: req.user.partner_id,
             user_id: req.user.id,
             lead_id: req.params.id,

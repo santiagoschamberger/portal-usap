@@ -21,7 +21,7 @@ const authenticateToken = async (req, res, next) => {
             });
             return;
         }
-        const { data: userData, error: userError } = await database_1.supabase
+        const { data: userData, error: userError } = await database_1.supabaseAdmin
             .from('users')
             .select(`
         partner_id,

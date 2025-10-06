@@ -1,117 +1,431 @@
 # Active Context
 
-## Current Focus: Database Schema ✅ COMPLETE → Frontend Development
+## Current Focus: Project Organization & Documentation ✅ COMPLETED
 
-### Database Schema Status - COMPLETED September 30, 2025
-- ✅ **All 7 tables created** in Supabase using MCP tools
-- ✅ **Row Level Security (RLS)** enabled on all tables
-- ✅ **9 performance indexes** applied
-- ✅ **3 automated triggers** for timestamp updates
-- ✅ **Foreign key constraints** enforcing data relationships
-- ✅ **Backend health check** confirming database connection
-- ✅ **2 partners and 2 users** exist in database (test data)
+### Recent Session: October 6, 2025
 
-See `DATABASE_SETUP_COMPLETE.md` for full details.
+#### Completed Tasks
+- ✅ **Documentation Organization**: Restructured all documentation into logical folders
+  - Created `docs/setup/` for setup and integration guides
+  - Created `docs/deployment/` for deployment instructions
+  - Created `docs/testing/` for testing documentation
+  - Created `docs/archive/` for historical notes
+  - Moved 22 documentation files to appropriate locations
 
-### Current State Assessment
-The frontend has been initialized with Next.js 15 and basic dependencies are installed:
-- ✅ Next.js 15 with App Router
-- ✅ TypeScript configuration
-- ✅ Tailwind CSS setup
-- ✅ Basic UI components (shadcn/ui style)
-- ✅ Supabase client setup
-- ✅ Form handling (React Hook Form + Zod)
-- ✅ State management (Zustand)
-- ✅ Real-time support (Socket.IO client)
+- ✅ **README.md Update**: Completely rewrote project README
+  - Added comprehensive project overview
+  - Documented current status and features
+  - Included architecture diagrams
+  - Added quick start guide
+  - Listed all key features and capabilities
+  - Linked to organized documentation
+  - Added roadmap and metrics
 
-### Implemented Components
-- ✅ Basic auth provider (updated to custom auth service)
-- ✅ Basic UI components (button, card, input, label)
-- ✅ Auth store setup (updated with JWT and custom auth)
-- ✅ TypeScript types definition
-- ✅ API client with interceptors
-- ✅ Authentication service layer
-- ✅ Protected route component with role-based access
-- ✅ Permission hooks
+- ✅ **Memory Bank Update**: Created comprehensive progress tracker
+  - Documented complete project timeline
+  - Listed all completed features
+  - Tracked architectural decisions
+  - Documented technical learnings
+  - Added success metrics
+  - Outlined next steps
 
-### Recently Completed (Current Session)
-- ✅ Login page (`/auth/login`) - Updated to use Supabase auth
-- ✅ Forgot password page (`/auth/forgot-password`) - with success state
-- ✅ Reset password page (`/auth/reset-password`) - with token validation
-- ✅ Protected route system with role-based access control
-- ✅ Dashboard page (`/dashboard`) - Complete with stats, quick actions, and recent activity
-- ✅ Leads listing page (`/leads`) - With filtering, search, and pagination
-- ✅ New lead form page (`/leads/new`) - Comprehensive lead creation form
-- ✅ Test user created in Supabase: test@usapayments.com / testpassword123
+## Current State: Production-Ready Testing
 
-### Missing Critical Components
-Based on the frontend documentation, we still need to implement:
+### System Status
 
-#### 1. Authentication Pages (Completed ✅)
-- ✅ Login page (`/login`)
-- ✅ Forgot password page (`/forgot-password`)
-- ✅ Reset password page (`/reset-password`)
-- ❌ Register page (`/register`) - disabled but structure needed
+#### ✅ Fully Operational
+1. **Database (Supabase)**
+   - 7 tables with complete schema
+   - 28 RLS policies enforcing security
+   - 43 performance indexes
+   - 6 automated triggers
+   - 11 utility functions
+   - Foreign key constraints active
 
-#### 2. User Dashboard Pages (High Priority)
-- ✅ Main dashboard (`/dashboard`) - Complete with stats and navigation
-- ❌ Submit referral page (`/submit`)
-- ❌ Compensation page (`/compensation`)
-- ❌ Sub accounts page (`/sub-accounts`)
-- ❌ Tutorials page (`/tutorials`)
-- ❌ User settings page (`/settings`)
+2. **Backend API (Railway)**
+   - Express.js server running
+   - Health endpoint: `/health` ✅
+   - Authentication: JWT with Supabase Auth
+   - Zoho CRM integration active
+   - Webhook endpoints exposed
+   - Environment variables configured
 
-#### 3. Public Pages (Medium Priority)
-- ❌ Public referral page (`/referral/[uuid]`)
+3. **Frontend (Vercel)**
+   - Next.js 15 application
+   - Authentication flows working
+   - Dashboard with stats and navigation
+   - Leads management pages
+   - Protected routes with role checks
+   - Responsive layout
 
-#### 4. Admin Pages (Medium Priority)
-- ❌ Admin dashboard (`/admin`)
-- ❌ User management (`/admin/users`)
-- ❌ Tutorial management (`/admin/tutorials`)
-- ❌ Admin settings (`/admin/settings`)
+4. **Zoho Integration**
+   - Partner provisioning: Zoho → Portal ✅
+   - Lead creation: Portal → Zoho ✅
+   - Status updates: Zoho → Portal ✅
+   - OAuth token management ✅
 
-#### 5. Core Components (High Priority)
-- ❌ Layout component with navigation
-- ❌ Protected route component
-- ❌ Form components (BusinessTypeSelect, PhoneInput, etc.)
-- ❌ Data components (StatsCard, tables, etc.)
-- ❌ Referral components
+#### 🚧 Ready But Not Active
+1. **Email Service**
+   - SendGrid integration coded
+   - Welcome email template exists
+   - Waiting for API key configuration
 
-#### 6. Services (High Priority)
-- ❌ API service layer
-- ❌ User service
-- ❌ Tutorial service
-- ❌ Settings service
-- ❌ Zoho service integration
-- ❌ Admin service
+2. **Real-Time Updates**
+   - Socket.IO server configured
+   - Client setup complete
+   - Not yet connected in production
 
-### Next Immediate Steps
-1. **Create the layout component** with role-based navigation
-2. **Implement authentication pages** (login, forgot password, reset password)
-3. **Create protected route component** for role-based access
-4. **Build the main dashboard** with stats and data tables
-5. **Implement the submit referral page** (core business function)
+3. **Sub-Account Management**
+   - Database structure exists
+   - API endpoints structured
+   - UI not yet implemented
 
-### Technical Decisions Made
-- Using Next.js 15 with App Router
-- Supabase for backend integration ([[memory:4551636]])
-- shadcn/ui component pattern for consistent UI
-- Zustand for state management
-- React Hook Form + Zod for form handling
+### Documentation Structure
 
-### Current Challenges
-- Need to establish API service layer for backend communication
-- Need to implement proper authentication flow with JWT
-- Need to create role-based access control system
-- Need to integrate with Zoho CRM for referral submission
+```
+docs/
+├── setup/                        # Setup & Integration
+│   ├── COMPLETE_SETUP_GUIDE.md   # Comprehensive setup
+│   ├── QUICK_START.md            # Quick setup
+│   ├── ZOHO_INTEGRATION_SETUP.md # Zoho webhook config
+│   ├── ZOHO_INTEGRATION_COMPLETE.md
+│   ├── zoho-integration-guide.md # Detailed Zoho docs
+│   └── frontend-doc.md           # Frontend architecture
+│
+├── deployment/                   # Deployment Guides
+│   ├── DEPLOYMENT_GUIDE.md       # General deployment
+│   ├── RAILWAY_BACKEND_DEPLOY.md # Railway setup
+│   └── VERCEL_DEPLOYMENT.md      # Vercel setup
+│
+├── testing/                      # Testing Documentation
+│   ├── TESTING_ZOHO_SYNC.md      # Integration testing
+│   ├── TEST_RESULTS.md           # Latest test results
+│   ├── MANUAL_TESTING_GUIDE.md   # Manual procedures
+│   └── ZOHO_TESTING_GUIDE.md     # Zoho-specific tests
+│
+└── archive/                      # Historical Notes
+    ├── DATABASE_SETUP_COMPLETE.md
+    ├── FRONTEND_ERRORS_FIXED.md
+    ├── LAYOUT_COMPLETE.md
+    ├── RAILWAY_FRONTEND_FIX.md
+    ├── RAILWAY_QUICK_FIX.md
+    ├── VERCEL_FIX.md
+    ├── TEST_ZOHO_PRODUCTION.md
+    └── CLAUDE.md
+```
 
-### Implementation Strategy
-Following the user's preference ([[memory:4551642]]), I'll pick the most logical implementation order:
-1. Start with authentication system (login/logout flow)
-2. Build core layout and navigation
-3. Implement main dashboard
-4. Add referral submission functionality
-5. Complete remaining user pages
-6. Add admin functionality
+### Code Structure
 
-This approach ensures we have a working authentication system first, then build out the core user functionality before adding administrative features. 
+```
+usapayments-portal-2.0/
+├── frontend/
+│   ├── src/
+│   │   ├── app/              # Pages (8+)
+│   │   │   ├── auth/
+│   │   │   │   ├── login/
+│   │   │   │   ├── forgot-password/
+│   │   │   │   └── reset-password/
+│   │   │   ├── dashboard/
+│   │   │   └── leads/
+│   │   │
+│   │   ├── components/       # UI Components (25+)
+│   │   │   ├── auth/
+│   │   │   ├── layout/
+│   │   │   └── ui/
+│   │   │
+│   │   ├── lib/              # Utilities
+│   │   │   ├── api-client.ts
+│   │   │   ├── supabase.ts
+│   │   │   └── stores/
+│   │   │
+│   │   └── services/         # API Services
+│   │       ├── auth.service.ts
+│   │       └── leads.service.ts
+│   │
+│   └── package.json
+│
+├── backend/
+│   ├── src/
+│   │   ├── routes/           # API Routes
+│   │   │   ├── auth.ts
+│   │   │   ├── leads.ts
+│   │   │   └── webhooks.ts
+│   │   │
+│   │   ├── services/         # Business Logic
+│   │   │   ├── authService.ts
+│   │   │   └── zohoService.ts
+│   │   │
+│   │   ├── middleware/       # Middleware
+│   │   │   └── auth.ts
+│   │   │
+│   │   └── config/           # Configuration
+│   │       └── database.ts
+│   │
+│   ├── database/
+│   │   ├── migrations/       # 12 migration files
+│   │   └── functions/        # Database functions
+│   │
+│   └── package.json
+│
+├── docs/                     # All documentation
+├── memory-bank/              # AI context
+└── README.md                 # Main project documentation
+```
+
+## Next Immediate Actions
+
+### For Production Launch
+1. **Configure Zoho Webhooks**: Update webhook URLs in Zoho CRM to point to Railway backend
+2. **Test End-to-End**: Complete production flow test (partner → lead → status)
+3. **Email Service**: Configure SendGrid or Resend for notifications
+4. **Monitoring**: Set up error tracking (Sentry) and logging
+
+### For Feature Completion
+1. **Sub-Account Management**: Build UI for partner to manage sub-accounts
+2. **Admin Dashboard**: Create admin interface for system monitoring
+3. **Public Form**: Implement public referral submission page
+4. **Real-Time**: Connect Socket.IO for live dashboard updates
+
+### For Production Readiness
+1. **Security Audit**: Review all security policies and access controls
+2. **Performance Testing**: Load testing for API endpoints
+3. **Error Handling**: Comprehensive error handling and user feedback
+4. **Documentation**: API documentation with OpenAPI/Swagger
+
+## Current Implementation Patterns
+
+### Authentication Flow
+```typescript
+1. User submits credentials
+2. Frontend → POST /api/auth/login
+3. Backend validates against Supabase
+4. Returns JWT access token + refresh token
+5. Frontend stores in Zustand store
+6. API calls include Authorization header
+7. Protected routes check auth state
+8. Refresh token used when access expires
+```
+
+### Lead Submission Flow
+```typescript
+1. Partner fills lead form
+2. Frontend validates with Zod schema
+3. POST /api/leads with partner context
+4. Backend creates lead in Supabase
+5. Backend syncs to Zoho CRM
+6. Zoho returns lead ID
+7. Backend updates local lead with zoho_lead_id
+8. Activity logged
+9. Success response to frontend
+```
+
+### Webhook Processing Flow
+```typescript
+1. Zoho CRM triggers webhook
+2. Backend receives POST request
+3. Validates payload structure
+4. Processes based on webhook type:
+   - Partner: Create partner + user + send invite
+   - Lead Status: Update lead + create history
+   - Contact: Create sub-account
+5. Logs activity
+6. Returns success/error response
+```
+
+## Technical Decisions & Patterns
+
+### Security Definer Functions
+**Pattern**: Use PostgreSQL security definer functions for operations requiring elevated permissions
+
+**Example**: `create_partner_with_user()`
+```sql
+CREATE FUNCTION create_partner_with_user(...)
+RETURNS json
+SECURITY DEFINER
+SET search_path = public
+```
+
+**Reason**: Allows creating partner + Supabase Auth user + portal user atomically, bypassing RLS
+
+**Usage**: Called from partner webhook to provision accounts
+
+### Row Level Security Strategy
+**Pattern**: Multi-layered RLS policies for data isolation
+
+**Layers**:
+1. **Partner Isolation**: Users only see their partner's data
+2. **Role Elevation**: Admin users bypass partner isolation
+3. **Action Scoping**: Different policies for SELECT, INSERT, UPDATE, DELETE
+
+**Example**:
+```sql
+-- Partners can view own data
+CREATE POLICY "partner_view" ON leads
+  FOR SELECT USING (
+    partner_id = (SELECT partner_id FROM users WHERE id = auth.uid())
+  );
+
+-- Admins can view all data
+CREATE POLICY "admin_view" ON leads
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+  );
+```
+
+### Component Organization
+**Pattern**: Atomic design with feature-based folders
+
+**Structure**:
+- `components/ui/` - Primitive components (button, input, card)
+- `components/auth/` - Authentication components
+- `components/layout/` - Layout components
+- `components/leads/` - Feature-specific components (planned)
+
+**Reason**: Scalable, maintainable, clear boundaries
+
+### API Client Pattern
+**Pattern**: Axios instance with interceptors
+
+**Features**:
+- Automatic Authorization header injection
+- Token refresh on 401
+- Error handling
+- Request/response logging
+
+**Location**: `frontend/src/lib/api-client.ts`
+
+### State Management
+**Pattern**: Zustand for client state, React Query for server state (planned)
+
+**Current**: Using Zustand for auth state
+**Planned**: React Query for data fetching, caching, and synchronization
+
+**Reason**: Lightweight, TypeScript-friendly, minimal boilerplate
+
+## Environment Configuration
+
+### Backend (.env)
+```env
+# Required for production
+✅ NODE_ENV=production
+✅ PORT=5001
+✅ FRONTEND_URL=https://your-frontend.vercel.app
+✅ SUPABASE_URL=...
+✅ SUPABASE_SERVICE_ROLE_KEY=...
+✅ DATABASE_URL=...
+✅ JWT_SECRET=...
+✅ JWT_REFRESH_SECRET=...
+✅ ZOHO_CLIENT_ID=...
+✅ ZOHO_CLIENT_SECRET=...
+✅ ZOHO_REFRESH_TOKEN=...
+✅ ZOHO_ENVIRONMENT=production
+
+# Optional
+🚧 SENDGRID_API_KEY=... (not yet configured)
+🚧 SENTRY_DSN=... (monitoring)
+```
+
+### Frontend (.env.local)
+```env
+✅ NEXT_PUBLIC_API_URL=https://your-backend.up.railway.app
+✅ NEXT_PUBLIC_SOCKET_URL=https://your-backend.up.railway.app
+✅ NEXT_PUBLIC_SUPABASE_URL=...
+✅ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+```
+
+## Key Files Reference
+
+### Critical Configuration
+- `backend/src/config/database.ts` - Database connection
+- `backend/src/services/zohoService.ts` - Zoho CRM integration
+- `frontend/src/lib/api-client.ts` - API client
+- `frontend/src/lib/supabase.ts` - Supabase client
+- `frontend/src/lib/stores/authStore.ts` - Auth state
+
+### Core Features
+- `backend/src/routes/auth.ts` - Authentication endpoints
+- `backend/src/routes/leads.ts` - Lead management endpoints
+- `backend/src/routes/webhooks.ts` - Webhook handlers
+- `frontend/src/app/dashboard/page.tsx` - Main dashboard
+- `frontend/src/components/layout/DashboardLayout.tsx` - Layout
+
+### Database
+- `backend/database/complete_migration.sql` - Complete schema
+- `backend/database/migrations/` - Individual migrations
+- `backend/database/functions/` - Database functions
+
+## Known Issues & Workarounds
+
+### Issue: Placeholder Password on Partner Creation
+**Description**: Webhooks create users with placeholder password
+**Impact**: Partners can't login immediately
+**Workaround**: Partners must use "Forgot Password" flow
+**Permanent Fix**: Implement email service to send password reset link automatically
+
+### Issue: No Real-Time Dashboard Updates
+**Description**: Lead status changes don't appear live
+**Impact**: Users must refresh to see updates
+**Workaround**: Manual refresh
+**Permanent Fix**: Connect Socket.IO for real-time push
+
+### Issue: Limited Error Feedback
+**Description**: Some errors show generic messages
+**Impact**: Users may not understand what went wrong
+**Workaround**: Check backend logs
+**Permanent Fix**: Improve error handling and user messaging
+
+## Testing Checklist
+
+### ✅ Tested & Working
+- [x] Backend health check
+- [x] Database connection
+- [x] Zoho CRM connection
+- [x] Partner webhook (development)
+- [x] Lead creation → Zoho sync
+- [x] Status webhook (development)
+- [x] Login/logout flow
+- [x] Password reset flow
+- [x] Dashboard rendering
+- [x] Lead form validation
+- [x] Protected routes
+
+### 🚧 Needs Production Testing
+- [ ] Partner webhook (production)
+- [ ] Lead status webhook (production)
+- [ ] Complete flow: Add partner in Zoho → Login → Submit lead → Update status
+- [ ] Performance under load
+- [ ] Error recovery scenarios
+
+### 📋 Not Yet Implemented
+- [ ] Email notifications
+- [ ] Real-time Socket.IO updates
+- [ ] Sub-account creation
+- [ ] Admin dashboard
+- [ ] Public referral form
+
+## Development Notes
+
+### Git Workflow
+- Main branch: `main` (production)
+- Working directly on main for now
+- Need to establish branch strategy for multi-developer work
+
+### Deployment Strategy
+- **Backend**: Push to Railway via git
+- **Frontend**: Auto-deploys from GitHub via Vercel
+- **Database**: Manual migrations via Supabase dashboard or scripts
+
+### Monitoring Strategy (Planned)
+- **Errors**: Sentry integration
+- **Logs**: Railway built-in logging
+- **Metrics**: Need APM solution
+- **Uptime**: Need monitoring service
+
+## Conclusion
+
+The project is well-organized with clear documentation structure and comprehensive progress tracking. All foundational features are complete and working. Next steps focus on production validation and completing secondary features.
+
+---
+
+*Last Updated: October 6, 2025*
+*Session: Documentation organization and memory bank updates*
