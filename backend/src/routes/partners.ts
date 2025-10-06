@@ -174,7 +174,7 @@ router.post('/sub-accounts', authenticateToken, requireAdmin, async (req: Authen
         first_name,
         last_name,
         partner_id: req.user.partner_id,
-        role: 'sub'
+        role: 'sub_account'
       }
     });
 
@@ -195,7 +195,7 @@ router.post('/sub-accounts', authenticateToken, requireAdmin, async (req: Authen
         first_name,
         last_name,
         partner_id: req.user.partner_id,
-        role: 'sub',
+        role: 'sub_account',
         is_active: true
       })
       .select()

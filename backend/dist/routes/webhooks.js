@@ -1,7 +1,11 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const database_1 = require("../config/database");
+const crypto_1 = __importDefault(require("crypto"));
 const router = (0, express_1.Router)();
 router.post('/zoho/partner', async (req, res) => {
     try {
@@ -117,80 +121,129 @@ router.post('/zoho/lead-status', async (req, res) => {
 });
 router.post('/zoho/contact', async (req, res) => {
     try {
-        const { contactId, name, email, partnerId } = req.body;
-        console.log('Contact webhook received:', { contactId, name, email, partnerId });
-        const { data: partner, error: partnerError } = await database_1.supabase
-            .from('partners')
-            .select('id')
-            .eq('zoho_partner_id', partnerId)
-            .single();
-        if (partnerError || !partner) {
-            return res.status(404).json({
-                error: 'Parent partner not found',
-                partner_id: partnerId
+        const { id, First_Name, Last_Name, Email, Account_Name } = req.body;
+        console.log('Contact webhook received:', {
+            contactId: id,
+            firstName: First_Name,
+            lastName: Last_Name,
+            email: Email,
+            accountId: Account_Name?.id
+        });
+        if (!Email || !First_Name || !Last_Name) {
+            return res.status(400).json({
+                error: 'Missing required fields',
+                required: ['Email', 'First_Name', 'Last_Name']
             });
         }
-        const { data: existingUser } = await database_1.supabase
+        if (!Account_Name || !Account_Name.id) {
+            console.log('No parent account linked - skipping sub-account creation');
+            return res.status(200).json({
+                success: false,
+                message: 'No parent account linked - sub-account not created',
+                reason: 'Contact must be linked to a Partner account in Zoho CRM'
+            });
+        }
+        const { data: partner, error: partnerError } = await database_1.supabaseAdmin
+            .from('partners')
+            .select('id, name, approved')
+            .eq('zoho_partner_id', Account_Name.id)
+            .single();
+        if (partnerError || !partner) {
+            console.log('Parent partner not found in portal:', Account_Name.id);
+            return res.status(200).json({
+                success: false,
+                message: 'Parent partner not found in portal',
+                reason: 'Partner must be approved and exist in portal before creating sub-accounts',
+                zoho_partner_id: Account_Name.id,
+                partner_name: Account_Name.name
+            });
+        }
+        if (!partner.approved) {
+            console.log('Parent partner not approved:', partner.id);
+            return res.status(200).json({
+                success: false,
+                message: 'Parent partner not approved',
+                reason: 'Partner must be approved before sub-accounts can be created',
+                partner_id: partner.id
+            });
+        }
+        const { data: existingUser } = await database_1.supabaseAdmin
             .from('users')
-            .select('id')
-            .eq('partner_id', partner.id)
-            .ilike('first_name', name.split(' ')[0] || name)
+            .select('id, email')
+            .eq('email', Email.toLowerCase())
             .single();
         if (existingUser) {
+            console.log('Sub-account already exists:', existingUser.id);
             return res.status(200).json({
                 success: true,
-                message: 'Contact already exists',
+                message: 'Sub-account already exists',
                 user_id: existingUser.id
             });
         }
-        const { data: authUser, error: authError } = await database_1.supabase.auth.admin.createUser({
-            email: email,
+        const tempPassword = crypto_1.default.randomBytes(16).toString('hex');
+        const { data: authUser, error: authError } = await database_1.supabaseAdmin.auth.admin.createUser({
+            email: Email.toLowerCase(),
+            password: tempPassword,
             email_confirm: true,
             user_metadata: {
-                full_name: name,
+                first_name: First_Name,
+                last_name: Last_Name,
                 partner_id: partner.id,
-                role: 'sub'
+                role: 'sub_account',
+                zoho_contact_id: id
             }
         });
-        if (authError) {
+        if (authError || !authUser.user) {
             console.error('Error creating auth user for contact:', authError);
             return res.status(500).json({
                 error: 'Failed to create user account',
-                details: authError.message
+                details: authError?.message || 'Unknown error'
             });
         }
-        const { error: userError } = await database_1.supabase
+        const { error: userError } = await database_1.supabaseAdmin
             .from('users')
             .insert({
             id: authUser.user.id,
+            email: Email.toLowerCase(),
             partner_id: partner.id,
-            role: 'sub',
-            first_name: name.split(' ')[0] || name,
-            last_name: name.split(' ').slice(1).join(' ') || '',
+            role: 'sub_account',
+            first_name: First_Name,
+            last_name: Last_Name,
             is_active: true
         });
         if (userError) {
             console.error('Error creating contact user record:', userError);
-            await database_1.supabase.auth.admin.deleteUser(authUser.user.id);
+            await database_1.supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
             return res.status(500).json({
                 error: 'Failed to create user record',
                 details: userError.message
             });
         }
-        await database_1.supabase.from('activity_log').insert({
+        await database_1.supabaseAdmin.from('activity_log').insert({
             partner_id: partner.id,
             user_id: authUser.user.id,
             activity_type: 'sub_account_created',
-            description: `Sub-account created for ${name} via Zoho webhook`,
-            metadata: { zoho_contact_id: contactId }
+            description: `Sub-account created for ${First_Name} ${Last_Name} via Zoho webhook`,
+            metadata: {
+                zoho_contact_id: id,
+                zoho_account_id: Account_Name.id
+            }
         });
+        const { error: resetError } = await database_1.supabase.auth.resetPasswordForEmail(Email.toLowerCase(), {
+            redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/reset-password`
+        });
+        if (resetError) {
+            console.error('Failed to send password reset email:', resetError);
+        }
+        console.log('Sub-account created successfully:', authUser.user.id);
         return res.status(201).json({
             success: true,
-            message: 'Contact user created successfully',
+            message: 'Sub-account created successfully. Password reset email sent.',
             data: {
                 user_id: authUser.user.id,
                 partner_id: partner.id,
-                email: email
+                email: Email.toLowerCase(),
+                zoho_contact_id: id
             }
         });
     }

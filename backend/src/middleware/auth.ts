@@ -6,7 +6,7 @@ export interface AuthenticatedRequest extends Request {
     id: string;
     email: string;
     partner_id: string;
-    role: 'admin' | 'sub';
+    role: 'admin' | 'sub_account';
     first_name?: string;
     last_name?: string;
   };

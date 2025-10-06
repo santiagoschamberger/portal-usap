@@ -139,7 +139,7 @@ router.post('/sub-accounts', auth_1.authenticateToken, auth_1.requireAdmin, asyn
                 first_name,
                 last_name,
                 partner_id: req.user.partner_id,
-                role: 'sub'
+                role: 'sub_account'
             }
         });
         if (authError || !authData.user) {
@@ -157,7 +157,7 @@ router.post('/sub-accounts', auth_1.authenticateToken, auth_1.requireAdmin, asyn
             first_name,
             last_name,
             partner_id: req.user.partner_id,
-            role: 'sub',
+            role: 'sub_account',
             is_active: true
         })
             .select()

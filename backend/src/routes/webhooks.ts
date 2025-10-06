@@ -243,7 +243,7 @@ router.post('/zoho/contact', async (req, res) => {
         first_name: First_Name,
         last_name: Last_Name,
         partner_id: partner.id,
-        role: 'sub',
+        role: 'sub_account',
         zoho_contact_id: id
       }
     });
@@ -263,7 +263,7 @@ router.post('/zoho/contact', async (req, res) => {
         id: authUser.user.id,
         email: Email.toLowerCase(),
         partner_id: partner.id,
-        role: 'sub',
+        role: 'sub_account',
         first_name: First_Name,
         last_name: Last_Name,
         is_active: true
