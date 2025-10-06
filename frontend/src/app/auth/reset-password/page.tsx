@@ -34,6 +34,7 @@ function ResetPasswordForm() {
   const [error, setError] = useState<string>('')
   const [success, setSuccess] = useState(false)
   const [tokenValid, setTokenValid] = useState<boolean | null>(null)
+  const [accessToken, setAccessToken] = useState<string>('')
 
   const token = searchParams.get('token') || ''
 
@@ -49,24 +50,30 @@ function ResetPasswordForm() {
     }
   })
 
-  // Verify token on component mount
+  // Extract access_token from URL hash (Supabase format)
   useEffect(() => {
-    const verifyToken = async () => {
-      if (!token) {
-        setTokenValid(false)
-        return
-      }
+    const hashParams = new URLSearchParams(window.location.hash.substring(1))
+    const accessTokenFromHash = hashParams.get('access_token')
+    const errorCode = hashParams.get('error_code')
+    const errorDescription = hashParams.get('error_description')
 
-      try {
-        const isValid = await AuthService.verifyResetToken(token)
-        setTokenValid(isValid)
-        setValue('token', token)
-      } catch (error) {
-        setTokenValid(false)
-      }
+    if (errorCode) {
+      setError(errorDescription || 'Invalid or expired reset link')
+      setTokenValid(false)
+      return
     }
 
-    verifyToken()
+    if (accessTokenFromHash) {
+      setAccessToken(accessTokenFromHash)
+      setValue('token', accessTokenFromHash)
+      setTokenValid(true)
+    } else if (token) {
+      // Fallback to query parameter if no hash token
+      setValue('token', token)
+      setTokenValid(true)
+    } else {
+      setTokenValid(false)
+    }
   }, [token, setValue])
 
   const onSubmit = async (data: ResetPasswordForm) => {
