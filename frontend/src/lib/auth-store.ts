@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { User } from '@supabase/supabase-js'
-import { supabase } from './supabase'
+import { User } from '@/types'
+import { AuthService } from '@/services/authService'
 
 interface AuthStore {
   user: User | null
@@ -21,15 +21,7 @@ export const useAuthStore = create<AuthStore>()(
 
       signIn: async (email: string, password: string) => {
         try {
-          const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          })
-
-          if (error) {
-            return { error }
-          }
-
+          const data = await AuthService.login({ email, password })
           set({ user: data.user, isAuthenticated: true })
           return { error: null }
         } catch (error) {
@@ -38,28 +30,19 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       signOut: async () => {
-        await supabase.auth.signOut()
+        await AuthService.logout()
         set({ user: null, isAuthenticated: false })
       },
 
       initialize: async () => {
         try {
-          const { data: { session } } = await supabase.auth.getSession()
+          const user = AuthService.getCurrentUser()
+          const isAuthenticated = AuthService.isAuthenticated()
           set({ 
-            user: session?.user ?? null, 
-            isAuthenticated: !!session?.user,
+            user, 
+            isAuthenticated,
             loading: false 
           })
-
-          supabase.auth.onAuthStateChange(
-            async (event, session) => {
-              set({ 
-                user: session?.user ?? null, 
-                isAuthenticated: !!session?.user,
-                loading: false 
-              })
-            }
-          )
         } catch {
           set({ loading: false, isAuthenticated: false })
         }
