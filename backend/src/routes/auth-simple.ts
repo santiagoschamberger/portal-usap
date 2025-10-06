@@ -64,24 +64,10 @@ router.post('/forgot-password', async (req, res) => {
     }
 
     console.log('Password reset requested for:', email);
-
-    // First, check if user exists in auth.users using admin client
-    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.listUsers();
-    
-    const userExists = authUser?.users?.some(u => u.email === email);
-
-    if (!userExists) {
-      console.log('User not found in auth.users:', email);
-      return res.status(404).json({
-        success: false,
-        error: 'No account found with that email address'
-      });
-    }
-
-    console.log('User found in auth, sending reset email:', email);
     console.log('Frontend URL:', process.env.FRONTEND_URL);
 
-    // Use Supabase's built-in password reset with the regular client (anon key)
+    // Use Supabase's built-in password reset
+    // Note: Supabase returns success even for non-existent emails to prevent email enumeration
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/reset-password`
     });
