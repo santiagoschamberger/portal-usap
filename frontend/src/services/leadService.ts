@@ -64,7 +64,7 @@ export const leadService = {
   async getLeads(): Promise<LeadsResponse> {
     try {
       const response = await api.get<LeadsResponse>('/api/leads')
-      return response.data
+      return response.data || { zoho_leads: [], local_leads: [], total: 0 }
     } catch (error) {
       console.error('Error fetching leads:', error)
       throw error
@@ -77,7 +77,7 @@ export const leadService = {
   async getLeadById(id: string): Promise<Lead> {
     try {
       const response = await api.get<Lead>(`/api/leads/${id}`)
-      return response.data
+      return response.data!
     } catch (error) {
       console.error('Error fetching lead:', error)
       throw error
@@ -98,7 +98,7 @@ export const leadService = {
         local_lead: Lead
         zoho_response: Record<string, unknown>
       }>('/api/leads', leadData)
-      return response.data
+      return response.data!
     } catch (error) {
       console.error('Error creating lead:', error)
       throw error
@@ -118,7 +118,7 @@ export const leadService = {
         status,
         notes,
       })
-      return response.data
+      return response.data!
     } catch (error) {
       console.error('Error updating lead status:', error)
       throw error
