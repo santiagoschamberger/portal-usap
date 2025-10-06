@@ -5,6 +5,70 @@ import { supabase, supabaseAdmin } from '../config/database';
 const router = Router();
 
 /**
+ * POST /auth/login
+ * Login with email and password
+ */
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email and password are required'
+      });
+    }
+
+    // Use Supabase auth to sign in
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error || !data.user || !data.session) {
+      console.error('Login error:', error);
+      return res.status(401).json({
+        success: false,
+        error: error?.message || 'Invalid email or password'
+      });
+    }
+
+    // Get user details from public.users table using admin client to bypass RLS
+    const { data: userData, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('id, email, partner_id, role, first_name, last_name')
+      .eq('id', data.user.id)
+      .single();
+
+    if (userError || !userData) {
+      console.error('User data fetch error:', userError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to fetch user data'
+      });
+    }
+
+    console.log('Login successful for:', email);
+
+    return res.json({
+      success: true,
+      data: {
+        user: userData,
+        token: data.session.access_token,
+        refreshToken: data.session.refresh_token
+      }
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Login failed',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
  * GET /auth/profile
  * Get current user profile (for testing authentication)
  */

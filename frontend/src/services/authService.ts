@@ -16,7 +16,7 @@ export class AuthService {
    * Login user with email and password
    */
   static async login(credentials: LoginFormData): Promise<LoginResponse> {
-    const response = await api.post<LoginResponse>('/auth/login', credentials)
+    const response = await api.post<LoginResponse>('/api/auth/login', credentials)
     
     if (response.success && response.data) {
       // Store tokens in localStorage
