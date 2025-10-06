@@ -63,8 +63,11 @@ router.post('/forgot-password', async (req, res) => {
       });
     }
 
-    // Use Supabase's built-in password reset
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    console.log('Password reset requested for:', email);
+    console.log('Frontend URL:', process.env.FRONTEND_URL);
+
+    // Use Supabase's built-in password reset with the regular client (anon key)
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/reset-password`
     });
 
@@ -75,6 +78,8 @@ router.post('/forgot-password', async (req, res) => {
         error: error.message
       });
     }
+
+    console.log('Password reset email sent successfully');
 
     return res.json({
       success: true,
