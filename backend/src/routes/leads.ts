@@ -20,8 +20,8 @@ router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
     
     const leads = zohoResponse.data || [];
 
-    // Also sync with local database
-    const { data: localLeads, error } = await supabase
+    // Also sync with local database using admin client to bypass RLS
+    const { data: localLeads, error } = await supabaseAdmin
       .from('leads')
       .select('*')
       .eq('partner_id', req.user.partner_id)
@@ -200,7 +200,7 @@ router.get('/:id', authenticateToken, async (req: AuthenticatedRequest, res) => 
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const { data: lead, error } = await supabase
+    const { data: lead, error } = await supabaseAdmin
       .from('leads')
       .select(`
         *,
@@ -253,8 +253,8 @@ router.patch('/:id/status', authenticateToken, async (req: AuthenticatedRequest,
       });
     }
 
-    // Get current lead
-    const { data: currentLead, error: fetchError } = await supabase
+    // Get current lead using admin client to bypass RLS
+    const { data: currentLead, error: fetchError } = await supabaseAdmin
       .from('leads')
       .select('status')
       .eq('id', req.params.id)
@@ -267,8 +267,8 @@ router.patch('/:id/status', authenticateToken, async (req: AuthenticatedRequest,
       });
     }
 
-    // Update lead status
-    const { data: updatedLead, error: updateError } = await supabase
+    // Update lead status using admin client to bypass RLS
+    const { data: updatedLead, error: updateError } = await supabaseAdmin
       .from('leads')
       .update({ 
         status,
@@ -287,7 +287,7 @@ router.patch('/:id/status', authenticateToken, async (req: AuthenticatedRequest,
     }
 
     // Add status history record
-    await supabase.from('lead_status_history').insert({
+    await supabaseAdmin.from('lead_status_history').insert({
       lead_id: req.params.id,
       old_status: currentLead.status,
       new_status: status,
@@ -296,7 +296,7 @@ router.patch('/:id/status', authenticateToken, async (req: AuthenticatedRequest,
     });
 
     // Log activity
-    await supabase.from('activity_log').insert({
+    await supabaseAdmin.from('activity_log').insert({
       partner_id: req.user.partner_id,
       user_id: req.user.id,
       lead_id: req.params.id,
