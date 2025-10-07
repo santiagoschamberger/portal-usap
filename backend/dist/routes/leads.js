@@ -300,5 +300,83 @@ router.patch('/:id/status', auth_1.authenticateToken, async (req, res) => {
         });
     }
 });
+router.post('/public', async (req, res) => {
+    try {
+        const { partner_id, first_name, last_name, email, phone, company, business_type, industry, website, notes, source } = req.body;
+        if (!partner_id || !first_name || !last_name || !email || !phone || !company) {
+            return res.status(400).json({
+                error: 'Missing required fields',
+                message: 'Please fill in all required fields'
+            });
+        }
+        const { data: partner, error: partnerError } = await database_1.supabaseAdmin
+            .from('users')
+            .select('id, partner_id')
+            .eq('id', partner_id)
+            .single();
+        if (partnerError || !partner) {
+            return res.status(404).json({
+                error: 'Invalid partner',
+                message: 'The partner link is invalid or expired'
+            });
+        }
+        const { data: partnerData } = await database_1.supabaseAdmin
+            .from('partners')
+            .select('name')
+            .eq('id', partner.partner_id)
+            .single();
+        const partnerName = partnerData?.name || 'Unknown Partner';
+        const zohoLead = await zohoService_1.zohoService.createLead({
+            Email: email,
+            First_Name: first_name,
+            Last_Name: last_name,
+            Company: company,
+            Phone: phone,
+            StrategicPartnerId: partner_id,
+            Entity_Type: Array.isArray(business_type) ? business_type : [business_type],
+            Lead_Status: 'New',
+            Lead_Source: source || 'Public Form',
+            Vendor: {
+                name: partnerName,
+                id: partner.partner_id
+            }
+        });
+        const { data: localLead, error: localError } = await database_1.supabaseAdmin
+            .from('leads')
+            .insert({
+            partner_id: partner.partner_id,
+            zoho_lead_id: zohoLead.id,
+            first_name,
+            last_name,
+            email,
+            phone,
+            company,
+            business_type,
+            status: 'new',
+            source: source || 'Public Form',
+            created_by_user_id: partner_id
+        })
+            .select()
+            .single();
+        if (localError) {
+            console.error('Error saving lead locally:', localError);
+        }
+        return res.json({
+            success: true,
+            message: 'Lead submitted successfully',
+            data: {
+                zoho_id: zohoLead.id,
+                local_id: localLead?.id
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error creating public lead:', error);
+        return res.status(500).json({
+            error: 'Failed to submit lead',
+            message: error instanceof Error ? error.message : 'Please try again later'
+        });
+    }
+});
 exports.default = router;
 //# sourceMappingURL=leads.js.map
