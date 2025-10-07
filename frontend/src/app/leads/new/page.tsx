@@ -92,21 +92,13 @@ Website: ${data.website || 'N/A'}
   return (
     <ProtectedRoute allowedRoles={['admin', 'user']}>
       <DashboardLayout>
-        <div className="space-y-6 max-w-4xl mx-auto">
+        <div className="space-y-6">
           {/* Page Header */}
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              onClick={() => router.push('/leads')}
-            >
-              ← Back to Leads
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold">Create New Lead</h1>
-              <p className="text-muted-foreground mt-2">
-                Enter the details for the new lead
-              </p>
-            </div>
+          <div>
+            <h1 className="text-3xl font-bold">Create New Lead</h1>
+            <p className="text-muted-foreground mt-2">
+              Enter the details for the new lead
+            </p>
           </div>
           <Card>
             <CardHeader>

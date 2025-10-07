@@ -100,11 +100,13 @@ export function Sidebar() {
   const pathname = usePathname()
   const { user } = useAuthStore()
 
-  const isAdmin = user?.user_metadata?.role === 'admin'
+  // Get user role from either user_metadata or direct role property
+  const userRole = user?.user_metadata?.role || (user as any)?.role || ''
+  const isAdmin = userRole === 'admin'
 
   const shouldShowItem = (item: NavItem) => {
     if (!item.roles) return true
-    return item.roles.includes(user?.user_metadata?.role || '')
+    return item.roles.includes(userRole)
   }
 
   return (
