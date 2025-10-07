@@ -34,9 +34,11 @@ export function ProtectedRoute({
 
       // Check role-based access
       if (allowedRoles && allowedRoles.length > 0) {
-        const userRole = user.user_metadata?.role as 'admin' | 'user' | 'contact' || 'user'
+        // Support both Supabase Auth format (user_metadata.role) and direct role property
+        const userRole = (user.user_metadata?.role || (user as any).role) as 'admin' | 'user' | 'contact' || 'user'
         if (!allowedRoles.includes(userRole)) {
           // User doesn't have required role
+          console.log('Access denied - User role:', userRole, 'Required roles:', allowedRoles)
           router.push('/dashboard') // Redirect to default dashboard
           return
         }
@@ -62,7 +64,8 @@ export function ProtectedRoute({
   }
 
   if (allowedRoles && allowedRoles.length > 0) {
-    const userRole = user.user_metadata?.role as 'admin' | 'user' | 'contact' || 'user'
+    // Support both Supabase Auth format (user_metadata.role) and direct role property
+    const userRole = (user.user_metadata?.role || (user as any).role) as 'admin' | 'user' | 'contact' || 'user'
     if (!allowedRoles.includes(userRole)) {
       return null
     }
@@ -90,11 +93,14 @@ export function usePermissions() {
   const { user } = useAuthStore()
 
   const hasRole = (role: 'admin' | 'user' | 'contact') => {
-    return user?.user_metadata?.role === role
+    // Support both Supabase Auth format and direct role property
+    const userRole = user?.user_metadata?.role || (user as any)?.role
+    return userRole === role
   }
 
   const hasAnyRole = (roles: ('admin' | 'user' | 'contact')[]) => {
-    const userRole = user?.user_metadata?.role as 'admin' | 'user' | 'contact'
+    // Support both Supabase Auth format and direct role property
+    const userRole = (user?.user_metadata?.role || (user as any)?.role) as 'admin' | 'user' | 'contact'
     return userRole ? roles.includes(userRole) : false
   }
 
