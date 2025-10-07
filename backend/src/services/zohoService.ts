@@ -180,18 +180,63 @@ class ZohoService {
   /**
    * Get contacts by vendor ID
    */
+  /**
+   * Get sample contact to discover field structure
+   */
+  async getSampleContact(): Promise<any> {
+    try {
+      const headers = await this.getAuthHeaders();
+      const response = await axios.get(`${this.baseUrl}/Contacts`, {
+        headers,
+        params: { per_page: 1 }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error getting sample contact:', error);
+      throw error;
+    }
+  }
+
   async getContactsByVendor(vendorId: string): Promise<any> {
     try {
       const headers = await this.getAuthHeaders();
-      // Try searching by Account_Name first (standard field), then Vendor (custom field)
-      const criteria = `((Account_Name.id:equals:${vendorId})or(Vendor.id:equals:${vendorId}))`;
       
-      const response = await axios.get(`${this.baseUrl}/Contacts/search`, {
-        headers,
-        params: { criteria },
-      });
+      // Try different search criteria variations
+      // The field name might be "Vendor", "Account_Name", or a custom field
+      const searchVariations = [
+        `(Vendor:equals:${vendorId})`,
+        `(Account_Name:equals:${vendorId})`,
+        `(Vendor.id:equals:${vendorId})`,
+        `(Account_Name.id:equals:${vendorId})`
+      ];
       
-      return response.data;
+      let lastError = null;
+      
+      for (const criteria of searchVariations) {
+        try {
+          const response = await axios.get(`${this.baseUrl}/Contacts/search`, {
+            headers,
+            params: { criteria }
+          });
+          
+          // If we got results, return them
+          if (response.data.data && response.data.data.length > 0) {
+            console.log(`✓ Contacts found using criteria: ${criteria}`);
+            return response.data;
+          }
+        } catch (err) {
+          lastError = err;
+          // Continue to next variation
+        }
+      }
+      
+      // If all variations failed, throw the last error
+      if (lastError) {
+        throw lastError;
+      }
+      
+      // No contacts found with any criteria
+      return { data: [] };
     } catch (error) {
       console.error('Error getting contacts from Zoho:', error);
       if (axios.isAxiosError(error) && error.response) {

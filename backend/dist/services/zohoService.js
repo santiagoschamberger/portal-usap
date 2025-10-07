@@ -119,15 +119,49 @@ class ZohoService {
             throw error;
         }
     }
+    async getSampleContact() {
+        try {
+            const headers = await this.getAuthHeaders();
+            const response = await axios_1.default.get(`${this.baseUrl}/Contacts`, {
+                headers,
+                params: { per_page: 1 }
+            });
+            return response.data;
+        }
+        catch (error) {
+            console.error('Error getting sample contact:', error);
+            throw error;
+        }
+    }
     async getContactsByVendor(vendorId) {
         try {
             const headers = await this.getAuthHeaders();
-            const criteria = `((Account_Name.id:equals:${vendorId})or(Vendor.id:equals:${vendorId}))`;
-            const response = await axios_1.default.get(`${this.baseUrl}/Contacts/search`, {
-                headers,
-                params: { criteria },
-            });
-            return response.data;
+            const searchVariations = [
+                `(Vendor:equals:${vendorId})`,
+                `(Account_Name:equals:${vendorId})`,
+                `(Vendor.id:equals:${vendorId})`,
+                `(Account_Name.id:equals:${vendorId})`
+            ];
+            let lastError = null;
+            for (const criteria of searchVariations) {
+                try {
+                    const response = await axios_1.default.get(`${this.baseUrl}/Contacts/search`, {
+                        headers,
+                        params: { criteria }
+                    });
+                    if (response.data.data && response.data.data.length > 0) {
+                        console.log(`✓ Contacts found using criteria: ${criteria}`);
+                        return response.data;
+                    }
+                }
+                catch (err) {
+                    lastError = err;
+                }
+            }
+            if (lastError) {
+                throw lastError;
+            }
+            return { data: [] };
         }
         catch (error) {
             console.error('Error getting contacts from Zoho:', error);
