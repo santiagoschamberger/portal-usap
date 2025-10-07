@@ -186,19 +186,19 @@ class ZohoService {
       // Try searching by Account_Name first (standard field), then Vendor (custom field)
       const criteria = `((Account_Name.id:equals:${vendorId})or(Vendor.id:equals:${vendorId}))`;
       
-      console.log('Searching Zoho contacts with criteria:', criteria);
-      
       const response = await axios.get(`${this.baseUrl}/Contacts/search`, {
         headers,
         params: { criteria },
       });
       
-      console.log('Zoho contacts search response:', JSON.stringify(response.data, null, 2));
       return response.data;
     } catch (error) {
       console.error('Error getting contacts from Zoho:', error);
       if (axios.isAxiosError(error) && error.response) {
-        console.error('Zoho API error response:', error.response.data);
+        console.error('Zoho API error details:', {
+          status: error.response.status,
+          message: error.response.data
+        });
       }
       throw error;
     }
