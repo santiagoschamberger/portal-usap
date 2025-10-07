@@ -1,6 +1,5 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { ProtectedRoute } from '@/components/protected-route'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,36 +7,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuthStore } from '@/lib/auth-store'
-import { toast } from 'react-hot-toast'
-import { Copy, Check, ExternalLink } from 'lucide-react'
 
 export default function SettingsPage() {
   const { user } = useAuthStore()
-  const [copied, setCopied] = useState(false)
-  const [publicUrl, setPublicUrl] = useState('')
-
-  useEffect(() => {
-    // Generate public URL for this partner
-    if (user?.id) {
-      const baseUrl = window.location.origin
-      setPublicUrl(`${baseUrl}/public-lead-form?partner=${user.id}`)
-    }
-  }, [user])
-
-  const handleCopyUrl = async () => {
-    try {
-      await navigator.clipboard.writeText(publicUrl)
-      setCopied(true)
-      toast.success('URL copied to clipboard!')
-      setTimeout(() => setCopied(false), 2000)
-    } catch (error) {
-      toast.error('Failed to copy URL')
-    }
-  }
-
-  const handleTestUrl = () => {
-    window.open(publicUrl, '_blank')
-  }
 
   return (
     <ProtectedRoute allowedRoles={['admin', 'user']}>
@@ -113,62 +85,6 @@ export default function SettingsPage() {
                 <p className="text-sm text-gray-600">
                   To update your profile information, please contact support.
                 </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Public Lead Form URL */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Public Lead Submission Form</CardTitle>
-              <CardDescription>
-                Share this unique URL with your leads so they can submit information directly to your account
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="publicUrl">Your Unique Lead Form URL</Label>
-                <div className="flex gap-2 mt-2">
-                  <Input
-                    id="publicUrl"
-                    value={publicUrl}
-                    readOnly
-                    className="bg-gray-50 font-mono text-sm"
-                  />
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handleCopyUrl}
-                    className="flex-shrink-0"
-                  >
-                    {copied ? (
-                      <Check className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handleTestUrl}
-                    className="flex-shrink-0"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </Button>
-                </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  Click the copy icon to copy the URL, or the external link icon to test it
-                </p>
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-medium text-blue-900 mb-2">How to use this URL:</h4>
-                <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-                  <li>Share this URL on your website, social media, or email campaigns</li>
-                  <li>Leads who submit through this form are automatically linked to your account</li>
-                  <li>You'll receive credit for all leads submitted through this link</li>
-                  <li>Track all submissions in your Leads dashboard</li>
-                </ul>
               </div>
             </CardContent>
           </Card>

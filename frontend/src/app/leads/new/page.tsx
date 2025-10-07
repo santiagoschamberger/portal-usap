@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ProtectedRoute } from '@/components/protected-route'
+import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { zohoService } from '@/services/zohoService'
 import { toast } from 'react-hot-toast'
 import { activityTracker } from '@/lib/activity-tracker'
@@ -90,35 +91,26 @@ Website: ${data.website || 'N/A'}
 
   return (
     <ProtectedRoute allowedRoles={['admin', 'user']}>
-      <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <header className="bg-white shadow-sm border-b">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center">
-                <Button
-                  variant="ghost"
-                  onClick={() => router.push('/leads')}
-                  className="mr-4"
-                >
-                  ← Back to Leads
-                </Button>
-                <h1 className="text-xl font-semibold text-gray-900">
-                  Create New Lead
-                </h1>
-              </div>
+      <DashboardLayout>
+        <div className="space-y-6 max-w-4xl mx-auto">
+          {/* Page Header */}
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              onClick={() => router.push('/leads')}
+            >
+              ← Back to Leads
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold">Create New Lead</h1>
+              <p className="text-muted-foreground mt-2">
+                Enter the details for the new lead
+              </p>
             </div>
           </div>
-        </header>
-
-        {/* Main Content */}
-        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <Card>
             <CardHeader>
               <CardTitle>Lead Information</CardTitle>
-              <CardDescription>
-                Enter the details for the new lead
-              </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -343,8 +335,8 @@ Website: ${data.website || 'N/A'}
               </form>
             </CardContent>
           </Card>
-        </main>
-      </div>
+        </div>
+      </DashboardLayout>
     </ProtectedRoute>
   )
 } 

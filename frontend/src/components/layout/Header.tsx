@@ -73,13 +73,19 @@ export function Header() {
         <div className="flex h-16 items-center">
         {/* Logo - Fixed width matching sidebar */}
         <div className="w-64 flex items-center px-6 border-r">
-          <Image 
-            src="/usa-payments-logo.png" 
-            alt="USA Payments Logo" 
-            width={150} 
-            height={90}
-            className="h-auto w-auto max-h-10"
-          />
+          <button 
+            onClick={() => router.push('/dashboard')}
+            className="cursor-pointer hover:opacity-80 transition-opacity"
+            aria-label="Go to dashboard"
+          >
+            <Image 
+              src="/usa-payments-logo.png" 
+              alt="USA Payments Logo" 
+              width={150} 
+              height={90}
+              className="h-auto w-auto max-h-10"
+            />
+          </button>
         </div>
 
         {/* Right side - Notifications and User Menu */}

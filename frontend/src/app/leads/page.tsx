@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ProtectedRoute } from '@/components/protected-route'
+import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { Lead } from '@/types'
 import { zohoService } from '@/services/zohoService'
 import { toast } from 'react-hot-toast'
@@ -166,34 +167,22 @@ export default function LeadsPage() {
 
   return (
     <ProtectedRoute allowedRoles={['admin', 'user']}>
-      <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <header className="bg-white shadow-sm border-b">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center">
-                <Button
-                  variant="ghost"
-                  onClick={() => router.push('/dashboard')}
-                  className="mr-4"
-                >
-                  ← Back to Dashboard
-                </Button>
-                <h1 className="text-xl font-semibold text-gray-900">
-                  Leads Management
-                </h1>
-              </div>
-              <Button onClick={handleCreateLead}>
-                Create New Lead
-              </Button>
+      <DashboardLayout>
+        <div className="space-y-6">
+          {/* Page Header */}
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold">Leads Management</h1>
+              <p className="text-muted-foreground mt-2">
+                Manage and track your leads
+              </p>
             </div>
+            <Button onClick={handleCreateLead} className="bg-[#9a132d] hover:bg-[#7d0f24]">
+              Create New Lead
+            </Button>
           </div>
-        </header>
-
-        {/* Main Content */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Filters */}
-          <Card className="mb-6">
+          <Card>
             <CardHeader>
               <CardTitle>Filters</CardTitle>
               <CardDescription>
@@ -356,8 +345,8 @@ export default function LeadsPage() {
               </div>
             </div>
           )}
-        </main>
-      </div>
+        </div>
+      </DashboardLayout>
     </ProtectedRoute>
   )
 } 

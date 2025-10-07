@@ -14,6 +14,7 @@ import {
   UserPlus,
   Shield,
   MessageCircle,
+  Link2,
 } from 'lucide-react'
 
 interface NavItem {
@@ -39,6 +40,12 @@ const navigationItems: NavItem[] = [
     title: 'Leads',
     href: '/leads',
     icon: FileText,
+  },
+  {
+    title: 'Public URL',
+    href: '/public-url',
+    icon: Link2,
+    roles: ['admin', 'user'], // Only main partners, not sub-accounts
   },
   {
     title: 'Compensation',
