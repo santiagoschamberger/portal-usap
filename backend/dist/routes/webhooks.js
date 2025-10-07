@@ -121,41 +121,58 @@ router.post('/zoho/lead-status', async (req, res) => {
 });
 router.post('/zoho/contact', async (req, res) => {
     try {
-        const { id, First_Name, Last_Name, Email, Account_Name } = req.body;
+        const fullname = req.body.fullname || `${req.body.First_Name || ''} ${req.body.Last_Name || ''}`.trim();
+        const email = req.body.email || req.body.Email;
+        const parentid = req.body.parentid || req.body.Vendor?.id || req.body.Account_Name?.id;
+        const contactId = req.body.partnerid || req.body.id;
+        let firstName, lastName;
+        if (req.body.First_Name && req.body.Last_Name) {
+            firstName = req.body.First_Name;
+            lastName = req.body.Last_Name;
+        }
+        else {
+            const nameParts = fullname.split(' ');
+            firstName = nameParts[0] || '';
+            lastName = nameParts.slice(1).join(' ') || nameParts[0] || '';
+        }
         console.log('Contact webhook received:', {
-            contactId: id,
-            firstName: First_Name,
-            lastName: Last_Name,
-            email: Email,
-            accountId: Account_Name?.id
+            format: req.body.fullname ? 'module-parameters' : 'json-body',
+            contactId,
+            fullname,
+            firstName,
+            lastName,
+            email,
+            parentid,
+            requestBody: req.body
         });
-        if (!Email || !First_Name || !Last_Name) {
+        if (!email || (!fullname && !firstName)) {
             return res.status(400).json({
                 error: 'Missing required fields',
-                required: ['Email', 'First_Name', 'Last_Name']
+                required: ['email', 'fullname or First_Name/Last_Name'],
+                received: req.body
             });
         }
-        if (!Account_Name || !Account_Name.id) {
-            console.log('No parent account linked - skipping sub-account creation');
+        if (!parentid) {
+            console.log('No parent partner ID - skipping sub-account creation');
             return res.status(200).json({
                 success: false,
-                message: 'No parent account linked - sub-account not created',
-                reason: 'Contact must be linked to a Partner account in Zoho CRM'
+                message: 'No parent partner linked - sub-account not created',
+                reason: 'Contact must be linked to a Partner in Zoho CRM (parentid, Vendor.id, or Account_Name.id)',
+                received: req.body
             });
         }
         const { data: partner, error: partnerError } = await database_1.supabaseAdmin
             .from('partners')
             .select('id, name, approved')
-            .eq('zoho_partner_id', Account_Name.id)
+            .eq('zoho_partner_id', parentid)
             .single();
         if (partnerError || !partner) {
-            console.log('Parent partner not found in portal:', Account_Name.id);
+            console.log('Parent partner not found in portal:', parentid);
             return res.status(200).json({
                 success: false,
                 message: 'Parent partner not found in portal',
                 reason: 'Partner must be approved and exist in portal before creating sub-accounts',
-                zoho_partner_id: Account_Name.id,
-                partner_name: Account_Name.name
+                zoho_partner_id: parentid
             });
         }
         if (!partner.approved) {
@@ -170,7 +187,7 @@ router.post('/zoho/contact', async (req, res) => {
         const { data: existingUser } = await database_1.supabaseAdmin
             .from('users')
             .select('id, email')
-            .eq('email', Email.toLowerCase())
+            .eq('email', email.toLowerCase())
             .single();
         if (existingUser) {
             console.log('Sub-account already exists:', existingUser.id);
@@ -182,15 +199,15 @@ router.post('/zoho/contact', async (req, res) => {
         }
         const tempPassword = crypto_1.default.randomBytes(16).toString('hex');
         const { data: authUser, error: authError } = await database_1.supabaseAdmin.auth.admin.createUser({
-            email: Email.toLowerCase(),
+            email: email.toLowerCase(),
             password: tempPassword,
             email_confirm: true,
             user_metadata: {
-                first_name: First_Name,
-                last_name: Last_Name,
+                first_name: firstName,
+                last_name: lastName,
                 partner_id: partner.id,
                 role: 'sub_account',
-                zoho_contact_id: id
+                zoho_contact_id: contactId
             }
         });
         if (authError || !authUser.user) {
@@ -204,11 +221,11 @@ router.post('/zoho/contact', async (req, res) => {
             .from('users')
             .insert({
             id: authUser.user.id,
-            email: Email.toLowerCase(),
+            email: email.toLowerCase(),
             partner_id: partner.id,
             role: 'sub_account',
-            first_name: First_Name,
-            last_name: Last_Name,
+            first_name: firstName,
+            last_name: lastName,
             is_active: true
         });
         if (userError) {
@@ -223,13 +240,13 @@ router.post('/zoho/contact', async (req, res) => {
             partner_id: partner.id,
             user_id: authUser.user.id,
             activity_type: 'sub_account_created',
-            description: `Sub-account created for ${First_Name} ${Last_Name} via Zoho webhook`,
+            description: `Sub-account created for ${firstName} ${lastName} via Zoho webhook`,
             metadata: {
-                zoho_contact_id: id,
-                zoho_account_id: Account_Name.id
+                zoho_contact_id: contactId,
+                zoho_partner_id: parentid
             }
         });
-        const { error: resetError } = await database_1.supabase.auth.resetPasswordForEmail(Email.toLowerCase(), {
+        const { error: resetError } = await database_1.supabase.auth.resetPasswordForEmail(email.toLowerCase(), {
             redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/reset-password`
         });
         if (resetError) {
@@ -242,8 +259,8 @@ router.post('/zoho/contact', async (req, res) => {
             data: {
                 user_id: authUser.user.id,
                 partner_id: partner.id,
-                email: Email.toLowerCase(),
-                zoho_contact_id: id
+                email: email.toLowerCase(),
+                zoho_contact_id: contactId
             }
         });
     }

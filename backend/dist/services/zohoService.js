@@ -119,6 +119,21 @@ class ZohoService {
             throw error;
         }
     }
+    async getContactsByVendor(vendorId) {
+        try {
+            const headers = await this.getAuthHeaders();
+            const criteria = `(Vendor.id:equals:${vendorId})`;
+            const response = await axios_1.default.get(`${this.baseUrl}/Contacts/search`, {
+                headers,
+                params: { criteria },
+            });
+            return response.data;
+        }
+        catch (error) {
+            console.error('Error getting contacts from Zoho:', error);
+            throw error;
+        }
+    }
     async createVendor(vendorName, email) {
         try {
             const headers = await this.getAuthHeaders();

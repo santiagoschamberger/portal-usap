@@ -32,6 +32,7 @@ declare class ZohoService {
     getLeadsByCriteria(criteria: string): Promise<any>;
     getPartnerLeads(partnerId: string): Promise<any>;
     getDealsByVendor(vendorId: string): Promise<any>;
+    getContactsByVendor(vendorId: string): Promise<any>;
     createVendor(vendorName: string, email: string): Promise<string>;
     validateConfig(): void;
 }

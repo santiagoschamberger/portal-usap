@@ -178,6 +178,25 @@ class ZohoService {
   }
 
   /**
+   * Get contacts by vendor ID
+   */
+  async getContactsByVendor(vendorId: string): Promise<any> {
+    try {
+      const headers = await this.getAuthHeaders();
+      const criteria = `(Vendor.id:equals:${vendorId})`;
+      
+      const response = await axios.get(`${this.baseUrl}/Contacts/search`, {
+        headers,
+        params: { criteria },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error getting contacts from Zoho:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Create a vendor/partner in Zoho CRM
    */
   async createVendor(vendorName: string, email: string): Promise<string> {
