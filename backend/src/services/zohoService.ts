@@ -183,15 +183,23 @@ class ZohoService {
   async getContactsByVendor(vendorId: string): Promise<any> {
     try {
       const headers = await this.getAuthHeaders();
-      const criteria = `(Vendor.id:equals:${vendorId})`;
+      // Try searching by Account_Name first (standard field), then Vendor (custom field)
+      const criteria = `((Account_Name.id:equals:${vendorId})or(Vendor.id:equals:${vendorId}))`;
+      
+      console.log('Searching Zoho contacts with criteria:', criteria);
       
       const response = await axios.get(`${this.baseUrl}/Contacts/search`, {
         headers,
         params: { criteria },
       });
+      
+      console.log('Zoho contacts search response:', JSON.stringify(response.data, null, 2));
       return response.data;
     } catch (error) {
       console.error('Error getting contacts from Zoho:', error);
+      if (axios.isAxiosError(error) && error.response) {
+        console.error('Zoho API error response:', error.response.data);
+      }
       throw error;
     }
   }
