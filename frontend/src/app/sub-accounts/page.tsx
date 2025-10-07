@@ -37,6 +37,7 @@ interface CreateSubAccountForm {
 export default function SubAccountsPage() {
   const [subAccounts, setSubAccounts] = useState<SubAccount[]>([])
   const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [creating, setCreating] = useState(false)
 
@@ -61,6 +62,22 @@ export default function SubAccountsPage() {
       toast.error('Failed to load sub-accounts')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleSyncFromZoho = async () => {
+    try {
+      setSyncing(true)
+      const result = await partnerService.syncContactsFromZoho()
+      toast.success(
+        `Synced ${result.synced} contacts: ${result.created} created, ${result.updated} updated`
+      )
+      fetchSubAccounts()
+    } catch (error: any) {
+      console.error('Error syncing from Zoho:', error)
+      toast.error(error.message || 'Failed to sync contacts from Zoho')
+    } finally {
+      setSyncing(false)
     }
   }
 
@@ -110,12 +127,31 @@ export default function SubAccountsPage() {
             <div>
               <h1 className="text-3xl font-bold">Sub-Accounts</h1>
               <p className="text-muted-foreground mt-2">
-                Manage your team members and sub-accounts
+                Manage your team members and sub-accounts from Zoho CRM
               </p>
             </div>
-            <Button onClick={() => setCreateDialogOpen(true)}>
-              Create Sub-Account
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={handleSyncFromZoho}
+                disabled={syncing}
+              >
+                {syncing ? (
+                  <>
+                    <span className="animate-spin mr-2">⟳</span>
+                    Syncing...
+                  </>
+                ) : (
+                  <>
+                    <span className="mr-2">🔄</span>
+                    Sync from Zoho
+                  </>
+                )}
+              </Button>
+              <Button onClick={() => setCreateDialogOpen(true)}>
+                Create Sub-Account
+              </Button>
+            </div>
           </div>
 
           {/* Sub-Accounts Table */}
@@ -147,8 +183,11 @@ export default function SubAccountsPage() {
                       <TableRow>
                         <TableHead>Name</TableHead>
                         <TableHead>Email</TableHead>
+                        <TableHead className="text-center">Total Leads</TableHead>
+                        <TableHead className="text-center">New</TableHead>
+                        <TableHead className="text-center">Qualified</TableHead>
+                        <TableHead className="text-center">Won</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Created</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -159,12 +198,29 @@ export default function SubAccountsPage() {
                             {subAccount.first_name} {subAccount.last_name}
                           </TableCell>
                           <TableCell>{subAccount.email}</TableCell>
+                          <TableCell className="text-center font-semibold">
+                            {subAccount.lead_stats?.total_leads || 0}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline">
+                              {subAccount.lead_stats?.new_leads || 0}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline">
+                              {subAccount.lead_stats?.qualified || 0}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="default" className="bg-green-600">
+                              {subAccount.lead_stats?.closed_won || 0}
+                            </Badge>
+                          </TableCell>
                           <TableCell>
                             <Badge variant={subAccount.is_active ? 'default' : 'secondary'}>
                               {subAccount.is_active ? 'Active' : 'Inactive'}
                             </Badge>
                           </TableCell>
-                          <TableCell>{formatDate(subAccount.created_at)}</TableCell>
                           <TableCell className="text-right">
                             <Button
                               variant="outline"

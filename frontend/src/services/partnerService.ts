@@ -10,11 +10,14 @@ export interface SubAccount {
   is_active: boolean
   created_at: string
   updated_at: string
-  stats?: {
+  lead_stats?: {
     total_leads: number
     new_leads: number
-    active_leads: number
-    converted_leads: number
+    contacted: number
+    qualified: number
+    proposal: number
+    closed_won: number
+    closed_lost: number
   }
 }
 
@@ -131,6 +134,25 @@ export const partnerService = {
       await api.delete(`/api/partners/sub-accounts/${id}`)
     } catch (error) {
       console.error('Error deactivating sub-account:', error)
+      throw error
+    }
+  },
+
+  /**
+   * Sync contacts from Zoho CRM
+   */
+  async syncContactsFromZoho(): Promise<{
+    success: boolean
+    message: string
+    synced: number
+    created: number
+    updated: number
+  }> {
+    try {
+      const response = await api.post('/api/partners/sync-contacts', {})
+      return response.data!
+    } catch (error) {
+      console.error('Error syncing contacts from Zoho:', error)
       throw error
     }
   },
