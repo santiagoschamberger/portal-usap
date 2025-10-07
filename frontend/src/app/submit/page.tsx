@@ -1,37 +1,25 @@
 'use client'
 
-import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { ProtectedRoute } from '@/components/protected-route'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function SubmitPage() {
+  const router = useRouter()
+
+  useEffect(() => {
+    // Redirect to the new lead form since "Submit a Referral" is the same as "Submit Lead"
+    router.push('/leads/new')
+  }, [router])
+
   return (
     <ProtectedRoute allowedRoles={['admin', 'user']}>
-      <DashboardLayout>
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold">Submit Lead</h1>
-            <p className="text-muted-foreground mt-2">
-              Submit a new lead to the system
-            </p>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Coming Soon</CardTitle>
-              <CardDescription>
-                This feature is under development
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">
-                The lead submission form will be available soon. For now, please use the 
-                &quot;Create New Lead&quot; option from the dashboard.
-              </p>
-            </CardContent>
-          </Card>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#9a132d] mx-auto mb-4"></div>
+          <p className="text-gray-600">Redirecting to lead submission form...</p>
         </div>
-      </DashboardLayout>
+      </div>
     </ProtectedRoute>
   )
 }

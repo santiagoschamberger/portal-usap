@@ -166,7 +166,7 @@ export default function DashboardPage() {
               <CardContent className="space-y-4">
                 <Button 
                   onClick={handleCreateLead}
-                  className="w-full"
+                  className="w-full bg-[#9a132d] hover:bg-[#7d0f24]"
                 >
                   Create New Lead
                 </Button>
@@ -176,6 +176,13 @@ export default function DashboardPage() {
                   className="w-full"
                 >
                   View All Leads
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => window.open('https://bookings.usapayments.com/#/usapaymentsstrategicpartnership', '_blank')}
+                  className="w-full border-[#9a132d] text-[#9a132d] hover:bg-[#9a132d] hover:text-white"
+                >
+                  Contact Us
                 </Button>
               </CardContent>
             </Card>
