@@ -28,6 +28,8 @@ import { partnerService, SubAccount } from '@/services/partnerService'
 import { toast } from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
 import { activityTracker } from '@/lib/activity-tracker'
+import { useAuthStore } from '@/lib/auth-store'
+import { useRouter } from 'next/navigation'
 
 interface CreateSubAccountForm {
   email: string
@@ -36,9 +38,12 @@ interface CreateSubAccountForm {
 }
 
 export default function SubAccountsPage() {
+  const router = useRouter()
+  const { user, startImpersonation } = useAuthStore()
   const [subAccounts, setSubAccounts] = useState<SubAccount[]>([])
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
+  const [impersonating, setImpersonating] = useState<string | null>(null)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [creating, setCreating] = useState(false)
 
@@ -122,6 +127,38 @@ export default function SubAccountsPage() {
     } catch (error) {
       console.error('Error updating sub-account:', error)
       toast.error('Failed to update sub-account status')
+    }
+  }
+
+  const handleLoginAs = async (subAccount: SubAccount) => {
+    if (!user) return
+
+    try {
+      setImpersonating(subAccount.id)
+      const response = await partnerService.impersonateSubAccount(subAccount.id)
+      
+      // Create impersonated user object
+      const impersonatedUser = {
+        ...response.data.user,
+        user_metadata: {
+          role: 'sub_account',
+          first_name: subAccount.first_name,
+          last_name: subAccount.last_name
+        }
+      }
+
+      // Start impersonation in auth store
+      startImpersonation(impersonatedUser, user)
+      
+      toast.success(`Now viewing as ${subAccount.first_name} ${subAccount.last_name}`)
+      
+      // Redirect to dashboard
+      router.push('/dashboard')
+    } catch (error: any) {
+      console.error('Error impersonating sub-account:', error)
+      toast.error(error.message || 'Failed to login as sub-account')
+    } finally {
+      setImpersonating(null)
     }
   }
 
@@ -237,13 +274,24 @@ export default function SubAccountsPage() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleToggleStatus(subAccount)}
-                            >
-                              {subAccount.is_active ? 'Deactivate' : 'Activate'}
-                            </Button>
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={() => handleLoginAs(subAccount)}
+                                disabled={!subAccount.is_active || impersonating === subAccount.id}
+                                className="bg-[#9a132d] hover:bg-[#7d0f24]"
+                              >
+                                {impersonating === subAccount.id ? 'Loading...' : 'Login As'}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleToggleStatus(subAccount)}
+                              >
+                                {subAccount.is_active ? 'Deactivate' : 'Activate'}
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}

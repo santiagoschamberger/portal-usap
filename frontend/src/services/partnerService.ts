@@ -139,6 +139,33 @@ export const partnerService = {
   },
 
   /**
+   * Impersonate a sub-account (admin only)
+   */
+  async impersonateSubAccount(subAccountId: string): Promise<{
+    success: boolean
+    message: string
+    data: {
+      user: any
+      token: string
+    }
+  }> {
+    try {
+      const response = await api.post<{
+        success: boolean
+        message: string
+        data: {
+          user: any
+          token: string
+        }
+      }>(`/api/partners/impersonate/${subAccountId}`, {})
+      return response.data!
+    } catch (error) {
+      console.error('Error impersonating sub-account:', error)
+      throw error
+    }
+  },
+
+  /**
    * Sync contacts from Zoho CRM
    */
   async syncContactsFromZoho(): Promise<{

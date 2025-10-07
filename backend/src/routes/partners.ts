@@ -655,5 +655,70 @@ router.delete('/sub-accounts/:id', authenticateToken, requireAdmin, async (req: 
   }
 });
 
+/**
+ * POST /api/partners/impersonate/:subAccountId
+ * Impersonate a sub-account (admin only)
+ */
+router.post('/impersonate/:subAccountId', authenticateToken, requireAdmin, async (req: AuthenticatedRequest, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { subAccountId } = req.params;
+
+    // Verify the sub-account exists and belongs to this partner
+    const { data: subAccount, error: subAccountError } = await supabaseAdmin
+      .from('users')
+      .select('*')
+      .eq('id', subAccountId)
+      .eq('partner_id', req.user.partner_id)
+      .eq('role', 'sub_account')
+      .single();
+
+    if (subAccountError || !subAccount) {
+      return res.status(404).json({
+        error: 'Sub-account not found',
+        message: 'Unable to find sub-account or you do not have permission'
+      });
+    }
+
+    if (!subAccount.is_active) {
+      return res.status(403).json({
+        error: 'Sub-account inactive',
+        message: 'Cannot impersonate an inactive sub-account'
+      });
+    }
+
+    // Create impersonation token
+    const impersonationData = {
+      id: subAccount.id,
+      email: subAccount.email,
+      partner_id: subAccount.partner_id,
+      role: subAccount.role,
+      first_name: subAccount.first_name,
+      last_name: subAccount.last_name,
+      is_impersonating: true,
+      original_user_id: req.user.id,
+      original_user_email: req.user.email
+    };
+
+    return res.json({
+      success: true,
+      message: 'Impersonation started',
+      data: {
+        user: impersonationData,
+        token: req.headers.authorization?.split(' ')[1] // Return same token with impersonation flag
+      }
+    });
+  } catch (error) {
+    console.error('Error impersonating sub-account:', error);
+    return res.status(500).json({
+      error: 'Failed to impersonate sub-account',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 export default router;
 
