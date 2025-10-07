@@ -43,22 +43,20 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between">
-        {/* Logo */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2">
-            <Image 
-              src="/usa-payments-logo.png" 
-              alt="USA Payments Logo" 
-              width={150} 
-              height={90}
-              className="h-auto w-auto max-h-10"
-            />
-          </div>
+      <div className="flex h-16 items-center">
+        {/* Logo - Fixed width matching sidebar */}
+        <div className="w-64 flex items-center px-6 border-r">
+          <Image 
+            src="/usa-payments-logo.png" 
+            alt="USA Payments Logo" 
+            width={150} 
+            height={90}
+            className="h-auto w-auto max-h-10"
+          />
         </div>
 
         {/* Right side - Notifications and User Menu */}
-        <div className="flex items-center gap-4">
+        <div className="flex-1 flex items-center justify-end gap-4 px-6">
           {/* Notifications */}
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="h-5 w-5" />
