@@ -121,16 +121,10 @@ router.post('/zoho/lead-status', async (req, res) => {
 });
 router.post('/zoho/contact', async (req, res) => {
     try {
-        console.log('=== ZOHO CONTACT WEBHOOK DEBUG ===');
-        console.log('Headers:', JSON.stringify(req.headers, null, 2));
-        console.log('Body:', JSON.stringify(req.body, null, 2));
-        console.log('Body keys:', Object.keys(req.body));
-        console.log('Body type:', typeof req.body);
-        console.log('===================================');
-        const fullname = req.body.fullname || `${req.body.First_Name || ''} ${req.body.Last_Name || ''}`.trim();
-        const email = req.body.email || req.body.Email;
-        const parentid = req.body.parentid || req.body.Vendor?.id || req.body.Account_Name?.id;
-        const contactId = req.body.partnerid || req.body.id;
+        const fullname = req.headers.fullname || req.body.fullname || `${req.body.First_Name || ''} ${req.body.Last_Name || ''}`.trim();
+        const email = req.headers.email || req.body.email || req.body.Email;
+        const parentid = req.headers.parentid || req.body.parentid || req.body.Vendor?.id || req.body.Account_Name?.id;
+        const contactId = req.headers.partnerid || req.body.partnerid || req.body.id;
         let firstName, lastName;
         if (req.body.First_Name && req.body.Last_Name) {
             firstName = req.body.First_Name;
@@ -142,14 +136,14 @@ router.post('/zoho/contact', async (req, res) => {
             lastName = nameParts.slice(1).join(' ') || nameParts[0] || '';
         }
         console.log('Contact webhook received:', {
-            format: req.body.fullname ? 'module-parameters' : 'json-body',
+            format: req.headers.fullname ? 'headers (module-parameters)' : 'body (json)',
             contactId,
             fullname,
             firstName,
             lastName,
             email,
             parentid,
-            requestBody: req.body
+            source: req.headers.fullname ? 'headers' : 'body'
         });
         if (!email || (!fullname && !firstName)) {
             return res.status(400).json({

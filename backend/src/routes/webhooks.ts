@@ -172,19 +172,12 @@ router.post('/zoho/lead-status', async (req, res) => {
  */
 router.post('/zoho/contact', async (req, res) => {
   try {
-    // DEBUG: Log the full raw request
-    console.log('=== ZOHO CONTACT WEBHOOK DEBUG ===');
-    console.log('Headers:', JSON.stringify(req.headers, null, 2));
-    console.log('Body:', JSON.stringify(req.body, null, 2));
-    console.log('Body keys:', Object.keys(req.body));
-    console.log('Body type:', typeof req.body);
-    console.log('===================================');
-
-    // Support both module parameters AND JSON body formats
-    const fullname = req.body.fullname || `${req.body.First_Name || ''} ${req.body.Last_Name || ''}`.trim();
-    const email = req.body.email || req.body.Email;
-    const parentid = req.body.parentid || req.body.Vendor?.id || req.body.Account_Name?.id;
-    const contactId = req.body.partnerid || req.body.id;
+    // Zoho sends module parameters as HEADERS (not body) when using "General" auth
+    // Support both headers (module parameters) and body (JSON format)
+    const fullname = req.headers.fullname as string || req.body.fullname || `${req.body.First_Name || ''} ${req.body.Last_Name || ''}`.trim();
+    const email = req.headers.email as string || req.body.email || req.body.Email;
+    const parentid = req.headers.parentid as string || req.body.parentid || req.body.Vendor?.id || req.body.Account_Name?.id;
+    const contactId = req.headers.partnerid as string || req.body.partnerid || req.body.id;
 
     // Split fullname into first and last name
     // If using JSON format with separate First_Name/Last_Name, use those directly
@@ -199,14 +192,14 @@ router.post('/zoho/contact', async (req, res) => {
     }
 
     console.log('Contact webhook received:', { 
-      format: req.body.fullname ? 'module-parameters' : 'json-body',
+      format: req.headers.fullname ? 'headers (module-parameters)' : 'body (json)',
       contactId,
       fullname,
       firstName,
       lastName,
       email,
       parentid,
-      requestBody: req.body
+      source: req.headers.fullname ? 'headers' : 'body'
     });
 
     // Validate required fields
