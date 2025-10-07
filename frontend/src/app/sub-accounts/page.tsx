@@ -27,6 +27,7 @@ import { Badge } from '@/components/ui/badge'
 import { partnerService, SubAccount } from '@/services/partnerService'
 import { toast } from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
+import { activityTracker } from '@/lib/activity-tracker'
 
 interface CreateSubAccountForm {
   email: string
@@ -78,6 +79,10 @@ export default function SubAccountsPage() {
       toast.success(
         `Synced ${synced} contacts: ${created} created, ${updated} updated`
       )
+      
+      // Track activity
+      activityTracker.addActivity('subaccount_synced', `Synced ${synced} contacts from Zoho CRM`)
+      
       fetchSubAccounts()
     } catch (error: any) {
       console.error('Error syncing from Zoho:', error)
@@ -92,6 +97,10 @@ export default function SubAccountsPage() {
       setCreating(true)
       await partnerService.createSubAccount(data)
       toast.success('Sub-account created successfully! Password reset email sent.')
+      
+      // Track activity
+      activityTracker.addActivity('subaccount_created', `Created sub-account for ${data.first_name} ${data.last_name}`)
+      
       setCreateDialogOpen(false)
       reset()
       fetchSubAccounts()

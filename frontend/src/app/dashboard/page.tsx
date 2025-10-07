@@ -10,6 +10,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { Lead } from '@/types'
 import { zohoService } from '@/services/zohoService'
 import { toast } from 'react-hot-toast'
+import { activityTracker, Activity } from '@/lib/activity-tracker'
 
 interface DashboardStats {
   totalLeads: number
@@ -29,10 +30,17 @@ export default function DashboardPage() {
   })
   const [recentLeads, setRecentLeads] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [recentActivities, setRecentActivities] = useState<Activity[]>([])
 
   useEffect(() => {
     fetchDashboardData()
+    loadRecentActivities()
   }, [])
+
+  const loadRecentActivities = () => {
+    const activities = activityTracker.getRecentActivities(3)
+    setRecentActivities(activities)
+  }
 
   const fetchDashboardData = async () => {
     try {
@@ -177,13 +185,6 @@ export default function DashboardPage() {
                 >
                   View All Leads
                 </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => window.open('https://bookings.usapayments.com/#/usapaymentsstrategicpartnership', '_blank')}
-                  className="w-full border-[#9a132d] text-[#9a132d] hover:bg-[#9a132d] hover:text-white"
-                >
-                  Contact Us
-                </Button>
               </CardContent>
             </Card>
 
@@ -191,31 +192,23 @@ export default function DashboardPage() {
               <CardHeader>
                 <CardTitle>Recent Activity</CardTitle>
                 <CardDescription>
-                  Latest leads and updates
+                  Your latest actions
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {loading ? (
-                  <div className="text-center py-4">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-                  </div>
-                ) : recentLeads.length > 0 ? (
+                {recentActivities.length > 0 ? (
                   <div className="space-y-3">
-                    {recentLeads.slice(0, 5).map((lead) => (
-                      <div key={lead.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <p className="font-medium">{lead.first_name} {lead.last_name}</p>
-                          <p className="text-sm text-gray-600">{lead.company || 'No company'}</p>
+                    {recentActivities.map((activity) => (
+                      <div key={activity.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                        <div className={`w-2 h-2 mt-2 rounded-full flex-shrink-0 ${activityTracker.getActivityColor(activity.type)}`} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900">
+                            {activity.description}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {activityTracker.getTimeAgo(activity.timestamp)}
+                          </p>
                         </div>
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          lead.status === 'new' ? 'bg-blue-100 text-blue-800' :
-                          lead.status === 'contacted' ? 'bg-yellow-100 text-yellow-800' :
-                          lead.status === 'qualified' ? 'bg-purple-100 text-purple-800' :
-                          lead.status === 'converted' ? 'bg-green-100 text-green-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {lead.status}
-                        </span>
                       </div>
                     ))}
                   </div>

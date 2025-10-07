@@ -13,6 +13,7 @@ import {
   Settings,
   UserPlus,
   Shield,
+  MessageCircle,
 } from 'lucide-react'
 
 interface NavItem {
@@ -20,6 +21,7 @@ interface NavItem {
   href: string
   icon: React.ComponentType<{ className?: string }>
   roles?: string[] // If specified, only show for these roles
+  external?: boolean // If true, opens in new tab
 }
 
 const navigationItems: NavItem[] = [
@@ -57,6 +59,12 @@ const navigationItems: NavItem[] = [
     title: 'Settings',
     href: '/settings',
     icon: Settings,
+  },
+  {
+    title: 'Contact Us',
+    href: 'https://bookings.usapayments.com/#/usapaymentsstrategicpartnership',
+    icon: MessageCircle,
+    external: true,
   },
 ]
 
@@ -103,6 +111,21 @@ export function Sidebar() {
               const isActive = pathname === item.href
               
               if (!shouldShowItem(item)) return null
+
+              if (item.external) {
+                return (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.title}
+                  </a>
+                )
+              }
 
               return (
                 <Link

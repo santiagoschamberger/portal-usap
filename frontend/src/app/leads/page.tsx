@@ -43,6 +43,22 @@ export default function LeadsPage() {
       setLoading(true)
       const response = await zohoService.leads.getAll()
       
+      // Helper function to normalize Zoho status to our internal format
+      const normalizeStatus = (zohoStatus: string | undefined): string => {
+        if (!zohoStatus) return 'new'
+        const status = zohoStatus.toLowerCase().trim()
+        
+        // Map Zoho statuses to our standardized statuses
+        if (status.includes('new') || status.includes('prospect')) return 'new'
+        if (status.includes('contact') || status.includes('reached out')) return 'contacted'
+        if (status.includes('qualif')) return 'qualified'
+        if (status.includes('signed') || status.includes('converted') || status.includes('won')) return 'converted'
+        if (status.includes('lost') || status.includes('declined') || status.includes('dead')) return 'lost'
+        if (status.includes('proposal')) return 'qualified' // Treat proposal as qualified
+        
+        return status
+      }
+
       // Combine local leads and Zoho leads
       const allLeads = [
         ...response.local_leads,
@@ -53,7 +69,8 @@ export default function LeadsPage() {
           email: zl.Email,
           phone: zl.Phone,
           company: zl.Company,
-          status: zl.Lead_Status?.toLowerCase() || 'new',
+          status: normalizeStatus(zl.Lead_Status),
+          zoho_status: zl.Lead_Status, // Keep original for reference
           created_at: zl.Created_Time,
           source: zl.Lead_Source
         }))

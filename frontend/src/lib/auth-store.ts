@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { User } from '@/types'
 import { AuthService } from '@/services/authService'
+import { activityTracker } from './activity-tracker'
 
 interface AuthStore {
   user: User | null
@@ -23,6 +24,10 @@ export const useAuthStore = create<AuthStore>()(
         try {
           const data = await AuthService.login({ email, password })
           set({ user: data.user, isAuthenticated: true })
+          
+          // Track login activity
+          activityTracker.addActivity('login', `Signed in to your account`)
+          
           return { error: null }
         } catch (error) {
           return { error }

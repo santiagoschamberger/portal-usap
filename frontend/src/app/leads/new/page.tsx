@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import { ProtectedRoute } from '@/components/protected-route'
 import { zohoService } from '@/services/zohoService'
 import { toast } from 'react-hot-toast'
+import { activityTracker } from '@/lib/activity-tracker'
 
 // Validation schema
 const leadSchema = z.object({
@@ -68,6 +69,9 @@ Website: ${data.website || 'N/A'}
       })
       
       toast.success('Lead created successfully!')
+      
+      // Track activity
+      activityTracker.addActivity('lead_created', `Created lead for ${data.firstName} ${data.lastName}`)
       
       // Redirect to leads list on success
       router.push('/leads')
