@@ -137,9 +137,11 @@ class ZohoService {
         try {
             const headers = await this.getAuthHeaders();
             const searchVariations = [
+                `(Partner:equals:${vendorId})`,
+                `(Partner.id:equals:${vendorId})`,
                 `(Vendor:equals:${vendorId})`,
-                `(Account_Name:equals:${vendorId})`,
                 `(Vendor.id:equals:${vendorId})`,
+                `(Account_Name:equals:${vendorId})`,
                 `(Account_Name.id:equals:${vendorId})`
             ];
             let lastError = null;

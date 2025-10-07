@@ -202,11 +202,13 @@ class ZohoService {
       const headers = await this.getAuthHeaders();
       
       // Try different search criteria variations
-      // The field name might be "Vendor", "Account_Name", or a custom field
+      // Based on Zoho setup: Partner is a Lookup field
       const searchVariations = [
+        `(Partner:equals:${vendorId})`,
+        `(Partner.id:equals:${vendorId})`,
         `(Vendor:equals:${vendorId})`,
-        `(Account_Name:equals:${vendorId})`,
         `(Vendor.id:equals:${vendorId})`,
+        `(Account_Name:equals:${vendorId})`,
         `(Account_Name.id:equals:${vendorId})`
       ];
       
