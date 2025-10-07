@@ -147,7 +147,12 @@ export const leadService = {
         new: allLeads.filter(l => l.status === 'new').length,
         contacted: allLeads.filter(l => l.status === 'contacted').length,
         qualified: allLeads.filter(l => l.status === 'qualified').length,
-        converted: allLeads.filter(l => l.status === 'converted').length,
+        // Count converted, signed application, and closed_won as converted
+        converted: allLeads.filter(l => 
+          l.status === 'converted' || 
+          l.status === 'signed application' || 
+          l.status === 'closed_won'
+        ).length,
       }
 
       return stats
