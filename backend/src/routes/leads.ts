@@ -108,77 +108,137 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
       },
     };
 
-    // Create lead in Zoho CRM
-    const zohoResponse = await zohoService.createLead(leadData);
-    
-    if (!zohoResponse.data || zohoResponse.data[0].code !== 'SUCCESS') {
-      return res.status(400).json({
-        error: 'Failed to create lead in Zoho CRM',
-        details: zohoResponse.data?.[0]?.message || 'Unknown error'
-      });
-    }
-
-    const zohoLeadId = zohoResponse.data[0].details.id;
-
-    // Add note if description provided
-    if (description) {
-      const noteData = {
-        Note_Title: 'Lead Description',
-        Note_Content: description,
-        Parent_Id: zohoLeadId,
-        se_module: 'Leads',
-      };
-
-      try {
-        await zohoService.addNoteToLead(noteData);
-      } catch (noteError) {
-        console.error('Failed to add note to lead:', noteError);
-        // Continue even if note fails
-      }
-    }
-
-    // Save lead to local database using admin client to bypass RLS
+    // Save lead to local database FIRST (following proper architecture pattern)
     const { data: localLead, error: localError } = await supabaseAdmin
       .from('leads')
       .insert({
         partner_id: req.user.partner_id,
         created_by: req.user.id,
-        zoho_lead_id: zohoLeadId,
         first_name,
         last_name,
         email,
-        phone,
-        company,
+        phone: phone || null,
+        company: company || null,
         status: 'new',
         lead_source: 'portal',
-        notes: description,
-        zoho_sync_status: 'synced'
+        notes: description || null,
+        zoho_sync_status: 'pending' // Initially pending until Zoho sync succeeds
       })
       .select()
       .single();
 
     if (localError) {
-      console.error('Error saving lead locally:', localError);
-      // Continue even if local save fails, as Zoho is primary
+      console.error('❌ CRITICAL: Failed to save lead to local database:', {
+        error: localError,
+        code: localError.code,
+        message: localError.message,
+        details: localError.details,
+        hint: localError.hint,
+        leadData: { first_name, last_name, email, partner_id: req.user.partner_id }
+      });
+      
+      return res.status(500).json({
+        error: 'Failed to save lead to database',
+        message: localError.message,
+        details: process.env.NODE_ENV === 'development' ? localError : undefined
+      });
+    }
+
+    console.log('✅ Lead saved to local database:', localLead.id);
+
+    // Now sync to Zoho CRM
+    let zohoLeadId: string | null = null;
+    let zohoSyncStatus: 'synced' | 'error' = 'synced';
+    
+    try {
+      const zohoResponse = await zohoService.createLead(leadData);
+      
+      if (!zohoResponse.data || zohoResponse.data[0].code !== 'SUCCESS') {
+        throw new Error(zohoResponse.data?.[0]?.message || 'Unknown Zoho error');
+      }
+
+      zohoLeadId = zohoResponse.data[0].details.id;
+      console.log('✅ Lead synced to Zoho CRM:', zohoLeadId);
+
+      // Add note if description provided
+      if (description && zohoLeadId) {
+        const noteData = {
+          Note_Title: 'Lead Description',
+          Note_Content: description,
+          Parent_Id: zohoLeadId,
+          se_module: 'Leads',
+        };
+
+        try {
+          await zohoService.addNoteToLead(noteData);
+          console.log('✅ Note added to Zoho lead');
+        } catch (noteError) {
+          console.error('⚠️ Failed to add note to lead:', noteError);
+          // Continue even if note fails
+        }
+      }
+
+      // Update local record with Zoho lead ID
+      const { error: updateError } = await supabaseAdmin
+        .from('leads')
+        .update({
+          zoho_lead_id: zohoLeadId,
+          zoho_sync_status: 'synced',
+          last_sync_at: new Date().toISOString()
+        })
+        .eq('id', localLead.id);
+
+      if (updateError) {
+        console.error('⚠️ Failed to update lead with Zoho ID:', updateError);
+        // Non-critical error, continue
+      }
+
+    } catch (zohoError) {
+      console.error('❌ Failed to sync lead to Zoho CRM:', zohoError);
+      zohoSyncStatus = 'error';
+      
+      // Update local record to mark sync error
+      await supabaseAdmin
+        .from('leads')
+        .update({
+          zoho_sync_status: 'error',
+          notes: `${description || ''}\n\nZoho Sync Error: ${zohoError instanceof Error ? zohoError.message : 'Unknown error'}`
+        })
+        .eq('id', localLead.id);
+      
+      // Don't fail the request - lead is saved locally
+      console.log('⚠️ Lead saved locally but Zoho sync failed. Will retry later.');
     }
 
     // Log activity
     await supabaseAdmin.from('activity_log').insert({
       partner_id: req.user.partner_id,
       user_id: req.user.id,
-      lead_id: localLead?.id,
-      activity_type: 'lead_created',
+      lead_id: localLead.id,
+      entity_type: 'lead',
+      entity_id: localLead.id,
+      action: 'created',
       description: `Lead created: ${first_name} ${last_name} (${email})`,
-      metadata: { zoho_lead_id: zohoLeadId }
+      metadata: { 
+        zoho_lead_id: zohoLeadId,
+        zoho_sync_status: zohoSyncStatus
+      }
     });
 
     return res.status(201).json({
       success: true,
-      message: 'Lead created successfully',
+      message: zohoSyncStatus === 'synced' 
+        ? 'Lead created and synced successfully' 
+        : 'Lead created successfully (Zoho sync pending)',
       data: {
+        lead_id: localLead.id,
         zoho_lead_id: zohoLeadId,
-        local_lead: localLead,
-        zoho_response: zohoResponse.data[0]
+        local_lead: {
+          ...localLead,
+          zoho_lead_id: zohoLeadId,
+          zoho_sync_status: zohoSyncStatus
+        },
+        sync_status: zohoSyncStatus
       }
     });
   } catch (error) {
