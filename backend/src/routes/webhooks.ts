@@ -172,6 +172,14 @@ router.post('/zoho/lead-status', async (req, res) => {
  */
 router.post('/zoho/contact', async (req, res) => {
   try {
+    // DEBUG: Log the full raw request
+    console.log('=== ZOHO CONTACT WEBHOOK DEBUG ===');
+    console.log('Headers:', JSON.stringify(req.headers, null, 2));
+    console.log('Body:', JSON.stringify(req.body, null, 2));
+    console.log('Body keys:', Object.keys(req.body));
+    console.log('Body type:', typeof req.body);
+    console.log('===================================');
+
     // Support both module parameters AND JSON body formats
     const fullname = req.body.fullname || `${req.body.First_Name || ''} ${req.body.Last_Name || ''}`.trim();
     const email = req.body.email || req.body.Email;

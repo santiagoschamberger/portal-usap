@@ -121,6 +121,12 @@ router.post('/zoho/lead-status', async (req, res) => {
 });
 router.post('/zoho/contact', async (req, res) => {
     try {
+        console.log('=== ZOHO CONTACT WEBHOOK DEBUG ===');
+        console.log('Headers:', JSON.stringify(req.headers, null, 2));
+        console.log('Body:', JSON.stringify(req.body, null, 2));
+        console.log('Body keys:', Object.keys(req.body));
+        console.log('Body type:', typeof req.body);
+        console.log('===================================');
         const fullname = req.body.fullname || `${req.body.First_Name || ''} ${req.body.Last_Name || ''}`.trim();
         const email = req.body.email || req.body.Email;
         const parentid = req.body.parentid || req.body.Vendor?.id || req.body.Account_Name?.id;
