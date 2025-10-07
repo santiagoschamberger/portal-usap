@@ -178,6 +178,7 @@ router.post('/sub-accounts', auth_1.authenticateToken, auth_1.requireAdmin, asyn
             last_name,
             partner_id: req.user.partner_id,
             role: 'sub_account',
+            password_hash: 'placeholder',
             is_active: true
         })
             .select()
@@ -426,6 +427,7 @@ router.post('/sync-contacts', auth_1.authenticateToken, auth_1.requireAdmin, asy
                         last_name: contact.Last_Name,
                         partner_id: partner.id,
                         role: 'sub_account',
+                        password_hash: 'placeholder',
                         is_active: true
                     });
                     if (userError) {

@@ -226,6 +226,7 @@ router.post('/zoho/contact', async (req, res) => {
             role: 'sub_account',
             first_name: firstName,
             last_name: lastName,
+            password_hash: 'placeholder',
             is_active: true
         });
         if (userError) {

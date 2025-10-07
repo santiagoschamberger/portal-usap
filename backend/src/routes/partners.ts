@@ -222,6 +222,7 @@ router.post('/sub-accounts', authenticateToken, requireAdmin, async (req: Authen
         last_name,
         partner_id: req.user.partner_id,
         role: 'sub_account',
+        password_hash: 'placeholder', // Placeholder since auth is handled by Supabase Auth
         is_active: true
       })
       .select()
@@ -526,6 +527,7 @@ router.post('/sync-contacts', authenticateToken, requireAdmin, async (req: Authe
               last_name: contact.Last_Name,
               partner_id: partner.id,
               role: 'sub_account',
+              password_hash: 'placeholder', // Placeholder since auth is handled by Supabase Auth
               is_active: true
             });
 
