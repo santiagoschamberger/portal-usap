@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -50,7 +51,16 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">USA Payments</h1>
+          <div className="flex justify-center mb-6">
+            <Image 
+              src="/usa-payments-logo.png" 
+              alt="USA Payments Logo" 
+              width={250} 
+              height={150}
+              priority
+              className="h-auto w-auto max-h-24"
+            />
+          </div>
           <p className="mt-2 text-sm text-gray-600">Partner Portal</p>
         </div>
 
@@ -104,7 +114,7 @@ export default function LoginPage() {
             <CardFooter className="flex flex-col space-y-4">
               <Button 
                 type="submit" 
-                className="w-full" 
+                className="w-full bg-[#9a132d] hover:bg-[#7d0f24]" 
                 disabled={loading}
               >
                 {loading ? 'Signing in...' : 'Sign in'}
@@ -114,7 +124,7 @@ export default function LoginPage() {
                 <div>
                   <Link 
                     href="/auth/forgot-password"
-                    className="text-sm text-blue-600 hover:text-blue-500"
+                    className="text-sm text-[#9a132d] hover:text-[#7d0f24]"
                   >
                     Forgot your password?
                   </Link>
@@ -123,7 +133,7 @@ export default function LoginPage() {
                   <span className="text-sm text-gray-600">Don't have an account? </span>
                   <Link 
                     href="/auth/signup"
-                    className="text-sm text-blue-600 hover:text-blue-500"
+                    className="text-sm text-[#9a132d] hover:text-[#7d0f24]"
                   >
                     Sign up
                   </Link>

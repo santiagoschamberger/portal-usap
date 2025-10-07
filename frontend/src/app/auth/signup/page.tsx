@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -67,6 +68,20 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
+        <div className="text-center">
+          <div className="flex justify-center mb-6">
+            <Image 
+              src="/usa-payments-logo.png" 
+              alt="USA Payments Logo" 
+              width={250} 
+              height={150}
+              priority
+              className="h-auto w-auto max-h-24"
+            />
+          </div>
+          <p className="mt-2 text-sm text-gray-600">Partner Portal</p>
+        </div>
+
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl font-bold text-center">
@@ -138,7 +153,7 @@ export default function SignupPage() {
 
                 <Button
                   type="submit"
-                  className="w-full"
+                  className="w-full bg-[#9a132d] hover:bg-[#7d0f24]"
                   disabled={loading}
                 >
                   {loading ? 'Creating account...' : 'Create account'}
@@ -149,7 +164,7 @@ export default function SignupPage() {
           <CardFooter className="justify-center">
             <div className="text-sm text-gray-600">
               Already have an account?{' '}
-              <Link href="/auth/login" className="text-blue-600 hover:text-blue-500">
+              <Link href="/auth/login" className="text-[#9a132d] hover:text-[#7d0f24]">
                 Sign in
               </Link>
             </div>

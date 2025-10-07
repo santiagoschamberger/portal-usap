@@ -3,6 +3,7 @@
 import { useAuthStore } from '@/lib/auth-store'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,11 +46,14 @@ export function Header() {
       <div className="container flex h-16 items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 font-bold text-xl">
-            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground">
-              UP
-            </div>
-            <span>USA Payments</span>
+          <div className="flex items-center gap-2">
+            <Image 
+              src="/usa-payments-logo.png" 
+              alt="USA Payments Logo" 
+              width={150} 
+              height={90}
+              className="h-auto w-auto max-h-10"
+            />
           </div>
         </div>
 
@@ -66,7 +70,7 @@ export function Header() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                 <Avatar className="h-10 w-10">
-                  <AvatarFallback className="bg-primary text-primary-foreground">
+                  <AvatarFallback className="bg-[#9a132d] text-white">
                     {getUserInitials()}
                   </AvatarFallback>
                 </Avatar>
