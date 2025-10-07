@@ -149,7 +149,13 @@ export const partnerService = {
     updated: number
   }> {
     try {
-      const response = await api.post('/api/partners/sync-contacts', {})
+      const response = await api.post<{
+        success: boolean
+        message: string
+        synced: number
+        created: number
+        updated: number
+      }>('/api/partners/sync-contacts', {})
       return response.data!
     } catch (error) {
       console.error('Error syncing contacts from Zoho:', error)

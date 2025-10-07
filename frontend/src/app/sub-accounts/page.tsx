@@ -69,8 +69,14 @@ export default function SubAccountsPage() {
     try {
       setSyncing(true)
       const result = await partnerService.syncContactsFromZoho()
+      
+      // Safely access properties with fallback values
+      const synced = result?.synced ?? result?.data?.synced ?? 0
+      const created = result?.created ?? result?.data?.created ?? 0
+      const updated = result?.updated ?? result?.data?.updated ?? 0
+      
       toast.success(
-        `Synced ${result.synced} contacts: ${result.created} created, ${result.updated} updated`
+        `Synced ${synced} contacts: ${created} created, ${updated} updated`
       )
       fetchSubAccounts()
     } catch (error: any) {
