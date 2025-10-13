@@ -159,6 +159,28 @@ class ZohoService {
   }
 
   /**
+   * Get all leads by Vendor ID (for syncing historical leads)
+   */
+  async getLeadsByVendor(vendorId: string): Promise<any> {
+    try {
+      const headers = await this.getAuthHeaders();
+      const criteria = `(Vendor.id:equals:${vendorId})`;
+      
+      const response = await axios.get(`${this.baseUrl}/Leads/search`, {
+        headers,
+        params: { 
+          criteria,
+          per_page: 200 // Get up to 200 leads per request
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error getting leads by vendor from Zoho:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get deals by vendor ID
    */
   async getDealsByVendor(vendorId: string): Promise<any> {

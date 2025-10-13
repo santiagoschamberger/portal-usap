@@ -23,6 +23,7 @@ export default function LeadsPage() {
   const [leads, setLeads] = useState<any[]>([])
   const [filteredLeads, setFilteredLeads] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
   const [filters, setFilters] = useState<LeadsFilters>({
     search: '',
     status: '',
@@ -148,6 +149,28 @@ export default function LeadsPage() {
     setCurrentPage(1) // Reset to first page when filters change
   }
 
+  const handleSyncLeads = async () => {
+    try {
+      setSyncing(true)
+      toast.loading('Syncing leads from Zoho CRM...', { id: 'sync-leads' })
+      
+      const result = await zohoService.leads.syncFromZoho()
+      
+      toast.success(
+        `Sync complete! ${result.created} created, ${result.updated} updated, ${result.skipped} skipped`,
+        { id: 'sync-leads', duration: 5000 }
+      )
+      
+      // Refresh the leads list
+      await fetchLeads()
+    } catch (error) {
+      console.error('Error syncing leads:', error)
+      toast.error('Failed to sync leads from Zoho CRM', { id: 'sync-leads' })
+    } finally {
+      setSyncing(false)
+    }
+  }
+
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'new':
@@ -177,9 +200,31 @@ export default function LeadsPage() {
                 Manage and track your leads
               </p>
             </div>
-            <Button onClick={handleCreateLead} className="bg-[#9a132d] hover:bg-[#7d0f24]">
-              Create New Lead
-            </Button>
+            <div className="flex gap-3">
+              <Button 
+                onClick={handleSyncLeads} 
+                variant="outline"
+                disabled={syncing}
+                className="border-[#9a132d] text-[#9a132d] hover:bg-[#9a132d] hover:text-white"
+              >
+                {syncing ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                    Syncing...
+                  </>
+                ) : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Sync from Zoho
+                  </>
+                )}
+              </Button>
+              <Button onClick={handleCreateLead} className="bg-[#9a132d] hover:bg-[#7d0f24]">
+                Create New Lead
+              </Button>
+            </div>
           </div>
           {/* Filters */}
           <Card>

@@ -174,5 +174,42 @@ export const leadService = {
       throw err
     }
   },
+
+  /**
+   * Sync historical leads from Zoho CRM
+   */
+  async syncLeadsFromZoho(): Promise<{
+    total: number
+    created: number
+    updated: number
+    skipped: number
+    details: Array<{
+      zoho_lead_id: string
+      email?: string
+      status: 'created' | 'updated' | 'skipped' | 'error'
+      reason?: string
+      lead_id?: string
+    }>
+  }> {
+    try {
+      const response = await api.post<{
+        total: number
+        created: number
+        updated: number
+        skipped: number
+        details: Array<{
+          zoho_lead_id: string
+          email?: string
+          status: 'created' | 'updated' | 'skipped' | 'error'
+          reason?: string
+          lead_id?: string
+        }>
+      }>('/api/leads/sync')
+      return response.data!
+    } catch (error) {
+      console.error('Error syncing leads from Zoho:', error)
+      throw error
+    }
+  },
 }
 

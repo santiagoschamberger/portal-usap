@@ -15,6 +15,7 @@ export const zohoService = {
       leadService.updateLeadStatus(id, status, notes),
     getStats: () => leadService.getLeadStats(),
     getRecent: () => leadService.getRecentLeads(),
+    syncFromZoho: () => leadService.syncLeadsFromZoho(),
   },
 }
 
