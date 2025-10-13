@@ -639,14 +639,22 @@ router.post('/public', async (req, res) => {
       });
     }
 
-    // Get partner name for Zoho
+    // Get partner name and Zoho partner ID
     const { data: partnerData } = await supabaseAdmin
       .from('partners')
-      .select('name')
+      .select('name, zoho_partner_id')
       .eq('id', partner.partner_id)
       .single();
 
     const partnerName = partnerData?.name || 'Unknown Partner';
+    const zohoPartnerId = partnerData?.zoho_partner_id;
+
+    if (!zohoPartnerId) {
+      return res.status(400).json({
+        error: 'Partner not linked to Zoho',
+        message: 'This partner is not properly configured in Zoho CRM'
+      });
+    }
 
     // Create lead in Zoho CRM
     const zohoLead = await zohoService.createLead({
@@ -661,7 +669,7 @@ router.post('/public', async (req, res) => {
       Lead_Source: source || 'Public Form',
       Vendor: {
         name: partnerName,
-        id: partner.partner_id
+        id: zohoPartnerId
       }
     });
 
@@ -676,10 +684,10 @@ router.post('/public', async (req, res) => {
         email,
         phone,
         company,
-        business_type,
         status: 'new',
-        source: source || 'Public Form',
-        created_by_user_id: partner_id
+        lead_source: source || 'Public Form',
+        created_by: partner_id,
+        notes: notes || null
       })
       .select()
       .single();
