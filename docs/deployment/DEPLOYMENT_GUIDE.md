@@ -4,13 +4,12 @@
 
 ### 📦 **Prerequisites**
 - GitHub account
-- Vercel account (free tier works)
-- Railway/Render account (for backend)
+- Railway account (used for both frontend and backend)
 - Supabase project (already set up ✅)
 
 ---
 
-## 🎨 **Frontend Deployment (Vercel)**
+## 🎨 **Frontend Deployment (Railway)**
 
 ### Step 1: Push to GitHub
 ```bash
@@ -20,49 +19,52 @@ git commit -m "feat: add main layout and navigation"
 git push origin main
 ```
 
-### Step 2: Deploy to Vercel
-1. Go to [vercel.com](https://vercel.com)
-2. Click "Add New Project"
-3. Import your GitHub repository
-4. Configure:
-   - **Framework Preset**: Next.js
-   - **Root Directory**: `frontend`
-   - **Build Command**: `npm run build`
-   - **Output Directory**: `.next`
-
-5. Add Environment Variables:
-   ```
-   NEXT_PUBLIC_API_URL=https://your-backend-url.railway.app
-   NEXT_PUBLIC_SOCKET_URL=https://your-backend-url.railway.app
-   NEXT_PUBLIC_SUPABASE_URL=https://cvzadrvtncnjanoehzhj.supabase.co
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-   ```
-
-6. Click "Deploy"
-
-**🎉 Done! Your frontend will be live at: `https://your-app.vercel.app`**
-
----
-
-## ⚙️ **Backend Deployment (Railway - Recommended)**
-
-### Why Railway?
-- ✅ Simple deployment from GitHub
-- ✅ Automatic HTTPS
-- ✅ Built-in monitoring
-- ✅ $5 credit/month free
-- ✅ Easy environment variables
-
-### Step 1: Deploy to Railway
+### Step 2: Deploy Frontend to Railway
 
 1. Go to [railway.app](https://railway.app)
 2. Click "New Project"
 3. Select "Deploy from GitHub repo"
 4. Choose your repository
-5. Configure:
-   - **Root Directory**: `backend`
+5. Click "Add Service" → "GitHub Repo"
+6. Configure:
+   - **Root Directory**: `frontend`
+   - **Build Command**: `npm install && npm run build`
    - **Start Command**: `npm start`
-   - **Build Command**: `npm run build`
+
+7. Add Environment Variables in Railway dashboard:
+   ```
+   NODE_ENV=production
+   NEXT_PUBLIC_API_URL=https://your-backend-service.railway.app
+   NEXT_PUBLIC_SOCKET_URL=https://your-backend-service.railway.app
+   NEXT_PUBLIC_SUPABASE_URL=https://cvzadrvtncnjanoehzhj.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
+
+8. Generate Domain: Settings → Generate Domain
+
+**🎉 Done! Your frontend will be live at: `https://your-frontend.railway.app`**
+
+---
+
+## ⚙️ **Backend Deployment (Railway)**
+
+### Why Railway for Both?
+- ✅ Simple deployment from GitHub
+- ✅ Automatic HTTPS
+- ✅ Built-in monitoring
+- ✅ Easy environment variables
+- ✅ Unified platform for frontend and backend
+- ✅ Internal networking between services
+
+### Step 1: Deploy Backend to Railway
+
+1. In the same Railway project (or create new)
+2. Click "Add Service" → "GitHub Repo"
+3. Choose your repository
+4. Configure:
+   - **Root Directory**: `backend`
+   - **Build Command**: `npm install && npm run build`
+   - **Start Command**: `npm start`
 
 ### Step 2: Environment Variables
 
@@ -91,36 +93,42 @@ ZOHO_REFRESH_TOKEN=your_zoho_refresh_token
 FRONTEND_URL=https://your-app.vercel.app
 ```
 
-### Step 3: Get Your Backend URL
-Railway will provide: `https://your-backend.railway.app`
+### Step 3: Generate Domain
+1. Go to Backend Service → Settings → Generate Domain
+2. Copy the backend URL: `https://your-backend.railway.app`
 
-### Step 4: Update Frontend
-Go back to Vercel → Settings → Environment Variables
-Update `NEXT_PUBLIC_API_URL` with your Railway URL
+### Step 4: Update Frontend Environment Variables
+1. Go to Frontend Service → Variables
+2. Update `NEXT_PUBLIC_API_URL` with your backend Railway URL
+3. Update `NEXT_PUBLIC_SOCKET_URL` with your backend Railway URL
+4. Redeploy frontend service
 
-**🎉 Done! Your backend is live!**
+**🎉 Done! Both services are live!**
 
 ---
 
-## 🔄 **Alternative: Render (Free Tier)**
+## 🔗 **Railway Project Structure**
 
-### Deploy Backend to Render
+Your Railway project should have **two services**:
 
-1. Go to [render.com](https://render.com)
-2. New → Web Service
-3. Connect GitHub repo
-4. Configure:
-   - **Name**: usapayments-backend
-   - **Environment**: Node
-   - **Region**: Choose closest to users
-   - **Branch**: main
-   - **Root Directory**: `backend`
-   - **Build Command**: `npm install && npm run build`
-   - **Start Command**: `npm start`
+```
+USA Payments Portal (Project)
+├── Frontend Service
+│   ├── Root: frontend/
+│   ├── Domain: https://your-frontend.railway.app
+│   └── Environment: NODE_ENV, NEXT_PUBLIC_*
+│
+└── Backend Service
+    ├── Root: backend/
+    ├── Domain: https://your-backend.railway.app
+    └── Environment: NODE_ENV, SUPABASE_*, ZOHO_*, JWT_*
+```
 
-5. Add Environment Variables (same as Railway above)
-
-**Note:** Free tier spins down after inactivity (cold starts)
+### Benefits of Single Railway Project:
+- ✅ Unified billing and monitoring
+- ✅ Shared environment variables (if needed)
+- ✅ Easy service-to-service communication
+- ✅ Single dashboard for both services
 
 ---
 
@@ -162,20 +170,19 @@ Update `NEXT_PUBLIC_API_URL` with your Railway URL
 
 ## 📊 **Post-Deployment Monitoring**
 
-### Vercel Dashboard
-- Monitor deployment status
-- View function logs
-- Check bandwidth usage
-
-### Railway Dashboard
+### Railway Dashboard (Both Services)
+- Monitor deployment status for frontend and backend
+- View application logs for each service
 - Monitor CPU/Memory usage
-- View application logs
+- Check bandwidth usage
 - Set up health checks
+- View build logs and deployment history
 
 ### Supabase Dashboard
 - Monitor database usage
 - Check query performance
 - Review RLS policy hits
+- Monitor API requests
 
 ---
 
@@ -199,26 +206,32 @@ Update `NEXT_PUBLIC_API_URL` with your Railway URL
 
 | Service | Tier | Cost |
 |---------|------|------|
-| **Vercel** | Hobby | $0/month |
-| **Railway** | Hobby | ~$5-10/month |
+| **Railway** (Frontend + Backend) | Hobby | ~$10-20/month |
 | **Supabase** | Free | $0/month (up to 500MB) |
-| **Total** | | **~$5-10/month** |
+| **Total** | | **~$10-20/month** |
+
+### Cost Breakdown:
+- Railway charges based on usage (CPU, RAM, Network)
+- Two services in one project share the $5 monthly credit
+- Typical usage: ~$10-20/month for both services
+- No cold starts (unlike free tiers on other platforms)
 
 ### Scaling Up
 When you need more:
-- Vercel Pro: $20/month
-- Railway Pro: ~$20-50/month
+- Railway Pro: ~$20-50/month per service
 - Supabase Pro: $25/month
+- Custom domains: Free on Railway
 
 ---
 
 ## 🔄 **Continuous Deployment**
 
-Both Vercel and Railway support automatic deployments:
+Railway supports automatic deployments for both services:
 
-1. **Push to GitHub** → Automatically deploys
-2. **Pull Request** → Preview deployment
-3. **Merge to main** → Production deployment
+1. **Push to GitHub** → Both services automatically deploy
+2. **Pull Request** → Preview deployments available
+3. **Merge to main** → Production deployment for both
+4. **Rollback** → Easy one-click rollback to previous versions
 
 ---
 

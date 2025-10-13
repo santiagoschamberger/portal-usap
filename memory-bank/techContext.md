@@ -156,11 +156,11 @@ FRONTEND_URL=http://localhost:3000
 ## Deployment Architecture
 
 ### Production Environment
-- **Frontend**: Vercel for Next.js deployment with edge functions
-- **Backend**: Railway or Render for Node.js API server
+- **Frontend**: Railway for Next.js deployment with automatic HTTPS
+- **Backend**: Railway for Node.js API server (same project, separate service)
 - **Database**: Supabase managed PostgreSQL
-- **CDN**: Vercel Edge Network for global content delivery
-- **Monitoring**: Sentry for error tracking, LogRocket for user sessions
+- **Hosting**: Both services hosted on Railway for unified management
+- **Monitoring**: Railway built-in monitoring, Sentry for error tracking
 
 ### CI/CD Pipeline
 - **Code Quality**: ESLint, Prettier, TypeScript checks
