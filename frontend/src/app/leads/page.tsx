@@ -309,7 +309,6 @@ export default function LeadsPage() {
                           <th className="text-left py-3 px-4 font-medium">Submitted By</th>
                         )}
                         <th className="text-left py-3 px-4 font-medium">Created</th>
-                        <th className="text-left py-3 px-4 font-medium">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -359,15 +358,6 @@ export default function LeadsPage() {
                           )}
                           <td className="py-3 px-4 text-sm text-gray-600">
                             {lead.created_at ? new Date(lead.created_at).toLocaleDateString() : 'N/A'}
-                          </td>
-                          <td className="py-3 px-4">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewLead(lead.id)}
-                            >
-                              View
-                            </Button>
                           </td>
                         </tr>
                       ))}

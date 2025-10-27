@@ -21,7 +21,7 @@ router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
     
     const leads = zohoResponse.data || [];
 
-    // Build query for local database
+    // Build query for local database - exclude converted leads
     let query = supabaseAdmin
       .from('leads')
       .select(`
@@ -34,7 +34,8 @@ router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
           role
         )
       `)
-      .eq('partner_id', req.user.partner_id);
+      .eq('partner_id', req.user.partner_id)
+      .neq('status', 'converted'); // Exclude converted leads - they should only appear in deals
 
     // If user is a sub-account, only show their own leads
     // Note: Supabase schema uses 'sub' not 'sub_account'

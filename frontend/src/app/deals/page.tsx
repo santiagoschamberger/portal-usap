@@ -326,7 +326,6 @@ export default function DealsPage() {
                           <th className="text-left py-3 px-4 font-medium">Submitted By</th>
                         )}
                         <th className="text-left py-3 px-4 font-medium">Close Date</th>
-                        <th className="text-left py-3 px-4 font-medium">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -373,15 +372,6 @@ export default function DealsPage() {
                           )}
                           <td className="py-3 px-4 text-sm text-gray-600">
                             {deal.close_date ? new Date(deal.close_date).toLocaleDateString() : 'N/A'}
-                          </td>
-                          <td className="py-3 px-4">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleViewDeal(deal.id)}
-                            >
-                              View
-                            </Button>
                           </td>
                         </tr>
                       ))}
