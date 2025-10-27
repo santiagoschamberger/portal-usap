@@ -9,6 +9,11 @@ dev-debug.log
 # Dependency directories
 node_modules/
 
+# Build output
+backend/dist/
+frontend/.next/
+frontend/out/
+
 # Environment variables
 .env
 

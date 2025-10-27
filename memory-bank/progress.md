@@ -180,6 +180,38 @@
 2. **Webhook URLs**: Need to be configured in Zoho CRM for production
 3. **Environment Sync**: Prod and dev environments need clear separation
 
+## Recent Critical Fix (October 27, 2025)
+
+### Deal Sync Webhook Missing
+
+**Issue Discovered:**
+- Sub-accounts creating leads successfully
+- Leads converting to deals in Zoho CRM
+- **Deals NOT appearing in portal**
+
+**Root Cause Analysis:**
+System had three webhooks:
+1. ✅ Partner webhook - Creating partners
+2. ✅ Lead status webhook - Updating lead status
+3. ✅ Contact webhook - Creating sub-accounts
+4. ❌ **MISSING: Deal webhook** - Receiving deal creation/updates
+
+**Fix Implemented:**
+- Created `/api/webhooks/zoho/deal` endpoint
+- Listens for deal creation/update events
+- Links deals to partners via Vendor.id
+- Attributes deals to sub-accounts via StrategicPartnerId
+- Full stage tracking and activity logging
+
+**Learning:**
+When Zoho CRM converts a lead to a deal, it's a **separate entity** in a different module. You need a dedicated webhook for each module you want to sync. Cannot assume lead webhook will handle deals.
+
+**Deployment Status:**
+- ✅ Code written and tested
+- ✅ TypeScript compiled
+- ⏳ Awaiting deployment to Railway
+- ⏳ Zoho webhook configuration required
+
 ## Recent Decisions & Learnings
 
 ### Architectural Decisions

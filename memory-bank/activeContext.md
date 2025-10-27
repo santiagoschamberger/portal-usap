@@ -1,8 +1,40 @@
 # Active Context
 
-## Current Focus: Project Organization & Documentation ✅ COMPLETED
+## Current Focus: Critical Bug Fix - Deal Sync Webhook ✅ COMPLETED
 
-### Recent Session: October 6, 2025
+### Recent Session: October 27, 2025
+
+#### Critical Issue Identified & Resolved
+**Problem:** Sub-accounts submitted leads that converted to deals in Zoho CRM, but deals were NOT appearing in the portal's Deals screen.
+
+**Root Cause:** Missing webhook endpoint `/api/webhooks/zoho/deal` to receive deal notifications from Zoho CRM.
+
+**Impact:** Core functionality broken - deal tracking completely non-functional after lead conversion.
+
+**Solution Implemented:**
+- ✅ Added new webhook endpoint: `POST /api/webhooks/zoho/deal`
+- ✅ Handles deal creation and updates from Zoho CRM
+- ✅ Smart partner linking via Vendor.id + StrategicPartnerId
+- ✅ Preserves sub-account attribution (created_by field)
+- ✅ Stage history tracking
+- ✅ Activity logging
+- ✅ ~230 lines of code added
+- ✅ TypeScript compilation successful
+- ✅ No linter errors
+
+**Files Modified:**
+- `backend/src/routes/webhooks.ts` - Added deal webhook handler
+- `docs/DEAL_WEBHOOK_FIX.md` - Complete documentation
+- `docs/QUICK_FIX_SUMMARY.md` - Quick reference guide
+
+**Still Required:**
+- ⏳ Deploy backend to Railway
+- ⏳ Configure webhook in Zoho CRM (Setup → Webhooks)
+- ⏳ Test end-to-end: lead → conversion → deal appears
+
+---
+
+### Previous Session: October 6, 2025
 
 #### Completed Tasks
 - ✅ **Documentation Organization**: Restructured all documentation into logical folders
