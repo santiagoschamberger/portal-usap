@@ -394,52 +394,50 @@ router.post('/zoho/deal', async (req, res) => {
       Deal_Name,
       Stage,
       Lead_Source,
-      Account_Name,
+      Business_Name,
+      Contact_First_Name,
       Contact_Name,
-      StrategicPartnerId, // This links back to the user who created the original lead
-      Vendor // This is the partner (account) in Zoho
+      Partners_Id // From ${Lookup:Partner.Partners Id} - this is our partner identifier
     } = req.body;
 
     console.log('Deal webhook received:', {
       zohoDealId,
       Deal_Name,
       Stage,
-      StrategicPartnerId,
-      Vendor: Vendor?.id
+      Partners_Id
     });
 
-    // Find the partner using Vendor ID
+    // Find the partner using Partners_Id
     let partnerId: string | null = null;
-    let createdBy: string | null = StrategicPartnerId || null;
+    let createdBy: string | null = null; // We'll set this to the main partner user
 
-    if (Vendor?.id) {
+    if (Partners_Id) {
       const { data: partner } = await supabaseAdmin
         .from('partners')
         .select('id')
-        .eq('zoho_partner_id', Vendor.id)
+        .eq('zoho_partner_id', Partners_Id)
         .single();
 
       if (partner) {
         partnerId = partner.id;
-      }
-    }
-
-    // If no partner found via Vendor, try to find via StrategicPartnerId (user ID)
-    if (!partnerId && StrategicPartnerId) {
-      const { data: user } = await supabaseAdmin
-        .from('users')
-        .select('partner_id')
-        .eq('id', StrategicPartnerId)
-        .single();
-
-      if (user) {
-        partnerId = user.partner_id;
+        
+        // Find the main user for this partner to use as created_by
+        const { data: mainUser } = await supabaseAdmin
+          .from('users')
+          .select('id')
+          .eq('partner_id', partner.id)
+          .eq('role', 'admin') // Main partner account
+          .single();
+          
+        if (mainUser) {
+          createdBy = mainUser.id;
+        }
       }
     }
 
     // If still no partner found, can't proceed
     if (!partnerId) {
-      console.log('No partner found for deal:', { Vendor, StrategicPartnerId });
+      console.log('No partner found for deal:', { Partners_Id });
       return res.status(400).json({
         error: 'Partner not found',
         message: 'Could not link deal to a partner in the portal'
@@ -463,13 +461,12 @@ router.post('/zoho/deal', async (req, res) => {
     const localStage = stageMap[Stage] || 'Qualification';
 
     // Extract contact info
-    const accountName = Account_Name?.name || Deal_Name || 'Unknown';
-    const contactName = Contact_Name?.name || '';
-    const nameParts = contactName.split(' ');
-    const firstName = nameParts[0] || null;
-    const lastName = nameParts.slice(1).join(' ') || null;
-    const email = Contact_Name?.email || null;
-    const phone = Contact_Name?.phone || null;
+    const accountName = Business_Name || Deal_Name || 'Unknown';
+    const contactName = Contact_Name || '';
+    const firstName = Contact_First_Name || contactName.split(' ')[0] || null;
+    const lastName = contactName.split(' ').slice(1).join(' ') || null;
+    const email = null; // We'll need to add email field if available
+    const phone = null; // We'll need to add phone field if available
 
     // Check if deal already exists
     const { data: existingDeal } = await supabaseAdmin
