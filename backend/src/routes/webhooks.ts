@@ -393,7 +393,6 @@ router.post('/zoho/deal', async (req, res) => {
       id: zohoDealId,
       Deal_Name,
       Stage,
-      Amount,
       Lead_Source,
       Account_Name,
       Contact_Name,
@@ -486,7 +485,7 @@ router.post('/zoho/deal', async (req, res) => {
       email,
       phone,
       company: accountName,
-      amount: parseFloat(Amount || '0'),
+      amount: 0, // Default to 0 since we're not tracking amount
       stage: localStage,
       lead_source: Lead_Source || 'zoho_sync',
       zoho_sync_status: 'synced',
