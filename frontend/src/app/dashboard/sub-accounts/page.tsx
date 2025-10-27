@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/lib/stores/authStore';
-import { apiClient } from '@/lib/api-client';
-import DashboardLayout from '@/components/layout/DashboardLayout';
+import { useAuthStore } from '@/lib/auth-store';
+import { api } from '@/lib/api';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
 
 interface SubAccount {
   id: string;
@@ -58,7 +58,7 @@ export default function SubAccountsPage() {
     try {
       setLoading(true);
       setError(null);
-      const response = await apiClient.get('/api/partners/sub-accounts');
+      const response = await api.get('/api/partners/sub-accounts');
       setSubAccounts(response.data.data || []);
     } catch (err: any) {
       console.error('Error fetching sub-accounts:', err);
@@ -72,7 +72,7 @@ export default function SubAccountsPage() {
     e.preventDefault();
     try {
       setError(null);
-      await apiClient.post('/api/partners/sub-accounts', newSubAccount);
+      await api.post('/api/partners/sub-accounts', newSubAccount);
       setShowCreateModal(false);
       setNewSubAccount({ email: '', first_name: '', last_name: '' });
       fetchSubAccounts();
@@ -91,7 +91,7 @@ export default function SubAccountsPage() {
     try {
       setActivatingId(subAccountId);
       setError(null);
-      await apiClient.post(`/api/partners/sub-accounts/${subAccountId}/activate`);
+      await api.post(`/api/partners/sub-accounts/${subAccountId}/activate`);
       alert(`Activation email sent to ${email}`);
     } catch (err: any) {
       console.error('Error sending activation email:', err);
@@ -108,7 +108,7 @@ export default function SubAccountsPage() {
 
     try {
       setError(null);
-      await apiClient.delete(`/api/partners/sub-accounts/${subAccountId}`);
+      await api.delete(`/api/partners/sub-accounts/${subAccountId}`);
       fetchSubAccounts();
       alert('Sub-account deactivated successfully');
     } catch (err: any) {
