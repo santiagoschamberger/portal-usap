@@ -212,15 +212,20 @@ router.post('/zoho/contact', async (req, res) => {
     }
 
     // Check if parent partner ID is provided
+    // IMPORTANT: Only create sub-accounts for contacts that are EXPLICITLY linked to a partner
+    // Do NOT create sub-accounts for contacts that are auto-generated from leads
     if (!parentid) {
-      console.log('No parent partner ID - skipping sub-account creation');
+      console.log('✅ No parent partner ID - skipping sub-account creation (this is normal for lead-generated contacts)');
       return res.status(200).json({
         success: false,
         message: 'No parent partner linked - sub-account not created',
         reason: 'Contact must be linked to a Partner in Zoho CRM (parentid, Vendor.id, or Account_Name.id)',
+        note: 'This is expected behavior for contacts generated from leads',
         received: req.body
       });
     }
+
+    console.log(`✅ Parent partner ID found: ${parentid} - proceeding with sub-account creation`);
 
     // Find parent partner in portal using admin client to bypass RLS
     const { data: partner, error: partnerError } = await supabaseAdmin
@@ -250,15 +255,34 @@ router.post('/zoho/contact', async (req, res) => {
       });
     }
 
-    // Check if sub-account with this email already exists
+    // Check if user with this email already exists (including main accounts)
     const { data: existingUser } = await supabaseAdmin
       .from('users')
-      .select('id, email')
+      .select('id, email, role, partner_id')
       .eq('email', email.toLowerCase())
       .single();
 
     if (existingUser) {
-      console.log('Sub-account already exists:', existingUser.id);
+      console.log('User with this email already exists:', { 
+        id: existingUser.id, 
+        role: existingUser.role,
+        partner_id: existingUser.partner_id
+      });
+      
+      // If this is the MAIN account of the partner, don't create a duplicate sub-account
+      // This happens when a partner submits a lead and Zoho auto-creates a contact
+      if (existingUser.partner_id === partner.id) {
+        console.log('⚠️ This email belongs to the main partner account - skipping sub-account creation');
+        return res.status(200).json({
+          success: false,
+          message: 'User already exists as main account',
+          reason: 'Cannot create sub-account for email that belongs to the main partner account',
+          user_id: existingUser.id
+        });
+      }
+      
+      // User exists but for a different partner
+      console.log('✅ Sub-account already exists:', existingUser.id);
       return res.status(200).json({
         success: true,
         message: 'Sub-account already exists',
@@ -351,6 +375,237 @@ router.post('/zoho/contact', async (req, res) => {
     });
   } catch (error) {
     console.error('Contact webhook error:', error);
+    return res.status(500).json({
+      error: 'Webhook processing failed',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * POST /api/webhooks/zoho/deal
+ * Webhook for deal creation/update in Zoho CRM
+ * This fires when a lead is converted to a deal or when a deal is created/updated
+ */
+router.post('/zoho/deal', async (req, res) => {
+  try {
+    const {
+      id: zohoDealId,
+      Deal_Name,
+      Stage,
+      Amount,
+      Closing_Date,
+      Probability,
+      Lead_Source,
+      Account_Name,
+      Contact_Name,
+      StrategicPartnerId, // This links back to the user who created the original lead
+      Vendor // This is the partner (account) in Zoho
+    } = req.body;
+
+    console.log('Deal webhook received:', {
+      zohoDealId,
+      Deal_Name,
+      Stage,
+      StrategicPartnerId,
+      Vendor: Vendor?.id
+    });
+
+    // Find the partner using Vendor ID
+    let partnerId: string | null = null;
+    let createdBy: string | null = StrategicPartnerId || null;
+
+    if (Vendor?.id) {
+      const { data: partner } = await supabaseAdmin
+        .from('partners')
+        .select('id')
+        .eq('zoho_partner_id', Vendor.id)
+        .single();
+
+      if (partner) {
+        partnerId = partner.id;
+      }
+    }
+
+    // If no partner found via Vendor, try to find via StrategicPartnerId (user ID)
+    if (!partnerId && StrategicPartnerId) {
+      const { data: user } = await supabaseAdmin
+        .from('users')
+        .select('partner_id')
+        .eq('id', StrategicPartnerId)
+        .single();
+
+      if (user) {
+        partnerId = user.partner_id;
+      }
+    }
+
+    // If still no partner found, can't proceed
+    if (!partnerId) {
+      console.log('No partner found for deal:', { Vendor, StrategicPartnerId });
+      return res.status(400).json({
+        error: 'Partner not found',
+        message: 'Could not link deal to a partner in the portal'
+      });
+    }
+
+    // Map Zoho deal stage to our local stage
+    const stageMap: { [key: string]: string } = {
+      'Qualification': 'Qualification',
+      'Needs Analysis': 'Needs Analysis',
+      'Value Proposition': 'Value Proposition',
+      'Proposal/Price Quote': 'Proposal',
+      'Proposal': 'Proposal',
+      'Negotiation/Review': 'Negotiation',
+      'Negotiation': 'Negotiation',
+      'Closed Won': 'Closed Won',
+      'Closed Lost': 'Closed Lost',
+      'Closed Lost to Competition': 'Closed Lost'
+    };
+
+    const localStage = stageMap[Stage] || 'Qualification';
+
+    // Extract contact info
+    const accountName = Account_Name?.name || Deal_Name || 'Unknown';
+    const contactName = Contact_Name?.name || '';
+    const nameParts = contactName.split(' ');
+    const firstName = nameParts[0] || null;
+    const lastName = nameParts.slice(1).join(' ') || null;
+    const email = Contact_Name?.email || null;
+    const phone = Contact_Name?.phone || null;
+
+    // Check if deal already exists
+    const { data: existingDeal } = await supabaseAdmin
+      .from('deals')
+      .select('id, stage')
+      .eq('zoho_deal_id', zohoDealId)
+      .single();
+
+    const dealData = {
+      deal_name: Deal_Name || accountName,
+      first_name: firstName,
+      last_name: lastName,
+      email,
+      phone,
+      company: accountName,
+      amount: parseFloat(Amount || '0'),
+      stage: localStage,
+      close_date: Closing_Date || null,
+      probability: Probability || 0,
+      lead_source: Lead_Source || 'zoho_sync',
+      zoho_sync_status: 'synced',
+      last_sync_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    if (existingDeal) {
+      // Update existing deal
+      const { error: updateError } = await supabaseAdmin
+        .from('deals')
+        .update(dealData)
+        .eq('id', existingDeal.id);
+
+      if (updateError) {
+        console.error('Error updating deal:', updateError);
+        return res.status(500).json({
+          error: 'Failed to update deal',
+          details: updateError.message
+        });
+      }
+
+      // Add stage history if stage changed
+      if (existingDeal.stage !== localStage) {
+        await supabaseAdmin.from('deal_stage_history').insert({
+          deal_id: existingDeal.id,
+          old_stage: existingDeal.stage,
+          new_stage: localStage,
+          notes: 'Stage updated via Zoho webhook'
+        });
+      }
+
+      // Log activity
+      await supabaseAdmin.from('activity_log').insert({
+        partner_id: partnerId,
+        user_id: createdBy,
+        entity_type: 'deal',
+        entity_id: existingDeal.id,
+        action: 'deal_updated',
+        description: `Deal ${Deal_Name} updated via Zoho webhook`,
+        metadata: {
+          zoho_deal_id: zohoDealId,
+          stage: localStage
+        }
+      });
+
+      console.log('Deal updated successfully:', existingDeal.id);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Deal updated successfully',
+        data: {
+          deal_id: existingDeal.id,
+          zoho_deal_id: zohoDealId,
+          stage: localStage
+        }
+      });
+    } else {
+      // Create new deal
+      const { data: newDeal, error: insertError } = await supabaseAdmin
+        .from('deals')
+        .insert({
+          ...dealData,
+          partner_id: partnerId,
+          zoho_deal_id: zohoDealId,
+          created_by: createdBy
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Error creating deal:', insertError);
+        return res.status(500).json({
+          error: 'Failed to create deal',
+          details: insertError.message
+        });
+      }
+
+      // Create initial stage history entry
+      await supabaseAdmin.from('deal_stage_history').insert({
+        deal_id: newDeal.id,
+        new_stage: localStage,
+        notes: 'Deal created via Zoho webhook'
+      });
+
+      // Log activity
+      await supabaseAdmin.from('activity_log').insert({
+        partner_id: partnerId,
+        user_id: createdBy,
+        entity_type: 'deal',
+        entity_id: newDeal.id,
+        action: 'deal_created',
+        description: `Deal ${Deal_Name} created via Zoho webhook`,
+        metadata: {
+          zoho_deal_id: zohoDealId,
+          stage: localStage
+        }
+      });
+
+      console.log('Deal created successfully:', newDeal.id);
+
+      return res.status(201).json({
+        success: true,
+        message: 'Deal created successfully',
+        data: {
+          deal_id: newDeal.id,
+          zoho_deal_id: zohoDealId,
+          partner_id: partnerId,
+          created_by: createdBy,
+          stage: localStage
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Deal webhook error:', error);
     return res.status(500).json({
       error: 'Webhook processing failed',
       message: error instanceof Error ? error.message : 'Unknown error'

@@ -59,7 +59,8 @@ router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
       .eq('partner_id', req.user.partner_id);
 
     // If user is a sub-account, only show their own deals
-    if (req.user.role === 'sub_account') {
+    // Note: Supabase schema uses 'sub' not 'sub_account'
+    if (req.user.role === 'sub_account' || req.user.role === 'sub') {
       query = query.eq('created_by', req.user.id);
     }
 
@@ -75,7 +76,7 @@ router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
         zoho_deals: zohoDeals,
         local_deals: localDeals || [],
         total: zohoDeals.length + (localDeals?.length || 0),
-        is_sub_account: req.user.role === 'sub_account'
+        is_sub_account: req.user.role === 'sub_account' || req.user.role === 'sub'
       }
     });
   } catch (error) {

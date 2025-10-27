@@ -37,7 +37,8 @@ router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
       .eq('partner_id', req.user.partner_id);
 
     // If user is a sub-account, only show their own leads
-    if (req.user.role === 'sub_account') {
+    // Note: Supabase schema uses 'sub' not 'sub_account'
+    if (req.user.role === 'sub_account' || req.user.role === 'sub') {
       query = query.eq('created_by', req.user.id);
     }
 
@@ -53,7 +54,7 @@ router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
         zoho_leads: leads,
         local_leads: localLeads || [],
         total: leads.length,
-        is_sub_account: req.user.role === 'sub_account'
+        is_sub_account: req.user.role === 'sub_account' || req.user.role === 'sub'
       }
     });
   } catch (error) {
