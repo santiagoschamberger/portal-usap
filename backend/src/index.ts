@@ -9,6 +9,7 @@ import { Server } from 'socket.io';
 import { config } from 'dotenv';
 import { supabase } from './config/database';
 import { zohoService } from './services/zohoService';
+import { cronService } from './services/cronService';
 
 // Import routes
 import authRoutes from './routes/auth-simple';
@@ -16,6 +17,7 @@ import leadsRoutes from './routes/leads';
 import dealsRoutes from './routes/deals';
 import webhooksRoutes from './routes/webhooks';
 import partnersRoutes from './routes/partners';
+import syncRoutes from './routes/sync';
 
 // Load environment variables
 config();
@@ -75,7 +77,8 @@ app.get('/', (req, res) => {
             leads: '/api/leads',
             deals: '/api/deals',
             partners: '/api/partners',
-            webhooks: '/api/webhooks'
+            webhooks: '/api/webhooks',
+            sync: '/api/sync'
         },
         documentation: 'See README.md for API documentation'
     });
@@ -126,6 +129,7 @@ app.use('/api/leads', leadsRoutes);
 app.use('/api/deals', dealsRoutes);
 app.use('/api/partners', partnersRoutes);
 app.use('/api/webhooks', webhooksRoutes);
+app.use('/api/sync', syncRoutes);
 
 // API routes catch-all (place after specific routes)
 app.use('/api', (req, res) => {
@@ -160,6 +164,14 @@ server.listen(PORT, () => {
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
   console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
   console.log(`🔌 Webhook endpoint: http://localhost:${PORT}/api/webhooks`);
+  
+  // Initialize cron jobs for daily sync
+  if (NODE_ENV === 'production') {
+    cronService.init();
+    console.log(`⏰ Daily sync scheduled for 2:00 AM UTC`);
+  } else {
+    console.log(`⏰ Cron jobs disabled in ${NODE_ENV} mode`);
+  }
 });
 
 export { app, io }; 
