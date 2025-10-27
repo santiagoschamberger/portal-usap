@@ -593,6 +593,66 @@ router.post('/sync-contacts', authenticateToken, requireAdmin, async (req: Authe
 });
 
 /**
+ * POST /api/partners/sub-accounts/:id/activate
+ * Send password reset email to activate a sub-account
+ */
+router.post('/sub-accounts/:id/activate', authenticateToken, requireAdmin, async (req: AuthenticatedRequest, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Verify sub-account belongs to this partner
+    const { data: subAccount } = await supabaseAdmin
+      .from('users')
+      .select('id, email, first_name, last_name')
+      .eq('id', req.params.id)
+      .eq('partner_id', req.user.partner_id)
+      .single();
+
+    if (!subAccount) {
+      return res.status(404).json({
+        error: 'Sub-account not found',
+        message: 'Sub-account does not exist or you do not have access to it'
+      });
+    }
+
+    // Send password reset email
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(subAccount.email, {
+      redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/reset-password`
+    });
+
+    if (resetError) {
+      console.error('Failed to send password reset email:', resetError);
+      return res.status(500).json({
+        error: 'Failed to send activation email',
+        message: resetError.message
+      });
+    }
+
+    // Log activity
+    await supabaseAdmin.from('activity_log').insert({
+      partner_id: req.user.partner_id,
+      user_id: req.user.id,
+      activity_type: 'sub_account_activation_sent',
+      description: `Activation email sent to ${subAccount.first_name} ${subAccount.last_name} (${subAccount.email})`,
+      metadata: { sub_account_id: req.params.id }
+    });
+
+    return res.json({
+      success: true,
+      message: `Activation email sent to ${subAccount.email}`
+    });
+  } catch (error) {
+    console.error('Error sending activation email:', error);
+    return res.status(500).json({
+      error: 'Failed to send activation email',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
  * DELETE /api/partners/sub-accounts/:id
  * Deactivate a sub-account
  */

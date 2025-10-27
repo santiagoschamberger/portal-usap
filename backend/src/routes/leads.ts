@@ -8,6 +8,7 @@ const router = Router();
 /**
  * GET /api/leads
  * Get leads for the authenticated partner
+ * Sub-accounts only see their own leads, main accounts see all
  */
 router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
   try {
@@ -20,12 +21,27 @@ router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
     
     const leads = zohoResponse.data || [];
 
-    // Also sync with local database using admin client to bypass RLS
-    const { data: localLeads, error } = await supabaseAdmin
+    // Build query for local database
+    let query = supabaseAdmin
       .from('leads')
-      .select('*')
-      .eq('partner_id', req.user.partner_id)
-      .order('created_at', { ascending: false });
+      .select(`
+        *,
+        creator:created_by (
+          id,
+          email,
+          first_name,
+          last_name,
+          role
+        )
+      `)
+      .eq('partner_id', req.user.partner_id);
+
+    // If user is a sub-account, only show their own leads
+    if (req.user.role === 'sub_account') {
+      query = query.eq('created_by', req.user.id);
+    }
+
+    const { data: localLeads, error } = await query.order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching local leads:', error);
@@ -36,7 +52,8 @@ router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
       data: {
         zoho_leads: leads,
         local_leads: localLeads || [],
-        total: leads.length
+        total: leads.length,
+        is_sub_account: req.user.role === 'sub_account'
       }
     });
   } catch (error) {

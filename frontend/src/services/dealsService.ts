@@ -1,4 +1,4 @@
-import { apiClient } from '@/lib/api-client'
+import { api } from '@/lib/api'
 
 export interface Deal {
   id: string
@@ -52,42 +52,40 @@ export interface SyncDealsResponse {
   }
 }
 
-class DealsService {
+export const dealsService = {
   /**
    * Get all deals for the authenticated partner
    */
   async getAll(): Promise<{ local_deals: Deal[]; zoho_deals: any[] }> {
-    const response = await apiClient.get('/deals')
-    return response.data.data
-  }
+    const response = await api.get<{ local_deals: Deal[]; zoho_deals: any[] }>('/api/deals')
+    return response.data || { local_deals: [], zoho_deals: [] }
+  },
 
   /**
    * Get a specific deal by ID
    */
   async getById(id: string): Promise<Deal> {
-    const response = await apiClient.get(`/deals/${id}`)
-    return response.data.data
-  }
+    const response = await api.get<Deal>(`/api/deals/${id}`)
+    return response.data!
+  },
 
   /**
    * Update deal stage
    */
   async updateStage(id: string, stage: string, notes?: string): Promise<Deal> {
-    const response = await apiClient.patch(`/deals/${id}/stage`, {
+    const response = await api.patch<Deal>(`/api/deals/${id}/stage`, {
       stage,
       notes
     })
-    return response.data.data
-  }
+    return response.data!
+  },
 
   /**
    * Sync deals from Zoho CRM
    */
   async syncFromZoho(): Promise<SyncDealsResponse['data']> {
-    const response = await apiClient.post('/deals/sync')
-    return response.data.data
+    const response = await api.post<SyncDealsResponse['data']>('/api/deals/sync')
+    return response.data!
   }
 }
-
-export const dealsService = new DealsService()
 
