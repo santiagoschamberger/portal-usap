@@ -31,6 +31,7 @@ declare class ZohoService {
     addNoteToLead(noteData: ZohoNoteData): Promise<any>;
     getLeadsByCriteria(criteria: string): Promise<any>;
     getPartnerLeads(partnerId: string): Promise<any>;
+    getLeadsByVendor(vendorId: string): Promise<any>;
     getDealsByVendor(vendorId: string): Promise<any>;
     getSampleContact(): Promise<any>;
     getContactsByVendor(vendorId: string): Promise<any>;

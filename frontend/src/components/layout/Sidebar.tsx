@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Users,
   FileText,
+  Briefcase,
   DollarSign,
   BookOpen,
   Settings,
@@ -40,6 +41,11 @@ const navigationItems: NavItem[] = [
     title: 'Leads',
     href: '/leads',
     icon: FileText,
+  },
+  {
+    title: 'Deals',
+    href: '/deals',
+    icon: Briefcase,
   },
   {
     title: 'Public URL',

@@ -13,6 +13,7 @@ import { zohoService } from './services/zohoService';
 // Import routes
 import authRoutes from './routes/auth-simple';
 import leadsRoutes from './routes/leads';
+import dealsRoutes from './routes/deals';
 import webhooksRoutes from './routes/webhooks';
 import partnersRoutes from './routes/partners';
 
@@ -72,6 +73,7 @@ app.get('/', (req, res) => {
             health: '/health',
             auth: '/api/auth',
             leads: '/api/leads',
+            deals: '/api/deals',
             partners: '/api/partners',
             webhooks: '/api/webhooks'
         },
@@ -121,6 +123,7 @@ app.get('/health', async (req, res) => {
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/leads', leadsRoutes);
+app.use('/api/deals', dealsRoutes);
 app.use('/api/partners', partnersRoutes);
 app.use('/api/webhooks', webhooksRoutes);
 

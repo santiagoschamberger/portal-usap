@@ -300,6 +300,197 @@ router.patch('/:id/status', auth_1.authenticateToken, async (req, res) => {
         });
     }
 });
+router.post('/sync', auth_1.authenticateToken, async (req, res) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ error: 'Authentication required' });
+        }
+        const { data: partner, error: partnerError } = await database_1.supabaseAdmin
+            .from('partners')
+            .select('id, name, zoho_partner_id')
+            .eq('id', req.user.partner_id)
+            .single();
+        if (partnerError || !partner) {
+            return res.status(404).json({
+                error: 'Partner not found',
+                message: 'Unable to find partner information'
+            });
+        }
+        if (!partner.zoho_partner_id) {
+            return res.status(400).json({
+                error: 'Partner not linked to Zoho',
+                message: 'This partner is not associated with a Zoho Vendor record'
+            });
+        }
+        const zohoResponse = await zohoService_1.zohoService.getLeadsByVendor(partner.zoho_partner_id);
+        if (!zohoResponse.data || zohoResponse.data.length === 0) {
+            return res.json({
+                success: true,
+                message: 'No leads found in Zoho CRM for this partner',
+                synced: 0,
+                created: 0,
+                updated: 0
+            });
+        }
+        let created = 0;
+        let updated = 0;
+        let skipped = 0;
+        const syncResults = [];
+        for (const zohoLead of zohoResponse.data) {
+            try {
+                const email = zohoLead.Email?.toLowerCase();
+                if (!email || !zohoLead.First_Name || !zohoLead.Last_Name) {
+                    skipped++;
+                    syncResults.push({
+                        zoho_lead_id: zohoLead.id,
+                        status: 'skipped',
+                        reason: 'Missing required fields'
+                    });
+                    continue;
+                }
+                const statusMap = {
+                    'New': 'new',
+                    'Contacted': 'contacted',
+                    'Qualified': 'qualified',
+                    'Proposal': 'proposal',
+                    'Negotiation': 'negotiation',
+                    'Closed Won': 'closed_won',
+                    'Closed Lost': 'closed_lost',
+                    'Nurture': 'nurture',
+                    'Unqualified': 'unqualified'
+                };
+                const localStatus = statusMap[zohoLead.Lead_Status] || 'new';
+                const { data: existingLead } = await database_1.supabaseAdmin
+                    .from('leads')
+                    .select('id, status, zoho_lead_id')
+                    .eq('zoho_lead_id', zohoLead.id)
+                    .single();
+                if (existingLead) {
+                    const { error: updateError } = await database_1.supabaseAdmin
+                        .from('leads')
+                        .update({
+                        first_name: zohoLead.First_Name,
+                        last_name: zohoLead.Last_Name,
+                        email: email,
+                        phone: zohoLead.Phone || null,
+                        company: zohoLead.Company || null,
+                        status: localStatus,
+                        lead_source: zohoLead.Lead_Source || 'zoho_sync',
+                        zoho_sync_status: 'synced',
+                        last_sync_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    })
+                        .eq('id', existingLead.id);
+                    if (updateError) {
+                        syncResults.push({
+                            zoho_lead_id: zohoLead.id,
+                            email,
+                            status: 'error',
+                            reason: updateError.message
+                        });
+                    }
+                    else {
+                        updated++;
+                        syncResults.push({
+                            zoho_lead_id: zohoLead.id,
+                            email,
+                            status: 'updated',
+                            lead_id: existingLead.id
+                        });
+                    }
+                }
+                else {
+                    const { data: newLead, error: insertError } = await database_1.supabaseAdmin
+                        .from('leads')
+                        .insert({
+                        partner_id: partner.id,
+                        zoho_lead_id: zohoLead.id,
+                        first_name: zohoLead.First_Name,
+                        last_name: zohoLead.Last_Name,
+                        email: email,
+                        phone: zohoLead.Phone || null,
+                        company: zohoLead.Company || null,
+                        status: localStatus,
+                        lead_source: zohoLead.Lead_Source || 'zoho_sync',
+                        priority: 'medium',
+                        score: 0,
+                        zoho_sync_status: 'synced',
+                        last_sync_at: new Date().toISOString(),
+                        created_by: req.user.id
+                    })
+                        .select()
+                        .single();
+                    if (insertError) {
+                        syncResults.push({
+                            zoho_lead_id: zohoLead.id,
+                            email,
+                            status: 'error',
+                            reason: insertError.message
+                        });
+                    }
+                    else {
+                        created++;
+                        syncResults.push({
+                            zoho_lead_id: zohoLead.id,
+                            email,
+                            status: 'created',
+                            lead_id: newLead.id
+                        });
+                        await database_1.supabaseAdmin.from('lead_status_history').insert({
+                            lead_id: newLead.id,
+                            new_status: localStatus,
+                            notes: 'Lead synced from Zoho CRM',
+                            changed_by_user_id: req.user.id
+                        });
+                    }
+                }
+            }
+            catch (error) {
+                console.error(`Error processing lead ${zohoLead.id}:`, error);
+                syncResults.push({
+                    zoho_lead_id: zohoLead.id,
+                    email: zohoLead.Email,
+                    status: 'error',
+                    reason: error instanceof Error ? error.message : 'Unknown error'
+                });
+            }
+        }
+        await database_1.supabaseAdmin
+            .from('partners')
+            .update({
+            last_sync_at: new Date().toISOString(),
+            zoho_sync_status: 'synced'
+        })
+            .eq('id', partner.id);
+        await database_1.supabaseAdmin.from('activity_log').insert({
+            partner_id: req.user.partner_id,
+            user_id: req.user.id,
+            entity_type: 'lead',
+            entity_id: partner.id,
+            action: 'leads_synced',
+            description: `Synced ${zohoResponse.data.length} leads from Zoho CRM (${created} created, ${updated} updated, ${skipped} skipped)`,
+            metadata: { created, updated, skipped, total: zohoResponse.data.length }
+        });
+        return res.json({
+            success: true,
+            message: 'Leads synced successfully',
+            data: {
+                total: zohoResponse.data.length,
+                created,
+                updated,
+                skipped,
+                details: syncResults
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error syncing leads:', error);
+        return res.status(500).json({
+            error: 'Failed to sync leads',
+            message: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+});
 router.post('/public', async (req, res) => {
     try {
         const { partner_id, first_name, last_name, email, phone, company, business_type, industry, website, notes, source } = req.body;
@@ -322,10 +513,17 @@ router.post('/public', async (req, res) => {
         }
         const { data: partnerData } = await database_1.supabaseAdmin
             .from('partners')
-            .select('name')
+            .select('name, zoho_partner_id')
             .eq('id', partner.partner_id)
             .single();
         const partnerName = partnerData?.name || 'Unknown Partner';
+        const zohoPartnerId = partnerData?.zoho_partner_id;
+        if (!zohoPartnerId) {
+            return res.status(400).json({
+                error: 'Partner not linked to Zoho',
+                message: 'This partner is not properly configured in Zoho CRM'
+            });
+        }
         const zohoLead = await zohoService_1.zohoService.createLead({
             Email: email,
             First_Name: first_name,
@@ -338,7 +536,7 @@ router.post('/public', async (req, res) => {
             Lead_Source: source || 'Public Form',
             Vendor: {
                 name: partnerName,
-                id: partner.partner_id
+                id: zohoPartnerId
             }
         });
         const { data: localLead, error: localError } = await database_1.supabaseAdmin
@@ -351,10 +549,10 @@ router.post('/public', async (req, res) => {
             email,
             phone,
             company,
-            business_type,
             status: 'new',
-            source: source || 'Public Form',
-            created_by_user_id: partner_id
+            lead_source: source || 'Public Form',
+            created_by: partner_id,
+            notes: notes || null
         })
             .select()
             .single();

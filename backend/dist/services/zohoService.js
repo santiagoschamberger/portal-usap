@@ -104,6 +104,24 @@ class ZohoService {
         const criteria = `(StrategicPartnerId:equals:${partnerId})`;
         return this.getLeadsByCriteria(criteria);
     }
+    async getLeadsByVendor(vendorId) {
+        try {
+            const headers = await this.getAuthHeaders();
+            const criteria = `(Vendor.id:equals:${vendorId})`;
+            const response = await axios_1.default.get(`${this.baseUrl}/Leads/search`, {
+                headers,
+                params: {
+                    criteria,
+                    per_page: 200
+                },
+            });
+            return response.data;
+        }
+        catch (error) {
+            console.error('Error getting leads by vendor from Zoho:', error);
+            throw error;
+        }
+    }
     async getDealsByVendor(vendorId) {
         try {
             const headers = await this.getAuthHeaders();

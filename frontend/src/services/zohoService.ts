@@ -1,4 +1,5 @@
 import { leadService } from './leadService'
+import { dealsService } from './dealsService'
 
 /**
  * Zoho Service
@@ -16,6 +17,15 @@ export const zohoService = {
     getStats: () => leadService.getLeadStats(),
     getRecent: () => leadService.getRecentLeads(),
     syncFromZoho: () => leadService.syncLeadsFromZoho(),
+  },
+  
+  // Deal Management
+  deals: {
+    getAll: () => dealsService.getAll(),
+    getById: (id: string) => dealsService.getById(id),
+    updateStage: (id: string, stage: string, notes?: string) => 
+      dealsService.updateStage(id, stage, notes),
+    syncFromZoho: () => dealsService.syncFromZoho(),
   },
 }
 
