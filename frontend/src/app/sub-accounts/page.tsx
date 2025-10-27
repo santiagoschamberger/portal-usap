@@ -44,6 +44,7 @@ export default function SubAccountsPage() {
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [impersonating, setImpersonating] = useState<string | null>(null)
+  const [activating, setActivating] = useState<string | null>(null)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [creating, setCreating] = useState(false)
 
@@ -127,6 +128,22 @@ export default function SubAccountsPage() {
     } catch (error) {
       console.error('Error updating sub-account:', error)
       toast.error('Failed to update sub-account status')
+    }
+  }
+
+  const handleActivateAccess = async (subAccount: SubAccount) => {
+    try {
+      setActivating(subAccount.id)
+      await partnerService.activateSubAccount(subAccount.id)
+      toast.success(`Activation email sent to ${subAccount.email}`)
+      
+      // Track activity
+      activityTracker.addActivity('subaccount_activated', `Sent activation email to ${subAccount.first_name} ${subAccount.last_name}`)
+    } catch (error: any) {
+      console.error('Error sending activation email:', error)
+      toast.error(error.message || 'Failed to send activation email')
+    } finally {
+      setActivating(null)
     }
   }
 
@@ -275,6 +292,15 @@ export default function SubAccountsPage() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={() => handleActivateAccess(subAccount)}
+                                disabled={activating === subAccount.id}
+                                className="bg-blue-600 hover:bg-blue-700"
+                              >
+                                {activating === subAccount.id ? 'Sending...' : 'Activate Access'}
+                              </Button>
                               <Button
                                 variant="default"
                                 size="sm"

@@ -12,11 +12,23 @@ router.get('/', auth_1.authenticateToken, async (req, res) => {
         }
         const zohoResponse = await zohoService_1.zohoService.getPartnerLeads(req.user.id);
         const leads = zohoResponse.data || [];
-        const { data: localLeads, error } = await database_1.supabaseAdmin
+        let query = database_1.supabaseAdmin
             .from('leads')
-            .select('*')
-            .eq('partner_id', req.user.partner_id)
-            .order('created_at', { ascending: false });
+            .select(`
+        *,
+        creator:created_by (
+          id,
+          email,
+          first_name,
+          last_name,
+          role
+        )
+      `)
+            .eq('partner_id', req.user.partner_id);
+        if (req.user.role === 'sub_account') {
+            query = query.eq('created_by', req.user.id);
+        }
+        const { data: localLeads, error } = await query.order('created_at', { ascending: false });
         if (error) {
             console.error('Error fetching local leads:', error);
         }
@@ -25,7 +37,8 @@ router.get('/', auth_1.authenticateToken, async (req, res) => {
             data: {
                 zoho_leads: leads,
                 local_leads: localLeads || [],
-                total: leads.length
+                total: leads.length,
+                is_sub_account: req.user.role === 'sub_account'
             }
         });
     }

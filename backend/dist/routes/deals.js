@@ -31,11 +31,23 @@ router.get('/', auth_1.authenticateToken, async (req, res) => {
                 console.error('Error fetching deals from Zoho:', zohoError);
             }
         }
-        const { data: localDeals, error } = await database_1.supabaseAdmin
+        let query = database_1.supabaseAdmin
             .from('deals')
-            .select('*')
-            .eq('partner_id', req.user.partner_id)
-            .order('created_at', { ascending: false });
+            .select(`
+        *,
+        creator:created_by (
+          id,
+          email,
+          first_name,
+          last_name,
+          role
+        )
+      `)
+            .eq('partner_id', req.user.partner_id);
+        if (req.user.role === 'sub_account') {
+            query = query.eq('created_by', req.user.id);
+        }
+        const { data: localDeals, error } = await query.order('created_at', { ascending: false });
         if (error) {
             console.error('Error fetching local deals:', error);
         }
@@ -44,7 +56,8 @@ router.get('/', auth_1.authenticateToken, async (req, res) => {
             data: {
                 zoho_deals: zohoDeals,
                 local_deals: localDeals || [],
-                total: zohoDeals.length + (localDeals?.length || 0)
+                total: zohoDeals.length + (localDeals?.length || 0),
+                is_sub_account: req.user.role === 'sub_account'
             }
         });
     }

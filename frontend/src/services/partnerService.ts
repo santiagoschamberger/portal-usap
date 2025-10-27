@@ -127,6 +127,22 @@ export const partnerService = {
   },
 
   /**
+   * Send activation email to sub-account
+   */
+  async activateSubAccount(id: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await api.post<{ success: boolean; message: string }>(
+        `/api/partners/sub-accounts/${id}/activate`,
+        {}
+      )
+      return response.data!
+    } catch (error) {
+      console.error('Error activating sub-account:', error)
+      throw error
+    }
+  },
+
+  /**
    * Deactivate sub-account
    */
   async deactivateSubAccount(id: string): Promise<void> {

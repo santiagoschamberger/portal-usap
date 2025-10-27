@@ -60,7 +60,7 @@ const navigationItems: NavItem[] = [
   },
   {
     title: 'Sub-Accounts',
-    href: '/dashboard/sub-accounts',
+    href: '/sub-accounts',
     icon: Users,
     roles: ['admin'], // Only main accounts can manage sub-accounts
   },

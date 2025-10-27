@@ -487,6 +487,53 @@ router.post('/sync-contacts', auth_1.authenticateToken, auth_1.requireAdmin, asy
         });
     }
 });
+router.post('/sub-accounts/:id/activate', auth_1.authenticateToken, auth_1.requireAdmin, async (req, res) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ error: 'Authentication required' });
+        }
+        const { data: subAccount } = await database_1.supabaseAdmin
+            .from('users')
+            .select('id, email, first_name, last_name')
+            .eq('id', req.params.id)
+            .eq('partner_id', req.user.partner_id)
+            .single();
+        if (!subAccount) {
+            return res.status(404).json({
+                error: 'Sub-account not found',
+                message: 'Sub-account does not exist or you do not have access to it'
+            });
+        }
+        const { error: resetError } = await database_1.supabase.auth.resetPasswordForEmail(subAccount.email, {
+            redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/reset-password`
+        });
+        if (resetError) {
+            console.error('Failed to send password reset email:', resetError);
+            return res.status(500).json({
+                error: 'Failed to send activation email',
+                message: resetError.message
+            });
+        }
+        await database_1.supabaseAdmin.from('activity_log').insert({
+            partner_id: req.user.partner_id,
+            user_id: req.user.id,
+            activity_type: 'sub_account_activation_sent',
+            description: `Activation email sent to ${subAccount.first_name} ${subAccount.last_name} (${subAccount.email})`,
+            metadata: { sub_account_id: req.params.id }
+        });
+        return res.json({
+            success: true,
+            message: `Activation email sent to ${subAccount.email}`
+        });
+    }
+    catch (error) {
+        console.error('Error sending activation email:', error);
+        return res.status(500).json({
+            error: 'Failed to send activation email',
+            message: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+});
 router.delete('/sub-accounts/:id', auth_1.authenticateToken, auth_1.requireAdmin, async (req, res) => {
     try {
         if (!req.user) {
