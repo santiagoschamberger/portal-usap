@@ -475,12 +475,43 @@ router.post('/sync', authenticateToken, async (req: AuthenticatedRequest, res) =
         
         const localStatus = statusMap[zohoLead.Lead_Status] || 'new';
 
-        // Check if lead already exists in our database
-        const { data: existingLead } = await supabaseAdmin
-          .from('leads')
-          .select('id, status, zoho_lead_id')
-          .eq('zoho_lead_id', zohoLead.id)
-          .single();
+        // Check if lead already exists in our database (multiple ways to prevent duplicates)
+        let existingLead = null;
+        
+        // First, try to find by zoho_lead_id (most reliable)
+        if (zohoLead.id) {
+          const { data: leadByZohoId } = await supabaseAdmin
+            .from('leads')
+            .select('id, status, zoho_lead_id, email')
+            .eq('zoho_lead_id', zohoLead.id)
+            .single();
+          
+          if (leadByZohoId) {
+            existingLead = leadByZohoId;
+          }
+        }
+        
+        // If not found by zoho_lead_id, try to find by email + partner combination
+        if (!existingLead) {
+          const { data: leadByEmail } = await supabaseAdmin
+            .from('leads')
+            .select('id, status, zoho_lead_id, email')
+            .eq('email', email)
+            .eq('partner_id', partner.id)
+            .single();
+            
+          if (leadByEmail) {
+            existingLead = leadByEmail;
+            
+            // Update the zoho_lead_id if it was missing
+            if (!leadByEmail.zoho_lead_id && zohoLead.id) {
+              await supabaseAdmin
+                .from('leads')
+                .update({ zoho_lead_id: zohoLead.id })
+                .eq('id', leadByEmail.id);
+            }
+          }
+        }
 
         if (existingLead) {
           // Update existing lead
