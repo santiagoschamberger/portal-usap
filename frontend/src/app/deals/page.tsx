@@ -30,6 +30,7 @@ export default function DealsPage() {
   })
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [isSubAccount, setIsSubAccount] = useState(false)
 
   useEffect(() => {
     fetchDeals()
@@ -90,6 +91,7 @@ export default function DealsPage() {
       setDeals(allDeals)
       setFilteredDeals(allDeals)
       setTotalPages(Math.ceil(allDeals.length / 10))
+      setIsSubAccount(response.is_sub_account || false)
     } catch (error) {
       console.error('Error fetching deals:', error)
       toast.error('Failed to load deals')
@@ -320,6 +322,9 @@ export default function DealsPage() {
                         <th className="text-left py-3 px-4 font-medium">Company</th>
                         <th className="text-left py-3 px-4 font-medium">Amount</th>
                         <th className="text-left py-3 px-4 font-medium">Stage</th>
+                        {!isSubAccount && (
+                          <th className="text-left py-3 px-4 font-medium">Submitted By</th>
+                        )}
                         <th className="text-left py-3 px-4 font-medium">Close Date</th>
                         <th className="text-left py-3 px-4 font-medium">Actions</th>
                       </tr>
@@ -350,6 +355,22 @@ export default function DealsPage() {
                               {deal.stage}
                             </span>
                           </td>
+                          {!isSubAccount && (
+                            <td className="py-3 px-4">
+                              {deal.creator ? (
+                                <div className="text-sm">
+                                  <div className="font-medium">
+                                    {deal.creator.first_name} {deal.creator.last_name}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {deal.creator.role === 'admin' ? 'Main Account' : 'Sub-Account'}
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-sm text-gray-400">N/A</span>
+                              )}
+                            </td>
+                          )}
                           <td className="py-3 px-4 text-sm text-gray-600">
                             {deal.close_date ? new Date(deal.close_date).toLocaleDateString() : 'N/A'}
                           </td>

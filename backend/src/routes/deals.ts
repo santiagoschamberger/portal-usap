@@ -8,6 +8,7 @@ const router = Router();
 /**
  * GET /api/deals
  * Get deals for the authenticated partner
+ * Sub-accounts only see their own deals, main accounts see all
  */
 router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
   try {
@@ -42,12 +43,27 @@ router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
       }
     }
 
-    // Also get deals from local database
-    const { data: localDeals, error } = await supabaseAdmin
+    // Build query for local database
+    let query = supabaseAdmin
       .from('deals')
-      .select('*')
-      .eq('partner_id', req.user.partner_id)
-      .order('created_at', { ascending: false });
+      .select(`
+        *,
+        creator:created_by (
+          id,
+          email,
+          first_name,
+          last_name,
+          role
+        )
+      `)
+      .eq('partner_id', req.user.partner_id);
+
+    // If user is a sub-account, only show their own deals
+    if (req.user.role === 'sub_account') {
+      query = query.eq('created_by', req.user.id);
+    }
+
+    const { data: localDeals, error } = await query.order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching local deals:', error);
@@ -58,7 +74,8 @@ router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
       data: {
         zoho_deals: zohoDeals,
         local_deals: localDeals || [],
-        total: zohoDeals.length + (localDeals?.length || 0)
+        total: zohoDeals.length + (localDeals?.length || 0),
+        is_sub_account: req.user.role === 'sub_account'
       }
     });
   } catch (error) {

@@ -31,6 +31,7 @@ export default function LeadsPage() {
   })
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [isSubAccount, setIsSubAccount] = useState(false)
 
   useEffect(() => {
     fetchLeads()
@@ -81,6 +82,7 @@ export default function LeadsPage() {
       setLeads(allLeads)
       setFilteredLeads(allLeads)
       setTotalPages(Math.ceil(allLeads.length / 10))
+      setIsSubAccount(response.is_sub_account || false)
     } catch (error) {
       console.error('Error fetching leads:', error)
       toast.error('Failed to load leads')
@@ -303,6 +305,9 @@ export default function LeadsPage() {
                         <th className="text-left py-3 px-4 font-medium">Company</th>
                         <th className="text-left py-3 px-4 font-medium">Contact</th>
                         <th className="text-left py-3 px-4 font-medium">Status</th>
+                        {!isSubAccount && (
+                          <th className="text-left py-3 px-4 font-medium">Submitted By</th>
+                        )}
                         <th className="text-left py-3 px-4 font-medium">Created</th>
                         <th className="text-left py-3 px-4 font-medium">Actions</th>
                       </tr>
@@ -336,6 +341,22 @@ export default function LeadsPage() {
                               {lead.status}
                             </span>
                           </td>
+                          {!isSubAccount && (
+                            <td className="py-3 px-4">
+                              {lead.creator ? (
+                                <div className="text-sm">
+                                  <div className="font-medium">
+                                    {lead.creator.first_name} {lead.creator.last_name}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {lead.creator.role === 'admin' ? 'Main Account' : 'Sub-Account'}
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-sm text-gray-400">N/A</span>
+                              )}
+                            </td>
+                          )}
                           <td className="py-3 px-4 text-sm text-gray-600">
                             {lead.created_at ? new Date(lead.created_at).toLocaleDateString() : 'N/A'}
                           </td>
