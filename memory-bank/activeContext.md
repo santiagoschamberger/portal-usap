@@ -1,36 +1,39 @@
 # Active Context
 
-## Current Focus: Critical Bug Fix - Deal Sync Webhook ✅ COMPLETED
+## Current Focus: Deal Webhook Setup & USA Payments Field Integration 🔧 IN PROGRESS
 
 ### Recent Session: October 27, 2025
 
-#### Critical Issue Identified & Resolved
-**Problem:** Sub-accounts submitted leads that converted to deals in Zoho CRM, but deals were NOT appearing in the portal's Deals screen.
+#### Enhanced Deal Webhook Implementation
+**Previous Issue:** Deal webhook was implemented but needed USA Payments specific field support.
 
-**Root Cause:** Missing webhook endpoint `/api/webhooks/zoho/deal` to receive deal notifications from Zoho CRM.
-
-**Impact:** Core functionality broken - deal tracking completely non-functional after lead conversion.
-
-**Solution Implemented:**
-- ✅ Added new webhook endpoint: `POST /api/webhooks/zoho/deal`
-- ✅ Handles deal creation and updates from Zoho CRM
-- ✅ Smart partner linking via Vendor.id + StrategicPartnerId
-- ✅ Preserves sub-account attribution (created_by field)
-- ✅ Stage history tracking
-- ✅ Activity logging
-- ✅ ~230 lines of code added
-- ✅ TypeScript compilation successful
+**Current Enhancement:**
+- ✅ Enhanced webhook to capture USA Payments specific fields (MID, MCC, Processor, etc.)
+- ✅ Added metadata storage for payment-specific data
+- ✅ Improved contact information extraction with fallbacks
+- ✅ Created comprehensive setup guide
+- ✅ Built test script for webhook validation
 - ✅ No linter errors
 
-**Files Modified:**
-- `backend/src/routes/webhooks.ts` - Added deal webhook handler
-- `docs/DEAL_WEBHOOK_FIX.md` - Complete documentation
-- `docs/QUICK_FIX_SUMMARY.md` - Quick reference guide
+**Files Enhanced:**
+- `backend/src/routes/webhooks.ts` - Enhanced with USA Payments fields
+- `docs/DEAL_WEBHOOK_SETUP_GUIDE.md` - Complete setup guide
+- `backend/scripts/test-deal-webhook.js` - Test script for validation
 
-**Still Required:**
-- ⏳ Deploy backend to Railway
-- ⏳ Configure webhook in Zoho CRM (Setup → Webhooks)
-- ⏳ Test end-to-end: lead → conversion → deal appears
+**USA Payments Fields Now Captured:**
+- MID (Merchant ID)
+- MCC (Merchant Category Code)  
+- Processor (Payment Processor)
+- Currency
+- DBA Name (Doing Business As)
+- Gateway ID
+- Contact Email/Phone (with fallbacks)
+
+**Current Tasks:**
+- ⏳ Deploy enhanced backend to Railway
+- ⏳ Configure webhook in Zoho CRM with proper field mapping
+- ⏳ Test webhook with USA Payments specific fields
+- ⏳ Validate end-to-end flow: lead → deal → portal display
 
 ---
 
