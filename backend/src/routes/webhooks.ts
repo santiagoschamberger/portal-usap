@@ -106,7 +106,13 @@ router.post('/zoho/lead-status', async (req, res) => {
         });
       }
 
-      // Add status history record
+      // REQUIREMENT: Delete previous status history records (keep only 1 record per lead)
+      await supabase
+        .from('lead_status_history')
+        .delete()
+        .eq('lead_id', lead.id);
+
+      // Add new status history record (only the current one)
       await supabase.from('lead_status_history').insert({
         lead_id: lead.id,
         old_status: oldStatus,
@@ -543,8 +549,14 @@ router.post('/zoho/deal', async (req, res) => {
         });
       }
 
-      // Add stage history if stage changed
+      // REQUIREMENT: Delete previous stage history records (keep only 1 record per deal)
       if (existingDeal.stage !== localStage) {
+        await supabaseAdmin
+          .from('deal_stage_history')
+          .delete()
+          .eq('deal_id', existingDeal.id);
+
+        // Add new stage history record (only the current one)
         await supabaseAdmin.from('deal_stage_history').insert({
           deal_id: existingDeal.id,
           old_stage: existingDeal.stage,
@@ -579,6 +591,47 @@ router.post('/zoho/deal', async (req, res) => {
         }
       });
     } else {
+      // REQUIREMENT: When creating a new deal, check if this is a lead conversion
+      // and remove the corresponding lead from the leads table
+      let convertedLeadId: string | null = null;
+      
+      // Try to find matching lead by partner and contact details
+      if (partnerId && firstName && lastName) {
+        const { data: matchingLead } = await supabaseAdmin
+          .from('leads')
+          .select('id, zoho_lead_id')
+          .eq('partner_id', partnerId)
+          .eq('first_name', firstName)
+          .eq('last_name', lastName)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (matchingLead) {
+          convertedLeadId = matchingLead.id;
+          console.log(`Found matching lead for conversion: ${matchingLead.id} (Zoho ID: ${matchingLead.zoho_lead_id})`);
+          
+          // REQUIREMENT: Remove the lead from leads table when converting to deal
+          const { error: deleteLeadError } = await supabaseAdmin
+            .from('leads')
+            .delete()
+            .eq('id', matchingLead.id);
+
+          if (deleteLeadError) {
+            console.error('Error deleting converted lead:', deleteLeadError);
+            // Continue anyway - deal creation is more important
+          } else {
+            console.log(`✅ Successfully removed converted lead ${matchingLead.id} from leads table`);
+            
+            // Also clean up lead status history for the deleted lead
+            await supabaseAdmin
+              .from('lead_status_history')
+              .delete()
+              .eq('lead_id', matchingLead.id);
+          }
+        }
+      }
+
       // Create new deal
       const { data: newDeal, error: insertError } = await supabaseAdmin
         .from('deals')
@@ -599,11 +652,11 @@ router.post('/zoho/deal', async (req, res) => {
         });
       }
 
-      // Create initial stage history entry
+      // Create initial stage history entry (only one record)
       await supabaseAdmin.from('deal_stage_history').insert({
         deal_id: newDeal.id,
         new_stage: localStage,
-        notes: 'Deal created via Zoho webhook'
+        notes: convertedLeadId ? 'Deal created from lead conversion via Zoho webhook' : 'Deal created via Zoho webhook'
       });
 
       // Log activity
@@ -613,10 +666,13 @@ router.post('/zoho/deal', async (req, res) => {
         entity_type: 'deal',
         entity_id: newDeal.id,
         action: 'deal_created',
-        description: `Deal ${Deal_Name} created via Zoho webhook`,
+        description: convertedLeadId 
+          ? `Deal ${Deal_Name} created from lead conversion via Zoho webhook`
+          : `Deal ${Deal_Name} created via Zoho webhook`,
         metadata: {
           zoho_deal_id: zohoDealId,
-          stage: localStage
+          stage: localStage,
+          converted_from_lead_id: convertedLeadId
         }
       });
 
@@ -624,13 +680,16 @@ router.post('/zoho/deal', async (req, res) => {
 
       return res.status(201).json({
         success: true,
-        message: 'Deal created successfully',
+        message: convertedLeadId 
+          ? 'Deal created successfully from lead conversion'
+          : 'Deal created successfully',
         data: {
           deal_id: newDeal.id,
           zoho_deal_id: zohoDealId,
           partner_id: partnerId,
           created_by: createdBy,
-          stage: localStage
+          stage: localStage,
+          converted_from_lead_id: convertedLeadId
         }
       });
     }

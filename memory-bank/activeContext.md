@@ -1,39 +1,85 @@
 # Active Context
 
-## Current Focus: Deal Webhook Setup & USA Payments Field Integration 🔧 IN PROGRESS
+## Current Focus: Lead/Deal Status Management & Conversion Logic ✅ COMPLETED
 
-### Recent Session: October 27, 2025
+### Recent Session: October 28, 2025
 
-#### Enhanced Deal Webhook Implementation
+#### Critical Requirements Implementation
+**User Requirements:**
+1. **Single Record Per Lead/Deal**: When changing status, delete previous records (keep only 1 record per lead/deal)
+2. **Lead Conversion**: When converting lead to deal, remove lead from leads table
+
+**Implementation Completed:**
+- ✅ Updated lead status webhook to delete previous status history records
+- ✅ Updated deal stage webhook to delete previous stage history records  
+- ✅ Added lead conversion detection and deletion logic
+- ✅ Enhanced deal webhook to identify and remove converted leads
+- ✅ Added comprehensive logging for conversion tracking
+- ✅ Created comprehensive test script for validation
+- ✅ Created database verification SQL script
+- ✅ No linter errors
+
+**Files Modified:**
+- `backend/src/routes/webhooks.ts` - Core webhook logic updated
+- `backend/scripts/test-lead-deal-conversion.js` - Comprehensive test script
+- `backend/scripts/verify-single-records.sql` - Database verification queries
+
+**Key Changes Made:**
+
+**Lead Status Webhook (`/api/webhooks/zoho/lead-status`):**
+```typescript
+// BEFORE: Added status history records (accumulating)
+await supabase.from('lead_status_history').insert({...});
+
+// AFTER: Delete previous records, keep only current one
+await supabase.from('lead_status_history').delete().eq('lead_id', lead.id);
+await supabase.from('lead_status_history').insert({...});
+```
+
+**Deal Webhook (`/api/webhooks/zoho/deal`):**
+```typescript
+// BEFORE: Added stage history records (accumulating)
+await supabase.from('deal_stage_history').insert({...});
+
+// AFTER: Delete previous records, keep only current one
+await supabase.from('deal_stage_history').delete().eq('deal_id', existingDeal.id);
+await supabase.from('deal_stage_history').insert({...});
+
+// NEW: Lead conversion detection and deletion
+const matchingLead = await supabaseAdmin.from('leads')
+  .select('id, zoho_lead_id')
+  .eq('partner_id', partnerId)
+  .eq('first_name', firstName)
+  .eq('last_name', lastName)
+  .single();
+
+if (matchingLead) {
+  // Delete the lead from leads table
+  await supabaseAdmin.from('leads').delete().eq('id', matchingLead.id);
+  // Clean up lead status history
+  await supabaseAdmin.from('lead_status_history').delete().eq('lead_id', matchingLead.id);
+}
+```
+
+**Ready for Production:**
+- ⏳ Deploy updated backend to Railway
+- ⏳ Test with real Zoho CRM data
+- ⏳ Verify database constraints are met
+
+---
+
+### Previous Session: October 27, 2025
+
+#### Enhanced Deal Webhook Implementation  
 **Previous Issue:** Deal webhook was implemented but needed USA Payments specific field support.
 
-**Current Enhancement:**
+**Completed Enhancement:**
 - ✅ Enhanced webhook to capture USA Payments specific fields (MID, MCC, Processor, etc.)
 - ✅ Added metadata storage for payment-specific data
 - ✅ Improved contact information extraction with fallbacks
 - ✅ Created comprehensive setup guide
 - ✅ Built test script for webhook validation
 - ✅ No linter errors
-
-**Files Enhanced:**
-- `backend/src/routes/webhooks.ts` - Enhanced with USA Payments fields
-- `docs/DEAL_WEBHOOK_SETUP_GUIDE.md` - Complete setup guide
-- `backend/scripts/test-deal-webhook.js` - Test script for validation
-
-**USA Payments Fields Now Captured:**
-- MID (Merchant ID)
-- MCC (Merchant Category Code)  
-- Processor (Payment Processor)
-- Currency
-- DBA Name (Doing Business As)
-- Gateway ID
-- Contact Email/Phone (with fallbacks)
-
-**Current Tasks:**
-- ⏳ Deploy enhanced backend to Railway
-- ⏳ Configure webhook in Zoho CRM with proper field mapping
-- ⏳ Test webhook with USA Payments specific fields
-- ⏳ Validate end-to-end flow: lead → deal → portal display
 
 ---
 
