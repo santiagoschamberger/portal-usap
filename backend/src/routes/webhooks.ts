@@ -497,6 +497,7 @@ router.post('/zoho/deal', async (req, res) => {
       'Proposal': 'Proposal',
       'Negotiation/Review': 'Negotiation',
       'Negotiation': 'Negotiation',
+      'Sent to Underwriting': 'Needs Analysis', // Map underwriting to Needs Analysis stage
       'Closed Won': 'Closed Won',
       'Closed Lost': 'Closed Lost',
       'Closed Lost to Competition': 'Closed Lost'
