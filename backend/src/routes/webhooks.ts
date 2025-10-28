@@ -86,7 +86,25 @@ router.post('/zoho/lead-status', async (req, res) => {
     }
 
     const oldStatus = lead.status;
-    const newStatus = Lead_Status?.toLowerCase() || 'unknown';
+    
+    // Map Zoho lead status to our local status
+    const statusMap: { [key: string]: string } = {
+      'New': 'new',
+      'Contacted': 'contacted',
+      'Qualified': 'qualified',
+      'Proposal': 'proposal',
+      'Negotiation': 'negotiation',
+      'Closed Won': 'closed_won',
+      'Closed Lost': 'closed_lost',
+      'Nurture': 'nurture',
+      'Unqualified': 'unqualified',
+      'Signed Application': 'qualified', // Map signed application to qualified status
+      'Application Signed': 'qualified',
+      'Under Review': 'qualified',
+      'In Review': 'qualified'
+    };
+    
+    const newStatus = statusMap[Lead_Status] || Lead_Status?.toLowerCase() || 'new';
 
     // Update lead status if it has changed
     if (oldStatus !== newStatus) {
