@@ -397,19 +397,21 @@ router.post('/zoho/deal', async (req, res) => {
       Business_Name,
       Contact_First_Name,
       Contact_Name,
-      Partners_Id // From ${Lookup:Partner.Partners Id} - this is our partner identifier
+      Partners_Id, // From ${Lookup:Partner.Partners Id} - this is our partner identifier
+      StrategicPartnerId // This should identify the original lead submitter
     } = req.body;
 
     console.log('Deal webhook received:', {
       zohoDealId,
       Deal_Name,
       Stage,
-      Partners_Id
+      Partners_Id,
+      StrategicPartnerId
     });
 
     // Find the partner using Partners_Id
     let partnerId: string | null = null;
-    let createdBy: string | null = null; // We'll set this to the main partner user
+    let createdBy: string | null = null;
 
     if (Partners_Id) {
       const { data: partner } = await supabaseAdmin
@@ -421,16 +423,52 @@ router.post('/zoho/deal', async (req, res) => {
       if (partner) {
         partnerId = partner.id;
         
-        // Find the main user for this partner to use as created_by
-        const { data: mainUser } = await supabaseAdmin
-          .from('users')
-          .select('id')
-          .eq('partner_id', partner.id)
-          .eq('role', 'admin') // Main partner account
-          .single();
-          
-        if (mainUser) {
-          createdBy = mainUser.id;
+        // First, try to find the original submitter using StrategicPartnerId
+        if (StrategicPartnerId) {
+          const { data: originalSubmitter } = await supabaseAdmin
+            .from('users')
+            .select('id')
+            .eq('zoho_user_id', StrategicPartnerId)
+            .eq('partner_id', partner.id)
+            .single();
+            
+          if (originalSubmitter) {
+            createdBy = originalSubmitter.id;
+            console.log('Found original submitter via StrategicPartnerId:', originalSubmitter.id);
+          }
+        }
+        
+        // If no StrategicPartnerId or submitter not found, try to find by matching lead details
+        if (!createdBy) {
+          // Try to find the original lead that matches this deal
+          const { data: matchingLead } = await supabaseAdmin
+            .from('leads')
+            .select('created_by')
+            .eq('partner_id', partner.id)
+            .or(`first_name.eq.${Contact_First_Name || ''},company.eq.${Business_Name || Deal_Name}`)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+            
+          if (matchingLead && matchingLead.created_by) {
+            createdBy = matchingLead.created_by;
+            console.log('Found original submitter via lead matching:', matchingLead.created_by);
+          }
+        }
+        
+        // If still no submitter found, fall back to main partner user
+        if (!createdBy) {
+          const { data: mainUser } = await supabaseAdmin
+            .from('users')
+            .select('id')
+            .eq('partner_id', partner.id)
+            .eq('role', 'admin') // Main partner account
+            .single();
+            
+          if (mainUser) {
+            createdBy = mainUser.id;
+            console.log('Falling back to main partner user:', mainUser.id);
+          }
         }
       }
     }

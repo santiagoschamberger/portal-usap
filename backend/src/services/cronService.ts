@@ -121,7 +121,7 @@ class CronService {
   destroy(): void {
     if (this.isInitialized) {
       cron.getTasks().forEach((task) => {
-        task.destroy();
+        task.stop();
       });
       this.isInitialized = false;
       console.log('🛑 All cron jobs stopped');

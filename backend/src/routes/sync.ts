@@ -40,8 +40,8 @@ router.post('/manual', authenticateToken, async (req: AuthenticatedRequest, res)
         totalPartners: result.totalPartners,
         successfulSyncs: result.successfulSyncs,
         summary: {
-          totalLeads: result.results.reduce((sum, r) => sum + r.leads.created + r.leads.updated, 0),
-          totalDeals: result.results.reduce((sum, r) => sum + r.deals.created + r.deals.updated, 0),
+          totalLeads: result.results.reduce((sum: number, r: any) => sum + r.leads.created + r.leads.updated, 0),
+          totalDeals: result.results.reduce((sum: number, r: any) => sum + r.deals.created + r.deals.updated, 0),
           errors: result.errors.length
         },
         results: result.results,
