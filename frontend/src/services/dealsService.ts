@@ -13,7 +13,8 @@ export interface Deal {
   company?: string
   amount: number
   stage: string
-  close_date?: string
+  close_date?: string // Deprecated: kept for backward compatibility
+  approval_date?: string // New field: maps to Zoho Approval Time Stamp
   probability: number
   lead_source?: string
   notes?: string

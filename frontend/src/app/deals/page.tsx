@@ -47,21 +47,25 @@ export default function DealsPage() {
       
       // Helper function to normalize Zoho stage to our internal format
       const normalizeStage = (zohoStage: string | undefined): string => {
-        if (!zohoStage) return 'Qualification'
+        if (!zohoStage) return 'New Deal'
         const stage = zohoStage.trim()
         
         // Map Zoho stages to our standardized stages
+        // Updated with actual stages from Zoho CRM API
         const stageMap: { [key: string]: string } = {
-          'Qualification': 'Qualification',
-          'Needs Analysis': 'Needs Analysis',
-          'Value Proposition': 'Value Proposition',
-          'Proposal/Price Quote': 'Proposal',
-          'Proposal': 'Proposal',
-          'Negotiation/Review': 'Negotiation',
-          'Negotiation': 'Negotiation',
-          'Closed Won': 'Closed Won',
-          'Closed Lost': 'Closed Lost',
-          'Closed Lost to Competition': 'Closed Lost'
+          'New Deal': 'New Deal',
+          'Pre-Vet': 'Pre-Vet',
+          'Sent for Signature': 'Sent for Signature',
+          'Signed Application': 'Signed Application',
+          'Sent to Underwriting': 'Sent to Underwriting',
+          'App Pended': 'App Pended',
+          'Approved': 'Approved',
+          'Declined': 'Declined',
+          'Dead / Do Not Contact': 'Dead / Do Not Contact',
+          'Merchant Unresponsive': 'Merchant Unresponsive',
+          'App Withdrawn': 'App Withdrawn',
+          'Approved - Closed': 'Approved - Closed',
+          'Conditionally Approved': 'Conditionally Approved'
         }
         
         return stageMap[stage] || stage
@@ -271,13 +275,19 @@ export default function DealsPage() {
                     onChange={(e) => handleFilterChange('stage', e.target.value)}
                   >
                     <option value="">All Stages</option>
-                    <option value="Qualification">Qualification</option>
-                    <option value="Needs Analysis">Needs Analysis</option>
-                    <option value="Value Proposition">Value Proposition</option>
-                    <option value="Proposal">Proposal</option>
-                    <option value="Negotiation">Negotiation</option>
-                    <option value="Closed Won">Closed Won</option>
-                    <option value="Closed Lost">Closed Lost</option>
+                    <option value="New Deal">New Deal</option>
+                    <option value="Pre-Vet">Pre-Vet</option>
+                    <option value="Sent for Signature">Sent for Signature</option>
+                    <option value="Signed Application">Signed Application</option>
+                    <option value="Sent to Underwriting">Sent to Underwriting</option>
+                    <option value="App Pended">App Pended</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Declined">Declined</option>
+                    <option value="Dead / Do Not Contact">Dead / Do Not Contact</option>
+                    <option value="Merchant Unresponsive">Merchant Unresponsive</option>
+                    <option value="App Withdrawn">App Withdrawn</option>
+                    <option value="Approved - Closed">Approved - Closed</option>
+                    <option value="Conditionally Approved">Conditionally Approved</option>
                   </select>
                 </div>
                 <div>
@@ -325,7 +335,7 @@ export default function DealsPage() {
                         {!isSubAccount && (
                           <th className="text-left py-3 px-4 font-medium">Submitted By</th>
                         )}
-                        <th className="text-left py-3 px-4 font-medium">Close Date</th>
+                        <th className="text-left py-3 px-4 font-medium">Approval Date</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -371,7 +381,8 @@ export default function DealsPage() {
                             </td>
                           )}
                           <td className="py-3 px-4 text-sm text-gray-600">
-                            {deal.close_date ? new Date(deal.close_date).toLocaleDateString() : 'N/A'}
+                            {deal.approval_date ? new Date(deal.approval_date).toLocaleDateString() : 
+                             deal.close_date ? new Date(deal.close_date).toLocaleDateString() : 'N/A'}
                           </td>
                         </tr>
                       ))}

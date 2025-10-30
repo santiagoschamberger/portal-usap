@@ -422,7 +422,8 @@ router.post('/zoho/deal', async (req, res) => {
       Contact_First_Name,
       Contact_Name,
       Partners_Id, // From ${Lookup:Partner.Partners Id} - this is our partner identifier
-      StrategicPartnerId // This should identify the original lead submitter
+      StrategicPartnerId, // This should identify the original lead submitter
+      Approval_Time_Stamp // Approval date field from Zoho
     } = req.body;
 
     console.log('Deal webhook received:', {
@@ -507,21 +508,24 @@ router.post('/zoho/deal', async (req, res) => {
     }
 
     // Map Zoho deal stage to our local stage
+    // Updated with actual stages from Zoho CRM API
     const stageMap: { [key: string]: string } = {
-      'Qualification': 'Qualification',
-      'Needs Analysis': 'Needs Analysis',
-      'Value Proposition': 'Value Proposition',
-      'Proposal/Price Quote': 'Proposal',
-      'Proposal': 'Proposal',
-      'Negotiation/Review': 'Negotiation',
-      'Negotiation': 'Negotiation',
-      'Sent to Underwriting': 'Needs Analysis', // Map underwriting to Needs Analysis stage
-      'Closed Won': 'Closed Won',
-      'Closed Lost': 'Closed Lost',
-      'Closed Lost to Competition': 'Closed Lost'
+      'New Deal': 'New Deal',
+      'Pre-Vet': 'Pre-Vet',
+      'Sent for Signature': 'Sent for Signature',
+      'Signed Application': 'Signed Application',
+      'Sent to Underwriting': 'Sent to Underwriting',
+      'App Pended': 'App Pended',
+      'Approved': 'Approved',
+      'Declined': 'Declined',
+      'Dead / Do Not Contact': 'Dead / Do Not Contact',
+      'Merchant Unresponsive': 'Merchant Unresponsive',
+      'App Withdrawn': 'App Withdrawn',
+      'Approved - Closed': 'Approved - Closed',
+      'Conditionally Approved': 'Conditionally Approved'
     };
 
-    const localStage = stageMap[Stage] || 'Qualification';
+    const localStage = stageMap[Stage] || 'New Deal';
 
     // Extract contact info
     const accountName = Business_Name || Deal_Name || 'Unknown';
@@ -547,6 +551,7 @@ router.post('/zoho/deal', async (req, res) => {
       company: accountName,
       amount: 0, // Default to 0 since we're not tracking amount
       stage: localStage,
+      approval_date: Approval_Time_Stamp || null, // Map from Zoho Approval Time Stamp field
       lead_source: Lead_Source || 'zoho_sync',
       zoho_sync_status: 'synced',
       last_sync_at: new Date().toISOString(),

@@ -188,20 +188,24 @@ router.post('/sync', authenticateToken, async (req: AuthenticatedRequest, res) =
     for (const zohoDeal of zohoResponse.data) {
       try {
         // Map Zoho deal stage to our local stage
+        // Updated with actual stages from Zoho CRM API
         const stageMap: { [key: string]: string } = {
-          'Qualification': 'Qualification',
-          'Needs Analysis': 'Needs Analysis',
-          'Value Proposition': 'Value Proposition',
-          'Proposal/Price Quote': 'Proposal',
-          'Proposal': 'Proposal',
-          'Negotiation/Review': 'Negotiation',
-          'Negotiation': 'Negotiation',
-          'Closed Won': 'Closed Won',
-          'Closed Lost': 'Closed Lost',
-          'Closed Lost to Competition': 'Closed Lost'
+          'New Deal': 'New Deal',
+          'Pre-Vet': 'Pre-Vet',
+          'Sent for Signature': 'Sent for Signature',
+          'Signed Application': 'Signed Application',
+          'Sent to Underwriting': 'Sent to Underwriting',
+          'App Pended': 'App Pended',
+          'Approved': 'Approved',
+          'Declined': 'Declined',
+          'Dead / Do Not Contact': 'Dead / Do Not Contact',
+          'Merchant Unresponsive': 'Merchant Unresponsive',
+          'App Withdrawn': 'App Withdrawn',
+          'Approved - Closed': 'Approved - Closed',
+          'Conditionally Approved': 'Conditionally Approved'
         };
         
-        const localStage = stageMap[zohoDeal.Stage] || 'Qualification';
+        const localStage = stageMap[zohoDeal.Stage] || 'New Deal';
 
         // Extract contact info from Account_Name if available
         const accountName = zohoDeal.Account_Name?.name || zohoDeal.Deal_Name || 'Unknown';
@@ -224,7 +228,8 @@ router.post('/sync', authenticateToken, async (req: AuthenticatedRequest, res) =
           company: accountName,
           amount: parseFloat(zohoDeal.Amount || '0'),
           stage: localStage,
-          close_date: zohoDeal.Closing_Date || null,
+          close_date: zohoDeal.Closing_Date || null, // Keep for backward compatibility
+          approval_date: zohoDeal.Approval_Time_Stamp || null, // Map from Zoho Approval Time Stamp field
           probability: zohoDeal.Probability || 0,
           lead_source: zohoDeal.Lead_Source || 'zoho_sync',
           zoho_sync_status: 'synced',

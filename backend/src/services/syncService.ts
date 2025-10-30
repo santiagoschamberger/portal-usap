@@ -350,20 +350,24 @@ class SyncService {
           }
 
           // Map Zoho deal stage to our local stage
+          // Updated with actual stages from Zoho CRM API
           const stageMap: { [key: string]: string } = {
-            'Qualification': 'Qualification',
-            'Needs Analysis': 'Needs Analysis',
-            'Value Proposition': 'Value Proposition',
-            'Proposal/Price Quote': 'Proposal',
-            'Proposal': 'Proposal',
-            'Negotiation/Review': 'Negotiation',
-            'Negotiation': 'Negotiation',
-            'Closed Won': 'Closed Won',
-            'Closed Lost': 'Closed Lost',
-            'Closed Lost to Competition': 'Closed Lost'
+            'New Deal': 'New Deal',
+            'Pre-Vet': 'Pre-Vet',
+            'Sent for Signature': 'Sent for Signature',
+            'Signed Application': 'Signed Application',
+            'Sent to Underwriting': 'Sent to Underwriting',
+            'App Pended': 'App Pended',
+            'Approved': 'Approved',
+            'Declined': 'Declined',
+            'Dead / Do Not Contact': 'Dead / Do Not Contact',
+            'Merchant Unresponsive': 'Merchant Unresponsive',
+            'App Withdrawn': 'App Withdrawn',
+            'Approved - Closed': 'Approved - Closed',
+            'Conditionally Approved': 'Conditionally Approved'
           };
 
-          const localStage = stageMap[zohoDeal.Stage] || 'Qualification';
+          const localStage = stageMap[zohoDeal.Stage] || 'New Deal';
 
           // Check if deal already exists
           const { data: existingDeal } = await supabaseAdmin
@@ -389,6 +393,7 @@ class SyncService {
             company: zohoDeal.Business_Name || zohoDeal.Deal_Name,
             amount: 0, // Default to 0 as requested
             stage: localStage,
+            approval_date: zohoDeal.Approval_Time_Stamp || null, // Map from Zoho Approval Time Stamp field
             lead_source: zohoDeal.Lead_Source || 'zoho_sync',
             zoho_sync_status: 'synced',
             last_sync_at: new Date().toISOString(),
