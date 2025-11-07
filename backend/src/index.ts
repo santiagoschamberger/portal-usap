@@ -18,6 +18,7 @@ import dealsRoutes from './routes/deals';
 import webhooksRoutes from './routes/webhooks';
 import partnersRoutes from './routes/partners';
 import syncRoutes from './routes/sync';
+import payarcRouter from './routes/payarc';
 
 // Load environment variables
 config();
@@ -124,12 +125,17 @@ app.get('/health', async (req, res) => {
 });
 
 // API routes
+// app.use((req, res, next) => {
+//   console.log('➡️', req.method, req.originalUrl);
+//   next();
+// });
 app.use('/api/auth', authRoutes);
 app.use('/api/leads', leadsRoutes);
 app.use('/api/deals', dealsRoutes);
 app.use('/api/partners', partnersRoutes);
 app.use('/api/webhooks', webhooksRoutes);
 app.use('/api/sync', syncRoutes);
+app.use('/api/payarc', payarcRouter);
 
 // API routes catch-all (place after specific routes)
 app.use('/api', (req, res) => {
