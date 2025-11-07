@@ -129,11 +129,11 @@ export default function PayarcReportPage() {
 
       // Map to simplified structure
       const filtered = rows.filter((r:any) => r.isActive)
-      console.log('filtered', filtered, filtered.length)
+      //console.log('filtered', filtered, filtered.length)
       // Map to simplified structure
       const mapped: Account[] = filtered.map((row: any) => ({
         merchantName: row.dba_name || row.business_name || "Unknown Merchant",
-        merchantId: row.Merchant_Account_Number || row.mid || "",
+        merchantId: row.Merchant_Account_Number || Number(row.mid).toString() || "",
       }));
 
       setAccounts(mapped);
