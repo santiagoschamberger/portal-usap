@@ -101,6 +101,12 @@ const adminNavigationItems: NavItem[] = [
     icon: BookOpen,
     roles: ['admin'],
   },
+  {
+    title: 'Payarc Report',
+    href: '/admin/payarc',
+    icon: DollarSign,
+    roles: ['admin'],
+  },
 ]
 
 export function Sidebar() {

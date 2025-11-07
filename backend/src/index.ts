@@ -18,6 +18,7 @@ import dealsRoutes from './routes/deals';
 import webhooksRoutes from './routes/webhooks';
 import partnersRoutes from './routes/partners';
 import syncRoutes from './routes/sync';
+import payarcRoutes from './routes/payarc';
 
 // Load environment variables
 config();
@@ -78,7 +79,8 @@ app.get('/', (req, res) => {
             deals: '/api/deals',
             partners: '/api/partners',
             webhooks: '/api/webhooks',
-            sync: '/api/sync'
+            sync: '/api/sync',
+            payarc: '/api/payarc'
         },
         documentation: 'See README.md for API documentation'
     });
@@ -130,6 +132,7 @@ app.use('/api/deals', dealsRoutes);
 app.use('/api/partners', partnersRoutes);
 app.use('/api/webhooks', webhooksRoutes);
 app.use('/api/sync', syncRoutes);
+app.use('/api/payarc', payarcRoutes);
 
 // API routes catch-all (place after specific routes)
 app.use('/api', (req, res) => {
