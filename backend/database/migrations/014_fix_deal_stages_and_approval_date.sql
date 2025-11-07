@@ -35,3 +35,4 @@ COMMENT ON COLUMN deals.approval_date IS 'Approval date from Zoho CRM Approval T
 COMMENT ON COLUMN deals.close_date IS 'DEPRECATED: Use approval_date instead. This field maps to Zoho Closing_Date';
 
 
+
