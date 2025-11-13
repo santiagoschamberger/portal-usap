@@ -148,7 +148,7 @@ export default function PayarcReportPage() {
 
   useEffect(() => {
     // Optionally load with default range on first render
-    // loadData();
+    loadData();
     loadAccounts();
   }, []);
 
@@ -165,7 +165,7 @@ const filtered = useMemo(() => {
   return transactions.filter((t) => {
     // filter by selected merchant MID (if selected)
     const matchMerchant = selectedAccount
-      ? t.merchantId === selectedAccount.merchantId
+      ? t.merchantId === '0' + selectedAccount.merchantId
       : true;
 
     // filter by date range
@@ -268,7 +268,7 @@ const filtered = useMemo(() => {
                     </label>
 
                     <input
-                      type="text"
+                      type="search"
                       value={accountSearch}
                       onChange={(e) => {
                         setAccountSearch(e.target.value);
@@ -333,7 +333,7 @@ const filtered = useMemo(() => {
                 </div>
                 <button
                   onClick={loadData}
-                  className="inline-flex items-center justify-center rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-red-400"
+                  className="inline-flex min-w-[180px] items-center justify-center rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-red-400"
                   disabled={loading}
                 >
                   {loading ? "Loading…" : "View Transactions"}

@@ -127,6 +127,10 @@ usapayments-portal-2.0/
    ZOHO_REFRESH_TOKEN=your_zoho_refresh_token
    ZOHO_ENVIRONMENT=production
    ```
+
+   # PayArc
+   PAYARC_API_URL=your_payarc_api_url
+   PAYARC_API_TOKEN=your_payarc_api_token
    
    **Frontend** (`frontend/.env.local`):
    ```env
