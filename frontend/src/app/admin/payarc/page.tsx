@@ -77,10 +77,7 @@ export default function PayarcReportPage() {
       setLoading(true);
       setError(null);
 
-      const from = fromDate ? format(fromDate, "yyyy-MM-dd") : undefined;
-      const to = toDate ? format(toDate, "yyyy-MM-dd") : undefined;
-
-      const res = await api.get("/api/payarc/payarc-report", {
+     const res = await api.get("/api/payarc/payarc-report", {
         params: {
           from: fromDate,          // already "YYYY-MM-DD"
           to: toDate,
