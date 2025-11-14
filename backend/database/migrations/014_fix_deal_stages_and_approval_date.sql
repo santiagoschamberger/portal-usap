@@ -36,3 +36,4 @@ COMMENT ON COLUMN deals.close_date IS 'DEPRECATED: Use approval_date instead. Th
 
 
 
+

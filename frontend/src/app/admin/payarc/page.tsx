@@ -3,9 +3,22 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ProtectedRoute } from "@/components/protected-route";
-import { format, startOfMonth } from "date-fns";
 import "react-datepicker/dist/react-datepicker.css";
 
+// Helper function to format date as YYYY-MM-DD
+const formatDateToString = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+// Helper function to get first day of current month
+const getFirstOfMonth = (): string => {
+  const now = new Date();
+  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+  return formatDateToString(firstDay);
+};
 
 type RawTransaction = {
   merchantName: string;
@@ -56,8 +69,8 @@ export default function PayarcReportPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const todayStr = format(new Date(), "yyyy-MM-dd");
-  const firstOfMonth = format(startOfMonth(new Date()), "yyyy-MM-dd");
+  const todayStr = formatDateToString(new Date());
+  const firstOfMonth = getFirstOfMonth();
 
   const [fromDate, setFromDate] = useState(firstOfMonth);
   const [toDate, setToDate] = useState(todayStr);
@@ -77,10 +90,7 @@ export default function PayarcReportPage() {
       setLoading(true);
       setError(null);
 
-      const from = fromDate ? format(fromDate, "yyyy-MM-dd") : undefined;
-      const to = toDate ? format(toDate, "yyyy-MM-dd") : undefined;
-
-      const res = await api.get("/api/payarc/payarc-report", {
+     const res = await api.get("/api/payarc/payarc-report", {
         params: {
           from: fromDate,          // already "YYYY-MM-DD"
           to: toDate,
@@ -148,7 +158,7 @@ export default function PayarcReportPage() {
 
   useEffect(() => {
     // Optionally load with default range on first render
-    // loadData();
+    loadData();
     loadAccounts();
   }, []);
 
@@ -165,7 +175,7 @@ const filtered = useMemo(() => {
   return transactions.filter((t) => {
     // filter by selected merchant MID (if selected)
     const matchMerchant = selectedAccount
-      ? t.merchantId === selectedAccount.merchantId
+      ? t.merchantId === '0' + selectedAccount.merchantId
       : true;
 
     // filter by date range
@@ -268,7 +278,7 @@ const filtered = useMemo(() => {
                     </label>
 
                     <input
-                      type="text"
+                      type="search"
                       value={accountSearch}
                       onChange={(e) => {
                         setAccountSearch(e.target.value);
@@ -333,7 +343,7 @@ const filtered = useMemo(() => {
                 </div>
                 <button
                   onClick={loadData}
-                  className="inline-flex items-center justify-center rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-red-400"
+                  className="inline-flex min-w-[180px] items-center justify-center rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-red-400"
                   disabled={loading}
                 >
                   {loading ? "Loading…" : "View Transactions"}
