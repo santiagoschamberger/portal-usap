@@ -142,6 +142,7 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
       Phone: phone || '',
       State: state || '',
       Lander_Message: lander_message || '',
+      Entity_Type: Array.isArray(business_type) ? business_type : [business_type || 'Business'],
       StrategicPartnerId: req.user.id,
       Lead_Status: 'New', // Default status for new leads
       Lead_Source: 'Strategic Partner',
