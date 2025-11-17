@@ -1,0 +1,388 @@
+
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    ZOHO CRM FIELD INVESTIGATION                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+
+✅ Zoho access token obtained successfully
+
+================================================================================
+INVESTIGATING PARTNER/VENDOR FIELDS
+================================================================================
+
+Total fields found: 30
+
+--- PARTNER TYPE FIELD ---
+
+Found potential Partner Type field:
+{
+  "api_name": "Vendor_Name",
+  "field_label": "Partner Name",
+  "data_type": "text",
+  "custom_field": false
+}
+
+Found potential Partner Type field:
+{
+  "api_name": "Owner",
+  "field_label": "Partners Owner",
+  "data_type": "ownerlookup",
+  "custom_field": false
+}
+
+Found potential Partner Type field:
+{
+  "api_name": "Record_Image",
+  "field_label": "Partners Image",
+  "data_type": "profileimage",
+  "custom_field": false
+}
+
+Found potential Partner Type field:
+{
+  "api_name": "Vendor_Type",
+  "field_label": "Partner Type",
+  "data_type": "picklist",
+  "custom_field": true,
+  "pick_list_values": [
+    {
+      "display_value": "-None-",
+      "actual_value": "-None-"
+    },
+    {
+      "display_value": "Agent/ISO",
+      "actual_value": "Agent"
+    },
+    {
+      "display_value": "Strategic Partner (Referral)",
+      "actual_value": "Processor / Referral"
+    },
+    {
+      "display_value": "ISV",
+      "actual_value": "ISV"
+    },
+    {
+      "display_value": "White Label SP",
+      "actual_value": "WLSP"
+    }
+  ]
+}
+
+Found potential Partner Type field:
+{
+  "api_name": "Partner_Contact",
+  "field_label": "Partner Contact",
+  "data_type": "lookup",
+  "custom_field": true
+}
+
+
+================================================================================
+INVESTIGATING LEAD FIELDS
+================================================================================
+
+Total fields found: 172
+
+--- STATE FIELD ---
+
+✅ State field found:
+{
+  "api_name": "State",
+  "field_label": "State",
+  "data_type": "text",
+  "custom_field": false
+}
+
+--- LEAD STATUS FIELD ---
+
+✅ Lead Status field found:
+{
+  "api_name": "Lead_Status",
+  "field_label": "Lead Status",
+  "data_type": "picklist",
+  "custom_field": false,
+  "pick_list_values": [
+    {
+      "display_value": "-None-",
+      "actual_value": "-None-"
+    },
+    {
+      "display_value": "New",
+      "actual_value": "Contact in Future"
+    },
+    {
+      "display_value": "Contact Attempt 1",
+      "actual_value": "Junk Lead"
+    },
+    {
+      "display_value": "Lost",
+      "actual_value": "Not Qualified"
+    },
+    {
+      "display_value": "Contact Attempt 2",
+      "actual_value": "E-Sign Sent to Merchant"
+    },
+    {
+      "display_value": "Sent Pre-App",
+      "actual_value": "App Sent to UW"
+    },
+    {
+      "display_value": "Convert",
+      "actual_value": "Convert"
+    },
+    {
+      "display_value": "Pre-App Received",
+      "actual_value": "Pre-App Received"
+    },
+    {
+      "display_value": "Sent Application for Signature",
+      "actual_value": "Sent Application for Signature"
+    },
+    {
+      "display_value": "Signed Application",
+      "actual_value": "Signed Application"
+    },
+    {
+      "display_value": "Sent Pre-Vet",
+      "actual_value": "Pre-Vet"
+    },
+    {
+      "display_value": "Sent Agreement for Signature",
+      "actual_value": "Sent Agreement for Signature"
+    },
+    {
+      "display_value": "Signed Agreement",
+      "actual_value": "Signed Agreement"
+    },
+    {
+      "display_value": "Interested",
+      "actual_value": "Interested"
+    },
+    {
+      "display_value": "Contacted - Needs Follow up",
+      "actual_value": "Contacted - Needs Follow up"
+    },
+    {
+      "display_value": "Needs Follow Up",
+      "actual_value": "Needs Follow Up"
+    },
+    {
+      "display_value": "Notify Apps Team",
+      "actual_value": "Notify Apps Team"
+    },
+    {
+      "display_value": "Junk",
+      "actual_value": "Junk"
+    },
+    {
+      "display_value": "Not Interested",
+      "actual_value": "Not Interested"
+    },
+    {
+      "display_value": "Reset Appointment",
+      "actual_value": "Reset Appointment"
+    },
+    {
+      "display_value": "Interested - Needs Follow Up",
+      "actual_value": "Interested - Needs Follow Up"
+    },
+    {
+      "display_value": "Interested - SP Lead",
+      "actual_value": "Interested - SP Lead"
+    },
+    {
+      "display_value": "Interested - Merchant Lead",
+      "actual_value": "Interested - Merchant Lead"
+    },
+    {
+      "display_value": "Awaiting Signature - No Motion.io",
+      "actual_value": "Awaiting Signature - No Motion.io"
+    },
+    {
+      "display_value": "Send to Motion.io",
+      "actual_value": "Send to Motion.io"
+    },
+    {
+      "display_value": "Contact Attempt 3",
+      "actual_value": "Contact Attempt 3"
+    },
+    {
+      "display_value": "Contact Attempt 4",
+      "actual_value": "Contact Attempt 4"
+    },
+    {
+      "display_value": "Contact Attempt 5",
+      "actual_value": "Contact Attempt 5"
+    }
+  ]
+}
+
+📋 Lead Status values (28 total):
+  - -None-
+  - New
+  - Contact Attempt 1
+  - Lost
+  - Contact Attempt 2
+  - Sent Pre-App
+  - Convert
+  - Pre-App Received
+  - Sent Application for Signature
+  - Signed Application
+  - Sent Pre-Vet
+  - Sent Agreement for Signature
+  - Signed Agreement
+  - Interested
+  - Contacted - Needs Follow up
+  - Needs Follow Up
+  - Notify Apps Team
+  - Junk
+  - Not Interested
+  - Reset Appointment
+  - Interested - Needs Follow Up
+  - Interested - SP Lead
+  - Interested - Merchant Lead
+  - Awaiting Signature - No Motion.io
+  - Send to Motion.io
+  - Contact Attempt 3
+  - Contact Attempt 4
+  - Contact Attempt 5
+
+--- LANDER MESSAGE FIELD ---
+
+✅ Lander Message field found:
+{
+  "api_name": "Lander_Message",
+  "field_label": "Lander Message",
+  "data_type": "textarea",
+  "custom_field": true
+}
+
+
+================================================================================
+INVESTIGATING DEAL FIELDS
+================================================================================
+
+Total fields found: 152
+
+--- DEAL STAGE FIELD ---
+
+✅ Deal Stage field found:
+{
+  "api_name": "Stage",
+  "field_label": "Stage",
+  "data_type": "picklist",
+  "custom_field": false,
+  "pick_list_values": [
+    {
+      "display_value": "New Deal",
+      "actual_value": "Qualification",
+      "sequence_number": 1
+    },
+    {
+      "display_value": "Pre-Vet",
+      "actual_value": "Needs Analysis",
+      "sequence_number": 2
+    },
+    {
+      "display_value": "Sent for Signature",
+      "actual_value": "Value Proposition",
+      "sequence_number": 3
+    },
+    {
+      "display_value": "Signed Application",
+      "actual_value": "Id. Decision Makers",
+      "sequence_number": 4
+    },
+    {
+      "display_value": "Sent to Underwriting",
+      "actual_value": "Proposal/Price Quote",
+      "sequence_number": 5
+    },
+    {
+      "display_value": "App Pended",
+      "actual_value": "Negotiation/Review",
+      "sequence_number": 6
+    },
+    {
+      "display_value": "Approved",
+      "actual_value": "Closed Won",
+      "sequence_number": 7
+    },
+    {
+      "display_value": "Declined",
+      "actual_value": "Closed Lost",
+      "sequence_number": 8
+    },
+    {
+      "display_value": "Dead / Do Not Contact",
+      "actual_value": "Dead / Do Not Contact",
+      "sequence_number": 10
+    },
+    {
+      "display_value": "Merchant Unresponsive",
+      "actual_value": "Merchant Unresponsive",
+      "sequence_number": 11
+    },
+    {
+      "display_value": "App Withdrawn",
+      "actual_value": "Application Withdrawn",
+      "sequence_number": 12
+    },
+    {
+      "display_value": "Approved - Closed",
+      "actual_value": "Approved - Closed",
+      "sequence_number": 13
+    },
+    {
+      "display_value": "Conditionally Approved",
+      "actual_value": "Conditionally Approved",
+      "sequence_number": 14
+    }
+  ]
+}
+
+📋 Deal Stage values (13 total):
+  - New Deal
+  - Pre-Vet
+  - Sent for Signature
+  - Signed Application
+  - Sent to Underwriting
+  - App Pended
+  - Approved
+  - Declined
+  - Dead / Do Not Contact
+  - Merchant Unresponsive
+  - App Withdrawn
+  - Approved - Closed
+  - Conditionally Approved
+
+🔍 "Send to Motion" stage exists? ❌ NO
+
+--- APPROVAL TIME STAMP FIELD ---
+
+✅ Approval Time Stamp field found:
+{
+  "api_name": "Approval_Time_Stamp",
+  "field_label": "Approval Time Stamp",
+  "data_type": "datetime",
+  "custom_field": true
+}
+
+--- PARTNERS ID FIELD ---
+❌ No Partners_Id field found
+
+
+================================================================================
+INVESTIGATION COMPLETE
+================================================================================
+
+✅ All field investigations completed successfully!
+
+📝 Next steps:
+  1. Review the output above
+  2. Document field names in PHASE_1_VERIFICATION_REPORT.md
+  3. Update webhook implementations with correct field names
+  4. Update planning documents with actual values
+
+

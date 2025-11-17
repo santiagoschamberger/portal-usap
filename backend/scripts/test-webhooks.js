@@ -17,7 +17,7 @@ const axios = require('axios');
 require('dotenv').config();
 
 // Get backend URL from environment or use default
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5001';
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
 
 // Colors for console output
 const colors = {
