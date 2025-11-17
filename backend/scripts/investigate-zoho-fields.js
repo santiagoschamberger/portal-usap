@@ -11,70 +11,82 @@
  * Run with: node backend/scripts/investigate-zoho-fields.js
  */
 
-const ZOHOCRMSDK = require('@zohocrm/nodejs-sdk-8.0');
+const axios = require('axios');
 require('dotenv').config();
 
-async function initializeZoho() {
-  try {
-    // Initialize SDK
-    const environment = ZOHOCRMSDK.USDataCenter.PRODUCTION();
-    const token = new ZOHOCRMSDK.OAuthBuilder()
-      .clientId(process.env.ZOHO_CLIENT_ID)
-      .clientSecret(process.env.ZOHO_CLIENT_SECRET)
-      .refreshToken(process.env.ZOHO_REFRESH_TOKEN)
-      .build();
+const BASE_URL = 'https://www.zohoapis.com/crm/v2';
+const AUTH_URL = 'https://accounts.zoho.com/oauth/v2/token';
 
-    await new ZOHOCRMSDK.InitializeBuilder()
-      .environment(environment)
-      .token(token)
-      .initialize();
+let cachedToken = null;
+let tokenExpiryTime = null;
 
-    console.log('✅ Zoho SDK initialized successfully\n');
-    return true;
-  } catch (error) {
-    console.error('❌ Error initializing Zoho SDK:', error);
-    return false;
+async function getAccessToken() {
+  // Return cached token if still valid
+  if (cachedToken && tokenExpiryTime && tokenExpiryTime > Date.now()) {
+    return cachedToken;
   }
+
+  try {
+    const response = await axios.post(AUTH_URL, null, {
+      params: {
+        refresh_token: process.env.ZOHO_REFRESH_TOKEN,
+        client_id: process.env.ZOHO_CLIENT_ID,
+        client_secret: process.env.ZOHO_CLIENT_SECRET,
+        grant_type: 'refresh_token',
+      },
+    });
+
+    cachedToken = response.data.access_token;
+    // Set expiry time with 5 minute buffer
+    tokenExpiryTime = Date.now() + (response.data.expires_in - 300) * 1000;
+    
+    console.log('✅ Zoho access token obtained successfully\n');
+    return cachedToken;
+  } catch (error) {
+    console.error('❌ Error getting Zoho access token:', error.response?.data || error.message);
+    throw new Error('Failed to get Zoho access token');
+  }
+}
+
+async function getAuthHeaders() {
+  const token = await getAccessToken();
+  return {
+    'Authorization': `Zoho-oauthtoken ${token}`,
+    'Content-Type': 'application/json',
+  };
 }
 
 async function getModuleFields(moduleName) {
   try {
-    const fieldsOperations = new ZOHOCRMSDK.Fields.FieldsOperations(moduleName);
-    const response = await fieldsOperations.getFields();
+    const headers = await getAuthHeaders();
+    const response = await axios.get(`${BASE_URL}/settings/fields?module=${moduleName}`, { headers });
 
-    if (response.getStatusCode() === 204) {
-      console.log(`No fields found for module: ${moduleName}`);
-      return [];
-    }
-
-    const responseObject = response.getObject();
-    if (responseObject instanceof ZOHOCRMSDK.Fields.ResponseWrapper) {
-      return responseObject.getFields();
+    if (response.data && response.data.fields) {
+      return response.data.fields;
     }
 
     return [];
   } catch (error) {
-    console.error(`Error fetching fields for ${moduleName}:`, error);
+    console.error(`Error fetching fields for ${moduleName}:`, error.response?.data || error.message);
     return [];
   }
 }
 
 function formatFieldInfo(field) {
   const info = {
-    api_name: field.getAPIName(),
-    field_label: field.getFieldLabel(),
-    data_type: field.getDataType(),
-    required: field.getRequired(),
-    custom_field: field.getCustomField()
+    api_name: field.api_name,
+    field_label: field.field_label,
+    data_type: field.data_type,
+    required: field.required,
+    custom_field: field.custom_field
   };
 
   // Add picklist values if available
-  const pickListValues = field.getPickListValues();
-  if (pickListValues && pickListValues.length > 0) {
-    info.pick_list_values = pickListValues.map(plv => ({
-      display_value: plv.getDisplayValue(),
-      actual_value: plv.getActualValue(),
-      sequence_number: plv.getSequenceNumber()
+  if (field.pick_list_values && field.pick_list_values.length > 0) {
+    info.pick_list_values = field.pick_list_values.map(plv => ({
+      display_value: plv.display_value,
+      actual_value: plv.actual_value,
+      sequence_number: plv.sequence_number
     }));
   }
 
@@ -93,8 +105,8 @@ async function investigatePartnerFields() {
   // Look for partner type field
   console.log('--- PARTNER TYPE FIELD ---');
   const partnerTypeFields = fields.filter(f => {
-    const apiName = f.getAPIName().toLowerCase();
-    const label = f.getFieldLabel()?.toLowerCase() || '';
+    const apiName = f.api_name?.toLowerCase() || '';
+    const label = f.field_label?.toLowerCase() || '';
     return apiName.includes('type') || 
            apiName.includes('partner') || 
            label.includes('type') ||
@@ -110,9 +122,9 @@ async function investigatePartnerFields() {
   } else {
     console.log('❌ No Partner Type field found');
     console.log('💡 Listing all custom fields for manual review:');
-    const customFields = fields.filter(f => f.getCustomField());
+    const customFields = fields.filter(f => f.custom_field);
     customFields.forEach(field => {
-      console.log(`  - ${field.getAPIName()} (${field.getFieldLabel()})`);
+      console.log(`  - ${field.api_name} (${field.field_label})`);
     });
   }
 
@@ -131,8 +143,8 @@ async function investigateLeadFields() {
   // Look for State field
   console.log('--- STATE FIELD ---');
   const stateField = fields.find(f => {
-    const apiName = f.getAPIName().toLowerCase();
-    const label = f.getFieldLabel()?.toLowerCase() || '';
+    const apiName = f.api_name?.toLowerCase() || '';
+    const label = f.field_label?.toLowerCase() || '';
     return apiName === 'state' || label === 'state';
   });
 
@@ -153,7 +165,7 @@ async function investigateLeadFields() {
 
   // Look for Lead Status field
   console.log('\n--- LEAD STATUS FIELD ---');
-  const statusField = fields.find(f => f.getAPIName() === 'Lead_Status');
+  const statusField = fields.find(f => f.api_name === 'Lead_Status');
 
   if (statusField) {
     const info = formatFieldInfo(statusField);
@@ -173,8 +185,8 @@ async function investigateLeadFields() {
   // Look for Lander Message field
   console.log('\n--- LANDER MESSAGE FIELD ---');
   const landerField = fields.find(f => {
-    const apiName = f.getAPIName().toLowerCase();
-    const label = f.getFieldLabel()?.toLowerCase() || '';
+    const apiName = f.api_name?.toLowerCase() || '';
+    const label = f.field_label?.toLowerCase() || '';
     return apiName.includes('lander') || label.includes('lander');
   });
 
@@ -186,8 +198,8 @@ async function investigateLeadFields() {
     console.log('❌ No Lander Message field found');
     console.log('💡 Searching for similar fields (message, notes, description):');
     const messageFields = fields.filter(f => {
-      const apiName = f.getAPIName().toLowerCase();
-      const label = f.getFieldLabel()?.toLowerCase() || '';
+      const apiName = f.api_name?.toLowerCase() || '';
+      const label = f.field_label?.toLowerCase() || '';
       return apiName.includes('message') || 
              apiName.includes('note') || 
              apiName.includes('description') ||
@@ -196,7 +208,7 @@ async function investigateLeadFields() {
              label.includes('description');
     });
     messageFields.forEach(field => {
-      console.log(`  - ${field.getAPIName()} (${field.getFieldLabel()})`);
+      console.log(`  - ${field.api_name} (${field.field_label})`);
     });
   }
 
@@ -214,7 +226,7 @@ async function investigateDealFields() {
 
   // Look for Stage field
   console.log('--- DEAL STAGE FIELD ---');
-  const stageField = fields.find(f => f.getAPIName() === 'Stage');
+  const stageField = fields.find(f => f.api_name === 'Stage');
 
   if (stageField) {
     const info = formatFieldInfo(stageField);
@@ -239,7 +251,7 @@ async function investigateDealFields() {
 
   // Look for Approval Time Stamp field
   console.log('\n--- APPROVAL TIME STAMP FIELD ---');
-  const approvalField = fields.find(f => f.getAPIName() === 'Approval_Time_Stamp');
+  const approvalField = fields.find(f => f.api_name === 'Approval_Time_Stamp');
 
   if (approvalField) {
     const info = formatFieldInfo(approvalField);
@@ -249,21 +261,21 @@ async function investigateDealFields() {
     console.log('❌ No Approval_Time_Stamp field found');
     console.log('💡 Searching for similar fields (approval, date, timestamp):');
     const approvalFields = fields.filter(f => {
-      const apiName = f.getAPIName().toLowerCase();
-      const label = f.getFieldLabel()?.toLowerCase() || '';
+      const apiName = f.api_name?.toLowerCase() || '';
+      const label = f.field_label?.toLowerCase() || '';
       return apiName.includes('approval') || 
              apiName.includes('approved') ||
              label.includes('approval') ||
              label.includes('approved');
     });
     approvalFields.forEach(field => {
-      console.log(`  - ${field.getAPIName()} (${field.getFieldLabel()}) - ${field.getDataType()}`);
+      console.log(`  - ${field.api_name} (${field.field_label}) - ${field.data_type}`);
     });
   }
 
   // Look for Partners_Id field
   console.log('\n--- PARTNERS ID FIELD ---');
-  const partnersIdField = fields.find(f => f.getAPIName() === 'Partners_Id');
+  const partnersIdField = fields.find(f => f.api_name === 'Partners_Id');
 
   if (partnersIdField) {
     const info = formatFieldInfo(partnersIdField);
@@ -283,13 +295,10 @@ async function investigateAllFields() {
   console.log('╚' + '═'.repeat(78) + '╝');
   console.log('\n');
 
-  const initialized = await initializeZoho();
-  if (!initialized) {
-    console.error('Failed to initialize Zoho SDK. Please check your credentials.');
-    process.exit(1);
-  }
-
   try {
+    // Get access token first
+    await getAccessToken();
+
     await investigatePartnerFields();
     await investigateLeadFields();
     await investigateDealFields();
