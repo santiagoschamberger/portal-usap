@@ -1,8 +1,56 @@
 # Active Context
 
-## Current Focus: Lead/Deal Status Management & Conversion Logic ✅ COMPLETED
+## Current Focus: Portal Enhancement Planning ✅ COMPLETED
 
-### Recent Session: October 28, 2025
+### Recent Session: November 14, 2025
+
+#### Comprehensive Enhancement Planning
+**Stakeholder Requirements:** Michael Kieffer, Norberto, Matthew Mickler
+
+**Planning Completed:**
+- ✅ Gathered comprehensive requirements from stakeholders
+- ✅ Asked 60+ clarifying questions to eliminate assumptions
+- ✅ Received detailed answers for all questions
+- ✅ Created comprehensive implementation plan (10 phases)
+- ✅ Created implementation checklist for progress tracking
+- ✅ Created status/stage mapping reference document
+- ✅ Documented all technical specifications
+- ✅ Defined testing strategy for each phase
+- ✅ Established success criteria
+
+**Key Requirements Clarified:**
+1. **Lead Form Simplification:** Reduce to 6 fields, auto-populate lead source
+2. **Status Alignment:** Map 6 Portal statuses ↔ Zoho statuses bidirectionally
+3. **Deal Management:** Map 13 Zoho stages → 5 simplified Portal stages
+4. **Sub-Account Permissions:** Sub-accounts see only their own leads
+5. **Agent/ISO Handling:** Cannot submit leads, view assigned leads only
+6. **Compensation Documents:** Upload system (30MB max, .xls/.xlsx/.csv)
+7. **Pagination & Search:** 10 per page, search by name/company/email
+8. **Refresh Button:** Visible to all users, manual Zoho sync
+
+**Documents Created:**
+- `docs/PORTAL_ENHANCEMENT_PLAN.md` (Comprehensive 10-phase plan)
+- `docs/IMPLEMENTATION_CHECKLIST.md` (Progress tracking checklist)
+- `docs/STATUS_STAGE_MAPPING_REFERENCE.md` (Status/stage mappings)
+
+**Implementation Approach:**
+- **Phased:** 10 testable phases
+- **Test-driven:** Test each phase before proceeding
+- **Production testing:** Use production environment for validation
+- **No assumptions:** All requirements clarified upfront
+
+**Next Steps:**
+- Begin Phase 1: Verification & Foundation
+- Verify all webhooks working correctly
+- Document current Zoho field mappings
+- Pull Zoho state field values for dropdown
+- Create database backup
+
+---
+
+### Previous Session: October 28, 2025
+
+## Previous Focus: Lead/Deal Status Management & Conversion Logic ✅ COMPLETED
 
 #### Critical Requirements Implementation
 **User Requirements:**
