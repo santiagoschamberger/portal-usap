@@ -77,21 +77,27 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
+    // Phase 2: Simplified lead form fields
+    // Maps to: businessName, contactName, email, phone, state, additionalInfo
     const {
-      first_name,
-      last_name,
+      company,      // businessName from frontend
+      full_name,    // contactName from frontend (Zoho will split to First/Last)
       email,
       phone,
-      company,
+      state,
+      lander_message, // additionalInfo from frontend
+      // Legacy fields (for backwards compatibility)
+      first_name,
+      last_name,
       business_type,
       description
     } = req.body;
 
-    // Validate required fields
-    if (!first_name || !last_name || !email) {
+    // Validate required fields (support both new and legacy formats)
+    if (!email || (!full_name && (!first_name || !last_name)) || !company) {
       return res.status(400).json({
         error: 'Missing required fields',
-        required: ['first_name', 'last_name', 'email']
+        required: ['company', 'full_name or (first_name + last_name)', 'email']
       });
     }
 
@@ -110,16 +116,34 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
       });
     }
 
-    // Prepare lead data for Zoho
+    // Split full_name if provided, otherwise use first_name/last_name
+    let firstName = first_name;
+    let lastName = last_name;
+    
+    if (full_name && !first_name && !last_name) {
+      const nameParts = full_name.trim().split(' ');
+      firstName = nameParts[0];
+      lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : nameParts[0];
+    }
+
+    // Prepare lead data for Zoho CRM
+    // Field mapping based on ZOHO_FIELD_FINDINGS.md:
+    // - Company → Company
+    // - Full_Name → First_Name + Last_Name (Zoho requires split)
+    // - Email → Email
+    // - Phone → Phone
+    // - State → State (text field)
+    // - Lander_Message → Lander_Message (custom textarea field)
     const leadData = {
-      Last_Name: last_name,
-      First_Name: first_name,
+      Last_Name: lastName,
+      First_Name: firstName,
       Email: email,
-      Company: company || 'N/A',
+      Company: company,
       Phone: phone || '',
+      State: state || '',
+      Lander_Message: lander_message || '',
       StrategicPartnerId: req.user.id,
-      Entity_Type: Array.isArray(business_type) ? business_type : [business_type || 'Business'],
-      Lead_Status: 'New',
+      Lead_Status: 'New', // Default status for new leads
       Lead_Source: 'Strategic Partner',
       Vendor: {
         name: partner.name,
@@ -128,19 +152,20 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
     };
 
     // Save lead to local database FIRST (following proper architecture pattern)
-    const { data: localLead, error: localError } = await supabaseAdmin
+    const { data: localLead, error: localError} = await supabaseAdmin
       .from('leads')
       .insert({
         partner_id: req.user.partner_id,
         created_by: req.user.id,
-        first_name,
-        last_name,
+        first_name: firstName,
+        last_name: lastName,
         email,
         phone: phone || null,
         company: company || null,
+        state: state || null,
         status: 'new',
         lead_source: 'portal',
-        notes: description || null,
+        notes: lander_message || description || null, // Support both new and legacy field
         zoho_sync_status: 'pending' // Initially pending until Zoho sync succeeds
       })
       .select()
@@ -179,11 +204,12 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
       zohoLeadId = zohoResponse.data[0].details.id;
       console.log('✅ Lead synced to Zoho CRM:', zohoLeadId);
 
-      // Add note if description provided
-      if (description && zohoLeadId) {
+      // Add note if additional info provided (lander_message or legacy description)
+      const noteContent = lander_message || description;
+      if (noteContent && zohoLeadId) {
         const noteData = {
-          Note_Title: 'Lead Description',
-          Note_Content: description,
+          Note_Title: 'Additional Information',
+          Note_Content: noteContent,
           Parent_Id: zohoLeadId,
           se_module: 'Leads',
         };
@@ -237,10 +263,11 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
       entity_type: 'lead',
       entity_id: localLead.id,
       action: 'created',
-      description: `Lead created: ${first_name} ${last_name} (${email})`,
+      description: `Lead created: ${firstName} ${lastName} (${email}) - ${company}`,
       metadata: { 
         zoho_lead_id: zohoLeadId,
-        zoho_sync_status: zohoSyncStatus
+        zoho_sync_status: zohoSyncStatus,
+        state: state || null
       }
     });
 
