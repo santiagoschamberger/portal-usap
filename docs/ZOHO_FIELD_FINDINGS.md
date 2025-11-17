@@ -23,6 +23,8 @@
 
 ## 📋 Partner/Vendor Module Fields
 
+**Important Note:** In Zoho CRM, this module is called **"Vendors"** but we refer to them as **"Partners"** in the portal.
+
 ### Partner Type Field ✅
 
 **Field Name:** `Vendor_Type`  
@@ -30,21 +32,39 @@
 **Data Type:** Picklist (dropdown)  
 **Custom Field:** Yes
 
-**Values (4 total):**
+**Zoho Values (4 total):**
 
-| Display Value | Actual Value | Use Case |
-|--------------|--------------|----------|
+| Display Value | Actual Value | Portal Usage |
+|--------------|--------------|--------------|
 | -None- | -None- | Default/unset |
-| **Agent/ISO** | Agent | Cannot submit leads via portal |
-| **Strategic Partner (Referral)** | Processor / Referral | Can submit leads via portal |
-| ISV | ISV | Independent Software Vendor |
-| White Label SP | WLSP | White Label Strategic Partner |
+| **Agent/ISO** | Agent | ✅ **Used in Portal** - Read-only access |
+| **Strategic Partner (Referral)** | Processor / Referral | ✅ **Used in Portal** - Can submit leads |
+| ISV | ISV | ❌ Ignored in portal (exists in Zoho only) |
+| White Label SP | WLSP | ❌ Ignored in portal (exists in Zoho only) |
+
+**Portal Implementation:**
+
+Only two partner types are used in the portal:
+
+1. **Agent/ISO** (`actual_value: "Agent"`)
+   - Read-only access to leads
+   - Can view leads assigned to them from Zoho
+   - Cannot submit new leads via portal
+   - Can have sub-accounts (Contacts in Zoho)
+
+2. **Strategic Partner** (`actual_value: "Processor / Referral"`)
+   - Full access to submit leads
+   - Can create and view their own leads
+   - Can have sub-accounts (Contacts in Zoho)
+   - Sub-accounts inherit same permissions
 
 **Implementation Notes:**
 - Use `Vendor_Type` in partner webhook
-- Check for `actual_value` of "Agent" for Agent/ISO partners
-- Check for `actual_value` of "Processor / Referral" for Strategic Partners
-- Store in `partners.partner_type` field
+- Filter to only "Agent" and "Processor / Referral" values in portal
+- Ignore ISV and WLSP types (leave untouched in Zoho)
+- Store in `partners.partner_type` field as:
+  - `agent_iso` for Agent/ISO
+  - `strategic_partner` for Strategic Partners
 
 ---
 
