@@ -165,22 +165,99 @@ When creating new scripts:
 
 ## 🚀 Quick Start for Phase 1
 
-To complete Phase 1 verification:
+### Option A: Automated (Recommended)
+
+Run the comprehensive Phase 1 verification script:
+
+```bash
+cd backend
+bash scripts/run-phase1-verification.sh
+```
+
+This will automatically:
+1. Run Zoho field investigation
+2. Test all webhooks
+3. Create database backup
+4. Generate summary report
+
+All results saved to `docs/phase1-results/`
+
+### Option B: Manual
+
+Run each step individually:
 
 1. **Investigate Zoho fields:**
    ```bash
-   node scripts/investigate-zoho-fields.js > field-investigation-results.txt
+   node scripts/investigate-zoho-fields.js > ../docs/zoho-field-investigation.txt
    ```
 
 2. **Test all webhooks:**
    ```bash
-   node scripts/test-webhooks.js all
+   node scripts/test-webhooks.js all > ../docs/webhook-test-results.txt
    ```
 
-3. **Review results** and document findings in:
+3. **Create database backup:**
+   ```bash
+   bash scripts/backup-database.sh
+   ```
+
+4. **Review results** and document findings in:
    - `docs/PHASE_1_VERIFICATION_REPORT.md`
 
-4. **Update planning documents** with actual field names and values
+5. **Update planning documents** with actual field names and values
+
+---
+
+## 🛠️ Utility Scripts
+
+### Database Backup
+
+**Script:** `backup-database.sh`
+
+**Purpose:** Creates timestamped backups of database schema and data.
+
+**Usage:**
+```bash
+cd backend
+bash scripts/backup-database.sh
+```
+
+**Output:**
+- `database/backups/schema_backup_TIMESTAMP.sql`
+- `database/backups/data_backup_TIMESTAMP.sql`
+- `database/backups/full_backup_TIMESTAMP.sql`
+- Symlinks to latest backups
+
+**Features:**
+- Automatic cleanup (keeps last 10 backups)
+- Works with Supabase CLI or pg_dump
+- Creates timestamped backups
+- Shows file sizes
+
+### Phase 1 Verification Runner
+
+**Script:** `run-phase1-verification.sh`
+
+**Purpose:** Runs all Phase 1 verification tasks in sequence.
+
+**Usage:**
+```bash
+cd backend
+bash scripts/run-phase1-verification.sh
+```
+
+**What it does:**
+1. Checks prerequisites (Node.js, .env, Zoho credentials)
+2. Runs field investigation
+3. Tests webhooks (if backend is running)
+4. Creates database backup
+5. Generates summary report
+
+**Output:**
+All results in `docs/phase1-results/`:
+- `zoho-field-investigation.txt`
+- `webhook-test-results.txt`
+- `phase1-summary.md`
 
 ---
 
