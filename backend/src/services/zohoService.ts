@@ -12,6 +12,8 @@ interface ZohoLeadData {
   Email: string;
   Company: string;
   Phone: string;
+  State?: string; // US State or territory
+  Lander_Message?: string; // Additional information
   StrategicPartnerId: string;
   Entity_Type: string | string[];
   Lead_Status: string;
