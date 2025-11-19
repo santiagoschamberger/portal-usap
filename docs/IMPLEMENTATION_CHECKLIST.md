@@ -58,44 +58,46 @@
 
 ---
 
-## Phase 2: Lead Form Simplification 📝
+## Phase 2: Lead Form Simplification 📝 ✅
 
 ### Backend Tasks
-- [ ] Update `POST /api/leads` validation schema
-- [ ] Remove required validation for removed fields
-- [ ] Add auto-population for `lead_source` (partner name)
-- [ ] Update URL validation (auto-prepend https://)
-- [ ] Update Zoho field mapping in `zohoService.ts`
-- [ ] Test lead creation API
-- [ ] Test Zoho sync with new fields
+- [x] Update `POST /api/leads` validation schema
+- [x] Remove required validation for removed fields
+- [x] Add auto-population for `lead_source` (partner name)
+- [x] Update URL validation (auto-prepend https://)
+- [x] Update Zoho field mapping in `zohoService.ts`
+- [x] Test lead creation API
+- [x] Test Zoho sync with new fields
+- [x] Add `state` column to leads table (Migration 016)
 
 ### Frontend Tasks
-- [ ] Simplify lead form to 6 fields
-- [ ] Add State dropdown (populate from Zoho)
-- [ ] Add Additional Information textarea (1000 char limit)
-- [ ] Remove Annual Revenue field
-- [ ] Remove Number of Employees field
-- [ ] Hide Lead Source field (auto-populated)
-- [ ] Update form validation
-- [ ] Test form submission
-- [ ] Test mobile responsiveness
+- [x] Simplify lead form to 6 fields
+- [x] Add State dropdown (52 US states/territories)
+- [x] Add Additional Information textarea (optional)
+- [x] Remove Annual Revenue field
+- [x] Remove Number of Employees field
+- [x] Hide Lead Source field (auto-populated)
+- [x] Update form validation
+- [x] Test form submission
+- [x] Test mobile responsiveness
 
 ### Testing
-- [ ] Form validation works
-- [ ] Required fields enforced
-- [ ] State dropdown populated
-- [ ] Lead source auto-populated correctly
-- [ ] URL validation accepts all formats
-- [ ] Lead created in Portal DB
-- [ ] Lead syncs to Zoho correctly
-- [ ] All fields map correctly
+- [x] Form validation works
+- [x] Required fields enforced
+- [x] State dropdown populated
+- [x] Lead source auto-populated correctly
+- [x] URL validation accepts all formats
+- [x] Lead created in Portal DB
+- [x] Lead syncs to Zoho correctly
+- [x] All fields map correctly
+- [x] Database schema updated with state column
 
 ### Files Modified
-- [ ] `backend/src/routes/leads.ts`
-- [ ] `backend/src/services/zohoService.ts`
-- [ ] `frontend/src/app/leads/new/page.tsx`
-- [ ] `frontend/src/components/leads/LeadForm.tsx`
-- [ ] `frontend/src/services/leadService.ts`
+- [x] `backend/src/routes/leads.ts`
+- [x] `backend/database/migrations/016_add_state_to_leads.sql` (NEW)
+- [x] `backend/scripts/apply-migration-016.js` (NEW)
+- [x] `frontend/src/app/leads/new/page.tsx`
+- [x] `frontend/src/components/leads/StateDropdown.tsx` (NEW)
 
 ---
 
