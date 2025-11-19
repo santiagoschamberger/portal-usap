@@ -5,6 +5,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ProtectedRoute } from "@/components/protected-route";
 import { format, startOfMonth } from "date-fns";
 import "react-datepicker/dist/react-datepicker.css";
+import MerchantSelect, { MerchantAccount } from "./MerchantSelect";
 
 
 type RawTransaction = {
@@ -65,9 +66,11 @@ export default function PayarcReportPage() {
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
-  const [accounts, setAccounts] = useState<Account[]>([]);
+  //const [accounts, setAccounts] = useState<Account[]>([]);
   const [accountSearch, setAccountSearch] = useState("");
-  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+  //const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+   const [accounts, setAccounts] = useState<MerchantAccount[]>([]);
+  const [selectedAccount, setSelectedAccount] = useState<MerchantAccount | null>(null);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
   const [errorAccounts, setErrorAccounts] = useState<string | null>(null);
 
@@ -128,10 +131,10 @@ export default function PayarcReportPage() {
       const filtered = rows.filter((r:any) => r.isActive)
       //console.log('filtered', filtered, filtered.length)
       // Map to simplified structure
-      const mapped: Account[] = filtered.map((row: any) => ({
-        merchantName: row.dba_name || row.business_name || "Unknown Merchant",
-        merchantId: row.Merchant_Account_Number || Number(row.mid).toString() || "",
-      }));
+      const mapped: MerchantAccount[] = filtered.map((row: any) => ({
+          merchantName: row.dba_name || row.business_name || "Unknown Merchant",
+          merchantId: String(row.Merchant_Account_Number || row.mid || ""),
+        }));
 
       setAccounts(mapped);
       console.log(`Loaded ${mapped.length} PayArc accounts`);
@@ -157,12 +160,16 @@ export default function PayarcReportPage() {
     return Array.from(set).sort();
   }, [transactions]);
 
+  function normalizeNumber(str: string) {
+    return str.startsWith("0") ? str : "0" + str;
+  }
+
   // Filter by merchant + date range on the client as an extra layer
 const filtered = useMemo(() => {
   return transactions.filter((t) => {
     // filter by selected merchant MID (if selected)
     const matchMerchant = selectedAccount
-      ? t.merchantId === '0' + selectedAccount.merchantId
+      ? t.merchantId === normalizeNumber(selectedAccount.merchantId)
       : true;
 
     // filter by date range
@@ -260,50 +267,12 @@ const filtered = useMemo(() => {
               <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                 <div className="flex flex-1 flex-col gap-2 md:flex-row">
                   <div className="flex-1 relative">
-                    <label className="block text-xs font-medium text-slate-500">
-                      Merchant (search by name or MID)
-                    </label>
-
-                    <input
-                      type="search"
-                      value={accountSearch}
-                      onChange={(e) => {
-                        setAccountSearch(e.target.value);
-                        setSelectedAccount(null);
-                      }}
-                      placeholder="Start typing merchant name or MID…"
-                      className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-red-600 focus:outline-none focus:ring-1 focus:ring-red-600"
-                    />
-
-                    {/* Search dropdown */}
-                    {accountSearch && filteredAccounts.length > 0 && (
-                      <div className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white text-sm shadow-lg">
-                        {filteredAccounts.map((acc) => (
-                          <button
-                            key={acc.merchantId}
-                            type="button"
-                            className="flex w-full flex-col items-start px-3 py-2 text-left hover:bg-slate-50"
-                            onClick={() => {
-                              setSelectedAccount(acc);
-                              setAccountSearch(`${acc.merchantName} (${acc.merchantId})`);
-                            }}
-                          >
-                            <span className="font-medium text-slate-900">
-                              {acc.merchantName}
-                            </span>
-                            <span className="text-xs text-slate-500">{acc.merchantId}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Loading or Error */}
-                    {loadingAccounts && (
-                      <p className="text-xs text-slate-400 mt-1">Loading accounts...</p>
-                    )}
-                    {errorAccounts && (
-                      <p className="text-xs text-red-600 mt-1">{errorAccounts}</p>
-                    )}
+                      <MerchantSelect
+                        accounts={accounts}
+                        value={selectedAccount}
+                        onChange={setSelectedAccount}
+                        loading={loadingAccounts}
+                      />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-500">
