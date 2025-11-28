@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 import { zohoService } from '../services/zohoService';
 import { supabaseAdmin } from '../config/database';
+import { StatusMappingService } from '../services/statusMappingService';
 
 const router = Router();
 
@@ -221,7 +222,7 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
         phone: phone || null,
         company: company || null,
         state: state || null,
-        status: 'new',
+        status: 'Pre-Vet / New Lead', // Use correct initial Portal status
         lead_source: 'portal',
         notes: lander_message || description || null, // Support both new and legacy field
         zoho_sync_status: 'pending' // Initially pending until Zoho sync succeeds
@@ -546,20 +547,8 @@ router.post('/sync', authenticateToken, async (req: AuthenticatedRequest, res) =
           continue;
         }
 
-        // Map Zoho lead status to our local status
-        const statusMap: { [key: string]: string } = {
-          'New': 'new',
-          'Contacted': 'contacted',
-          'Qualified': 'qualified',
-          'Proposal': 'proposal',
-          'Negotiation': 'negotiation',
-          'Closed Won': 'closed_won',
-          'Closed Lost': 'closed_lost',
-          'Nurture': 'nurture',
-          'Unqualified': 'unqualified'
-        };
-        
-        const localStatus = statusMap[zohoLead.Lead_Status] || 'new';
+        // Map Zoho lead status to our local status using StatusMappingService
+        const localStatus = StatusMappingService.mapFromZoho(zohoLead.Lead_Status);
 
         // Check if lead already exists in our database (multiple ways to prevent duplicates)
         let existingLead = null;
