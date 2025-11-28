@@ -1,139 +1,86 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { ProtectedRoute } from '@/components/protected-route'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { LeadStatusBadge } from '@/components/leads/LeadStatusBadge'
-import { Lead } from '@/types'
+import { LeadFilters } from '@/components/leads/LeadFilters'
+import { Pagination } from '@/components/ui/Pagination'
 import { zohoService } from '@/services/zohoService'
 import { toast } from 'react-hot-toast'
-
-interface LeadsFilters {
-  search: string
-  status: string
-  dateRange: string
-}
+import { useDebounce } from '@/hooks/useDebounce'
+import { Lead } from '@/services/leadService' // Import from service to match snake_case backend
 
 export default function LeadsPage() {
   const router = useRouter()
-  const [leads, setLeads] = useState<any[]>([])
-  const [filteredLeads, setFilteredLeads] = useState<any[]>([])
+  const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
-  const [filters, setFilters] = useState<LeadsFilters>({
+  
+  // Filter State
+  const [filters, setFilters] = useState({
     search: '',
     status: '',
     dateRange: ''
   })
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [isSubAccount, setIsSubAccount] = useState(false)
+  
+  // Pagination State
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 1
+  })
 
-  useEffect(() => {
-    fetchLeads()
-  }, [])
+  // Debounce search to prevent too many API calls
+  const debouncedSearch = useDebounce(filters.search, 500)
 
-  useEffect(() => {
-    applyFilters()
-  }, [filters, leads])
-
-  const fetchLeads = async () => {
+  // Fetch leads when filters or pagination changes
+  const fetchLeads = useCallback(async () => {
     try {
       setLoading(true)
-      const response = await zohoService.leads.getAll()
+      const response = await zohoService.leads.getAll({
+        page: pagination.page,
+        limit: pagination.limit,
+        search: debouncedSearch,
+        status: filters.status,
+        date_range: filters.dateRange
+      })
       
-      // Combine local leads (which already have Portal status) and Zoho leads
-      const allLeads = [
-        ...response.local_leads, // These already have mapped status from backend
-        ...response.zoho_leads.map(zl => ({
-          id: zl.id,
-          first_name: zl.Full_Name?.split(' ')[0] || '',
-          last_name: zl.Full_Name?.split(' ').slice(1).join(' ') || '',
-          email: zl.Email,
-          phone: zl.Phone,
-          company: zl.Company,
-          status: zl.Lead_Status, // Keep as-is from Zoho for display
-          zoho_status: zl.Lead_Status, // Original Zoho status
-          created_at: zl.Created_Time,
-          source: zl.Lead_Source
-        }))
-      ]
-      
-      setLeads(allLeads)
-      setFilteredLeads(allLeads)
-      setTotalPages(Math.ceil(allLeads.length / 10))
-      setIsSubAccount(response.is_sub_account || false)
+      setLeads(response.data)
+      setPagination(prev => ({
+        ...prev,
+        total: response.pagination.total,
+        totalPages: response.pagination.pages
+      }))
     } catch (error) {
       console.error('Error fetching leads:', error)
       toast.error('Failed to load leads')
     } finally {
       setLoading(false)
     }
-  }
+  }, [pagination.page, pagination.limit, debouncedSearch, filters.status, filters.dateRange])
 
-  const applyFilters = () => {
-    let filtered = [...leads]
-
-    // Search filter
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase()
-      filtered = filtered.filter(lead =>
-        lead.first_name?.toLowerCase().includes(searchLower) ||
-        lead.last_name?.toLowerCase().includes(searchLower) ||
-        lead.email?.toLowerCase().includes(searchLower) ||
-        lead.company?.toLowerCase().includes(searchLower)
-      )
-    }
-
-    // Status filter
-    if (filters.status) {
-      filtered = filtered.filter(lead => lead.status === filters.status)
-    }
-
-    // Date range filter
-    if (filters.dateRange) {
-      const now = new Date()
-      filtered = filtered.filter(lead => {
-        const createdDate = new Date(lead.created_at)
-        switch (filters.dateRange) {
-          case 'today':
-            return createdDate.toDateString() === now.toDateString()
-          case 'week':
-            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-            return createdDate >= weekAgo
-          case 'month':
-            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-            return createdDate >= monthAgo
-          case 'quarter':
-            const quarterAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
-            return createdDate >= quarterAgo
-          default:
-            return true
-        }
-      })
-    }
-
-    setFilteredLeads(filtered)
-    setTotalPages(Math.ceil(filtered.length / 10))
-    setCurrentPage(1)
-  }
+  // Initial fetch and refetch on dependencies
+  useEffect(() => {
+    fetchLeads()
+  }, [fetchLeads])
 
   const handleCreateLead = () => {
     router.push('/leads/new')
   }
 
-  const handleViewLead = (leadId: string) => {
-    router.push(`/leads/${leadId}`)
+  const handleFilterChange = (key: string, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }))
+    // Reset to page 1 when filters change
+    setPagination(prev => ({ ...prev, page: 1 }))
   }
 
-  const handleFilterChange = (key: keyof LeadsFilters, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }))
-    setCurrentPage(1) // Reset to first page when filters change
+  const handlePageChange = (page: number) => {
+    setPagination(prev => ({ ...prev, page }))
   }
 
   const handleSyncLeads = async () => {
@@ -163,19 +110,19 @@ export default function LeadsPage() {
       <DashboardLayout>
         <div className="space-y-6">
           {/* Page Header */}
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <h1 className="text-3xl font-bold">Leads Management</h1>
               <p className="text-muted-foreground mt-2">
                 Manage and track your leads
               </p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 w-full sm:w-auto">
               <Button 
                 onClick={handleSyncLeads} 
                 variant="outline"
                 disabled={syncing}
-                className="border-[#9a132d] text-[#9a132d] hover:bg-[#9a132d] hover:text-white"
+                className="border-[#9a132d] text-[#9a132d] hover:bg-[#9a132d] hover:text-white flex-1 sm:flex-none"
               >
                 {syncing ? (
                   <>
@@ -191,65 +138,17 @@ export default function LeadsPage() {
                   </>
                 )}
               </Button>
-              <Button onClick={handleCreateLead} className="bg-[#9a132d] hover:bg-[#7d0f24]">
+              <Button onClick={handleCreateLead} className="bg-[#9a132d] hover:bg-[#7d0f24] flex-1 sm:flex-none">
                 Create New Lead
               </Button>
             </div>
           </div>
+
           {/* Filters */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Filters</CardTitle>
-              <CardDescription>
-                Filter leads by various criteria
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="search">Search</Label>
-                  <Input
-                    id="search"
-                    placeholder="Search by name, email, or company..."
-                    value={filters.search}
-                    onChange={(e) => handleFilterChange('search', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="status">Status</Label>
-                  <select
-                    id="status"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={filters.status}
-                    onChange={(e) => handleFilterChange('status', e.target.value)}
-                  >
-                    <option value="">All Statuses</option>
-                    <option value="Pre-Vet / New Lead">Pre-Vet / New Lead</option>
-                    <option value="Contacted">Contacted</option>
-                    <option value="Sent for Signature / Submitted">Sent for Signature / Submitted</option>
-                    <option value="Approved">Approved</option>
-                    <option value="Declined">Declined</option>
-                    <option value="Dead / Withdrawn">Dead / Withdrawn</option>
-                  </select>
-                </div>
-                <div>
-                  <Label htmlFor="dateRange">Date Range</Label>
-                  <select
-                    id="dateRange"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={filters.dateRange}
-                    onChange={(e) => handleFilterChange('dateRange', e.target.value)}
-                  >
-                    <option value="">All Time</option>
-                    <option value="today">Today</option>
-                    <option value="week">This Week</option>
-                    <option value="month">This Month</option>
-                    <option value="quarter">This Quarter</option>
-                  </select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <LeadFilters 
+            filters={filters} 
+            onFilterChange={handleFilterChange} 
+          />
 
           {/* Leads Table */}
           <Card>
@@ -261,115 +160,104 @@ export default function LeadsPage() {
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-                  <p className="mt-2 text-gray-600">Loading leads...</p>
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#9a132d] mx-auto"></div>
+                  <p className="mt-4 text-gray-600">Loading leads...</p>
                 </div>
-              ) : filteredLeads.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-3 px-4 font-medium">Name</th>
-                        <th className="text-left py-3 px-4 font-medium">Company</th>
-                        <th className="text-left py-3 px-4 font-medium">Contact</th>
-                        <th className="text-left py-3 px-4 font-medium">Status</th>
-                        {!isSubAccount && (
-                          <th className="text-left py-3 px-4 font-medium">Submitted By</th>
-                        )}
-                        <th className="text-left py-3 px-4 font-medium">Created</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredLeads
-                        .slice((currentPage - 1) * 10, currentPage * 10)
-                        .map((lead) => (
-                        <tr key={lead.id} className="border-b hover:bg-gray-50">
-                          <td className="py-3 px-4">
-                            <div>
-                              <div className="font-medium">
-                                {lead.first_name} {lead.last_name}
+              ) : leads.length > 0 ? (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-3 px-4 font-medium text-gray-500">Name</th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-500">Company</th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-500">Contact</th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-500">Status</th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-500">Submitted By</th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-500">Created</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {leads.map((lead) => (
+                          <tr key={lead.id} className="border-b hover:bg-gray-50 transition-colors">
+                            <td className="py-3 px-4">
+                              <div>
+                                <div className="font-medium text-gray-900">
+                                  {lead.first_name} {lead.last_name}
+                                </div>
+                                <div className="text-xs text-gray-500 mt-0.5">
+                                  {lead.lead_source || 'Portal'}
+                                </div>
                               </div>
-                              <div className="text-sm text-gray-600">
-                                {lead.source || 'Portal'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-700">
+                              {lead.company || 'N/A'}
+                            </td>
+                            <td className="py-3 px-4">
+                              <div>
+                                <div className="text-sm text-gray-900">{lead.email}</div>
+                                <div className="text-xs text-gray-500 mt-0.5">{lead.phone || 'N/A'}</div>
                               </div>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            {lead.company || 'N/A'}
-                          </td>
-                          <td className="py-3 px-4">
-                            <div>
-                              <div className="text-sm">{lead.email}</div>
-                              <div className="text-sm text-gray-600">{lead.phone || 'N/A'}</div>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <LeadStatusBadge status={lead.status} size="sm" />
-                          </td>
-                          {!isSubAccount && (
+                            </td>
+                            <td className="py-3 px-4">
+                              <LeadStatusBadge status={lead.status} size="sm" />
+                            </td>
                             <td className="py-3 px-4">
                               {lead.creator ? (
-                                <div className="text-sm">
-                                  <div className="font-medium">
+                                <div>
+                                  <div className="text-sm font-medium text-gray-900">
                                     {lead.creator.first_name} {lead.creator.last_name}
                                   </div>
-                                  <div className="text-xs text-gray-500">
-                                    {lead.creator.role === 'admin' ? 'Main Account' : 'Sub-Account'}
+                                  <div className="text-xs text-gray-500 capitalize">
+                                    {lead.creator.role.replace('_', ' ')}
                                   </div>
                                 </div>
                               ) : (
-                                <span className="text-sm text-gray-400">N/A</span>
+                                <span className="text-sm text-gray-400">System</span>
                               )}
                             </td>
-                          )}
-                          <td className="py-3 px-4 text-sm text-gray-600">
-                            {lead.created_at ? new Date(lead.created_at).toLocaleDateString() : 'N/A'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                            <td className="py-3 px-4 text-sm text-gray-600">
+                              {lead.created_at ? new Date(lead.created_at).toLocaleDateString() : 'N/A'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  <Pagination 
+                    currentPage={pagination.page}
+                    totalPages={pagination.totalPages}
+                    onPageChange={handlePageChange}
+                    totalItems={pagination.total}
+                    itemsPerPage={pagination.limit}
+                  />
+                </>
               ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-500 mb-4">No leads found</p>
-                  <Button onClick={handleCreateLead}>
-                    Create Your First Lead
-                  </Button>
+                <div className="text-center py-12 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                  <div className="mx-auto h-12 w-12 text-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                    </svg>
+                  </div>
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">No leads found</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {filters.search || filters.status || filters.dateRange 
+                      ? 'Try adjusting your filters' 
+                      : 'Get started by creating a new lead'}
+                  </p>
+                  <div className="mt-6">
+                    <Button onClick={handleCreateLead} className="bg-[#9a132d] hover:bg-[#7d0f24]">
+                      Create New Lead
+                    </Button>
+                  </div>
                 </div>
               )}
             </CardContent>
           </Card>
-
-          {/* Pagination */}
-          {filteredLeads.length > 0 && (
-            <div className="flex justify-between items-center mt-6">
-              <div className="text-sm text-gray-600">
-                Showing {((currentPage - 1) * 10) + 1} to {Math.min(currentPage * 10, filteredLeads.length)} of {filteredLeads.length} results
-              </div>
-              <div className="flex space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage(prev => prev - 1)}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage(prev => prev + 1)}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
-          )}
         </div>
       </DashboardLayout>
     </ProtectedRoute>
   )
-} 
+}

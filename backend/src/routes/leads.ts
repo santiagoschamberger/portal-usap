@@ -1,14 +1,20 @@
 import { Router } from 'express';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 import { zohoService } from '../services/zohoService';
-import { supabase, supabaseAdmin } from '../config/database';
+import { supabaseAdmin } from '../config/database';
 
 const router = Router();
 
 /**
  * GET /api/leads
- * Get leads for the authenticated partner
- * Sub-accounts only see their own leads, main accounts see all
+ * Get leads for the authenticated partner with pagination, search, and filtering
+ * 
+ * Query Params:
+ * - page: number (default 1)
+ * - limit: number (default 10)
+ * - search: string (search in name, company, email)
+ * - status: string (filter by status)
+ * - date_range: string ('today', 'week', 'month', 'quarter', 'year')
  */
 router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
   try {
@@ -16,12 +22,15 @@ router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    // Get leads from Zoho CRM for this partner
-    const zohoResponse = await zohoService.getPartnerLeads(req.user.id);
-    
-    const leads = zohoResponse.data || [];
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const search = req.query.search as string;
+    const status = req.query.status as string;
+    const dateRange = req.query.date_range as string;
 
-    // Build query for local database - exclude converted leads
+    const offset = (page - 1) * limit;
+
+    // Start building the query
     let query = supabaseAdmin
       .from('leads')
       .select(`
@@ -33,29 +42,77 @@ router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
           last_name,
           role
         )
-      `)
+      `, { count: 'exact' })
       .eq('partner_id', req.user.partner_id)
-      .neq('status', 'converted'); // Exclude converted leads - they should only appear in deals
+      .neq('status', 'converted'); // Exclude converted leads
 
+    // Sub-account permission check
     // If user is a sub-account, only show their own leads
-    // Note: Supabase schema uses 'sub' not 'sub_account'
     if (req.user.role === 'sub_account' || req.user.role === 'sub') {
       query = query.eq('created_by', req.user.id);
     }
 
-    const { data: localLeads, error } = await query.order('created_at', { ascending: false });
+    // Apply Search Filter
+    if (search) {
+      const searchTerm = `%${search}%`;
+      query = query.or(`first_name.ilike.${searchTerm},last_name.ilike.${searchTerm},company.ilike.${searchTerm},email.ilike.${searchTerm}`);
+    }
+
+    // Apply Status Filter
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    // Apply Date Range Filter
+    if (dateRange) {
+      const now = new Date();
+      let startDate = new Date();
+
+      switch (dateRange) {
+        case 'today':
+          startDate.setHours(0, 0, 0, 0);
+          break;
+        case 'week':
+          startDate.setDate(now.getDate() - 7);
+          break;
+        case 'month':
+          startDate.setMonth(now.getMonth() - 1);
+          break;
+        case 'quarter':
+          startDate.setMonth(now.getMonth() - 3);
+          break;
+        case 'year':
+          startDate.setFullYear(now.getFullYear() - 1);
+          break;
+        default:
+          startDate = new Date(0); // All time
+      }
+      
+      if (dateRange !== 'all') {
+        query = query.gte('created_at', startDate.toISOString());
+      }
+    }
+
+    // Apply Pagination and Sorting
+    query = query
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    const { data: leads, count, error } = await query;
 
     if (error) {
-      console.error('Error fetching local leads:', error);
+      console.error('Error fetching leads:', error);
+      throw error;
     }
 
     return res.json({
       success: true,
-      data: {
-        zoho_leads: leads,
-        local_leads: localLeads || [],
-        total: leads.length,
-        is_sub_account: req.user.role === 'sub_account' || req.user.role === 'sub'
+      data: leads || [],
+      pagination: {
+        total: count || 0,
+        page,
+        limit,
+        pages: Math.ceil((count || 0) / limit)
       }
     });
   } catch (error) {

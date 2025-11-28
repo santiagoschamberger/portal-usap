@@ -11,25 +11,20 @@ export interface Lead {
   email: string
   phone?: string
   company?: string
-  status: 'new' | 'contacted' | 'qualified' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost' | 'nurture' | 'unqualified'
+  status: string
   lead_source: string // Maps to lead_source in database
   notes?: string
   zoho_sync_status?: 'pending' | 'synced' | 'error'
   last_sync_at?: string
   created_at: string
   updated_at: string
-}
-
-export interface ZohoLead {
-  id: string
-  Full_Name: string
-  Email: string
-  Company: string
-  Phone: string
-  Lead_Status: string
-  StrategicPartnerId: string
-  Lead_Source: string
-  Created_Time: string
+  zoho_status?: string
+  creator?: {
+    id: string
+    first_name: string
+    last_name: string
+    role: string
+  }
 }
 
 export interface CreateLeadData {
@@ -38,6 +33,9 @@ export interface CreateLeadData {
   email: string
   phone?: string
   company?: string
+  state?: string
+  lander_message?: string
+  full_name?: string
   business_type?: string | string[]
   description?: string
 }
@@ -50,22 +48,41 @@ export interface LeadStats {
   converted: number
 }
 
-export interface LeadsResponse {
-  zoho_leads: ZohoLead[]
-  local_leads: Lead[]
-  total: number
+export interface PaginatedLeadsResponse {
+  data: Lead[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    pages: number;
+  };
+}
+
+export interface LeadFilters {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+  date_range?: string;
 }
 
 // Lead Service
 export const leadService = {
   /**
-   * Get all leads for the authenticated partner
-   * Fetches from both Zoho CRM and local database
+   * Get leads for the authenticated partner with pagination and filters
+   * Fetches from local database (which is synced with Zoho)
    */
-  async getLeads(): Promise<LeadsResponse> {
+  async getLeads(filters: LeadFilters = {}): Promise<PaginatedLeadsResponse> {
     try {
-      const response = await api.get<LeadsResponse>('/api/leads')
-      return response.data || { zoho_leads: [], local_leads: [], total: 0 }
+      const params = new URLSearchParams();
+      if (filters.page) params.append('page', filters.page.toString());
+      if (filters.limit) params.append('limit', filters.limit.toString());
+      if (filters.search) params.append('search', filters.search);
+      if (filters.status) params.append('status', filters.status);
+      if (filters.date_range) params.append('date_range', filters.date_range);
+
+      const response = await api.get<PaginatedLeadsResponse>(`/api/leads?${params.toString()}`)
+      return response.data || { data: [], pagination: { total: 0, page: 1, limit: 10, pages: 0 } }
     } catch (error) {
       console.error('Error fetching leads:', error)
       throw error
@@ -134,25 +151,14 @@ export const leadService = {
    */
   async getLeadStats(): Promise<LeadStats> {
     try {
-      const { zoho_leads, local_leads } = await this.getLeads()
+      const { data } = await this.getLeads({ limit: 1000 }) // Fetch up to 1000 for stats
       
-      // Combine leads for stats calculation
-      const allLeads = [...local_leads, ...zoho_leads.map(zl => ({
-        ...zl,
-        status: zl.Lead_Status?.toLowerCase() || 'unknown'
-      }))]
-
       const stats: LeadStats = {
-        total: allLeads.length,
-        new: allLeads.filter(l => l.status === 'new').length,
-        contacted: allLeads.filter(l => l.status === 'contacted').length,
-        qualified: allLeads.filter(l => l.status === 'qualified').length,
-        // Count converted, signed application, and closed_won as converted
-        converted: allLeads.filter(l => 
-          l.status === 'converted' || 
-          l.status === 'signed application' || 
-          l.status === 'closed_won'
-        ).length,
+        total: data.length,
+        new: data.filter(l => l.status === 'new').length,
+        contacted: data.filter(l => l.status === 'contacted').length,
+        qualified: data.filter(l => l.status === 'qualified').length,
+        converted: data.filter(l => l.status === 'converted' || l.status === 'signed application').length,
       }
 
       return stats
@@ -167,8 +173,8 @@ export const leadService = {
    */
   async getRecentLeads(): Promise<Lead[]> {
     try {
-      const { local_leads } = await this.getLeads()
-      return local_leads.slice(0, 10)
+      const { data } = await this.getLeads({ limit: 10, page: 1 })
+      return data
     } catch (err) {
       console.error('Error fetching recent leads:', err)
       throw err
@@ -212,4 +218,3 @@ export const leadService = {
     }
   },
 }
-

@@ -2,7 +2,7 @@
 export interface User {
   id: string
   email: string
-  role: 'admin' | 'user' | 'contact'
+  role: 'admin' | 'user' | 'contact' | 'sub_account'
   partnerId?: string
   firstName?: string
   lastName?: string
@@ -32,20 +32,28 @@ export interface AuthState {
 // Lead and Referral Types
 export interface Lead {
   id: string
-  partnerId: string
-  zohoLeadId?: string
-  firstName: string
-  lastName: string
-  email?: string
+  partnerId: string // Maps to partner_id in DB
+  zohoLeadId?: string // Maps to zoho_lead_id
+  firstName: string // Maps to first_name
+  lastName: string // Maps to last_name
+  email: string
   phone?: string
   company?: string
-  businessType?: string
+  businessType?: string // Maps to company (sometimes) or business_type
   status: string
-  source: string
+  zoho_status?: string // Maps to zoho_status
+  source: string // Maps to lead_source
   notes?: string
-  createdBy: string
-  createdAt: string
-  updatedAt: string
+  createdBy: string // Maps to created_by
+  createdAt: string // Maps to created_at
+  updatedAt: string // Maps to updated_at
+  creator?: { // Joined creator info
+    id: string
+    first_name: string
+    last_name: string
+    role: string
+    email: string
+  }
 }
 
 export interface LeadStatusHistory {
@@ -214,4 +222,4 @@ export const COUNTRY_CODES: CountryCode[] = [
   { code: '+61', country: 'Australia', flag: '🇦🇺' },
   { code: '+81', country: 'Japan', flag: '🇯🇵' },
   { code: '+86', country: 'China', flag: '🇨🇳' }
-] 
+]

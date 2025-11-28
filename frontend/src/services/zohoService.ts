@@ -1,4 +1,4 @@
-import { leadService } from './leadService'
+import { leadService, LeadFilters } from './leadService'
 import { dealsService } from './dealsService'
 
 /**
@@ -9,7 +9,7 @@ import { dealsService } from './dealsService'
 export const zohoService = {
   // Lead Management
   leads: {
-    getAll: () => leadService.getLeads(),
+    getAll: (filters: LeadFilters = {}) => leadService.getLeads(filters),
     getById: (id: string) => leadService.getLeadById(id),
     create: (data: any) => leadService.createLead(data),
     updateStatus: (id: string, status: string, notes?: string) => 
@@ -30,4 +30,3 @@ export const zohoService = {
 }
 
 export default zohoService
-
