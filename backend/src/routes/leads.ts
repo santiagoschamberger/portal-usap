@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import axios from 'axios';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 import { zohoService } from '../services/zohoService';
 import { supabaseAdmin } from '../config/database';
@@ -835,6 +836,88 @@ router.post('/public', async (req, res) => {
       error: 'Failed to submit lead',
       message: error instanceof Error ? error.message : 'Please try again later'
     });
+  }
+});
+
+
+/**
+ * GET /api/leads/debug/zoho-fields
+ * DEBUG ONLY: Inspect Zoho field names to fix sync
+ */
+router.get('/debug/zoho-fields', authenticateToken, async (req: AuthenticatedRequest, res) => {
+  try {
+    // 1. Get Token
+    const token = await zohoService.getAccessToken();
+    
+    // 2. Fetch one lead
+    const response = await axios.get('https://www.zohoapis.com/crm/v2/Leads', {
+      headers: { 'Authorization': `Zoho-oauthtoken ${token}` },
+      params: { per_page: 1 }
+    });
+
+    if (!response.data.data || response.data.data.length === 0) {
+      return res.json({ message: 'No leads found in Zoho to inspect' });
+    }
+
+    const lead = response.data.data[0];
+    
+    // 3. Filter for partner-related fields
+    const allKeys = Object.keys(lead);
+    const partnerFields = allKeys.filter(key => 
+      key.toLowerCase().includes('partner') || 
+      key.toLowerCase().includes('vendor') ||
+      key.toLowerCase().includes('account')
+    );
+
+    // 4. Test search with found values
+    const searchTests: any[] = [];
+    
+    // Helper to test search
+    const testSearch = async (criteria: string) => {
+      try {
+        const res = await axios.get('https://www.zohoapis.com/crm/v2/Leads/search', {
+          headers: { 'Authorization': `Zoho-oauthtoken ${token}` },
+          params: { criteria }
+        });
+        searchTests.push({ criteria, success: true, count: res.data.data?.length || 0 });
+      } catch (err: any) {
+        searchTests.push({ criteria, success: false, error: err.response?.data || err.message });
+      }
+    };
+
+    // Use the ID from the lead we found to test search
+    let testId = '';
+    if (lead.Vendor && lead.Vendor.id) testId = lead.Vendor.id;
+    else if (lead.StrategicPartnerId) testId = lead.StrategicPartnerId; // Caution: might be UUID
+
+    if (testId) {
+       await testSearch(`(Vendor:equals:${testId})`);
+       await testSearch(`(Vendor.id:equals:${testId})`);
+       await testSearch(`(Partner:equals:${testId})`);
+       await testSearch(`(Partner.id:equals:${testId})`);
+       // Add other potential fields found
+       for (const field of partnerFields) {
+          if (lead[field] && typeof lead[field] === 'object' && lead[field].id) {
+             await testSearch(`(${field}.id:equals:${lead[field].id})`);
+          }
+       }
+    }
+
+    return res.json({
+      lead_sample: {
+        id: lead.id,
+        Vendor: lead.Vendor,
+        Vendor_Name: lead.Vendor_Name,
+        Partner: lead.Partner,
+        StrategicPartnerId: lead.StrategicPartnerId,
+        // Return all potential keys
+        partner_related_keys: partnerFields
+      },
+      search_tests: searchTests
+    });
+
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message, details: error.response?.data });
   }
 });
 
