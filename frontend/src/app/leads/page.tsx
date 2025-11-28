@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ProtectedRoute } from '@/components/protected-route'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import { LeadStatusBadge } from '@/components/leads/LeadStatusBadge'
 import { Lead } from '@/types'
 import { zohoService } from '@/services/zohoService'
 import { toast } from 'react-hot-toast'
@@ -46,25 +47,9 @@ export default function LeadsPage() {
       setLoading(true)
       const response = await zohoService.leads.getAll()
       
-      // Helper function to normalize Zoho status to our internal format
-      const normalizeStatus = (zohoStatus: string | undefined): string => {
-        if (!zohoStatus) return 'new'
-        const status = zohoStatus.toLowerCase().trim()
-        
-        // Map Zoho statuses to our standardized statuses
-        if (status.includes('new') || status.includes('prospect')) return 'new'
-        if (status.includes('contact') || status.includes('reached out')) return 'contacted'
-        if (status.includes('qualif')) return 'qualified'
-        if (status.includes('signed') || status.includes('converted') || status.includes('won')) return 'converted'
-        if (status.includes('lost') || status.includes('declined') || status.includes('dead')) return 'lost'
-        if (status.includes('proposal')) return 'qualified' // Treat proposal as qualified
-        
-        return status
-      }
-
-      // Combine local leads and Zoho leads
+      // Combine local leads (which already have Portal status) and Zoho leads
       const allLeads = [
-        ...response.local_leads,
+        ...response.local_leads, // These already have mapped status from backend
         ...response.zoho_leads.map(zl => ({
           id: zl.id,
           first_name: zl.Full_Name?.split(' ')[0] || '',
@@ -72,8 +57,8 @@ export default function LeadsPage() {
           email: zl.Email,
           phone: zl.Phone,
           company: zl.Company,
-          status: normalizeStatus(zl.Lead_Status),
-          zoho_status: zl.Lead_Status, // Keep original for reference
+          status: zl.Lead_Status, // Keep as-is from Zoho for display
+          zoho_status: zl.Lead_Status, // Original Zoho status
           created_at: zl.Created_Time,
           source: zl.Lead_Source
         }))
@@ -173,23 +158,6 @@ export default function LeadsPage() {
     }
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'new':
-        return 'bg-blue-100 text-blue-800'
-      case 'contacted':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'qualified':
-        return 'bg-purple-100 text-purple-800'
-      case 'converted':
-        return 'bg-green-100 text-green-800'
-      case 'lost':
-        return 'bg-red-100 text-red-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
-
   return (
     <ProtectedRoute allowedRoles={['admin', 'user']}>
       <DashboardLayout>
@@ -256,11 +224,12 @@ export default function LeadsPage() {
                     onChange={(e) => handleFilterChange('status', e.target.value)}
                   >
                     <option value="">All Statuses</option>
-                    <option value="new">New</option>
-                    <option value="contacted">Contacted</option>
-                    <option value="qualified">Qualified</option>
-                    <option value="converted">Converted</option>
-                    <option value="lost">Lost</option>
+                    <option value="Pre-Vet / New Lead">Pre-Vet / New Lead</option>
+                    <option value="Contacted">Contacted</option>
+                    <option value="Sent for Signature / Submitted">Sent for Signature / Submitted</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Declined">Declined</option>
+                    <option value="Dead / Withdrawn">Dead / Withdrawn</option>
                   </select>
                 </div>
                 <div>
@@ -336,9 +305,7 @@ export default function LeadsPage() {
                             </div>
                           </td>
                           <td className="py-3 px-4">
-                            <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(lead.status)}`}>
-                              {lead.status}
-                            </span>
+                            <LeadStatusBadge status={lead.status} size="sm" />
                           </td>
                           {!isSubAccount && (
                             <td className="py-3 px-4">

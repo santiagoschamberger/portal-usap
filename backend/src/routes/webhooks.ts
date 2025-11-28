@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { supabase, supabaseAdmin } from '../config/database';
 import { zohoService } from '../services/zohoService';
+import { StatusMappingService } from '../services/statusMappingService';
 import crypto from 'crypto';
 
 const router = Router();
@@ -87,24 +88,10 @@ router.post('/zoho/lead-status', async (req, res) => {
 
     const oldStatus = lead.status;
     
-    // Map Zoho lead status to our local status
-    const statusMap: { [key: string]: string } = {
-      'New': 'new',
-      'Contacted': 'contacted',
-      'Qualified': 'qualified',
-      'Proposal': 'proposal',
-      'Negotiation': 'negotiation',
-      'Closed Won': 'closed_won',
-      'Closed Lost': 'closed_lost',
-      'Nurture': 'nurture',
-      'Unqualified': 'unqualified',
-      'Signed Application': 'qualified', // Map signed application to qualified status
-      'Application Signed': 'qualified',
-      'Under Review': 'qualified',
-      'In Review': 'qualified'
-    };
-    
-    const newStatus = statusMap[Lead_Status] || Lead_Status?.toLowerCase() || 'new';
+    // Use StatusMappingService to map Zoho status to Portal display status
+    const newStatus = StatusMappingService.mapFromZoho(Lead_Status);
+
+    console.log(`Status mapping: Zoho "${Lead_Status}" → Portal "${newStatus}"`);
 
     // Update lead status if it has changed
     if (oldStatus !== newStatus) {
@@ -112,6 +99,7 @@ router.post('/zoho/lead-status', async (req, res) => {
         .from('leads')
         .update({
           status: newStatus,
+          zoho_status: Lead_Status, // Store original Zoho status for reference
           updated_at: new Date().toISOString()
         })
         .eq('id', lead.id);
@@ -136,7 +124,7 @@ router.post('/zoho/lead-status', async (req, res) => {
         old_status: oldStatus,
         new_status: newStatus,
         changed_by: 'zoho_webhook',
-        notes: 'Status updated via Zoho CRM webhook'
+        notes: `Status updated via Zoho CRM webhook (Zoho: "${Lead_Status}")`
       });
 
       // Log activity
@@ -144,10 +132,11 @@ router.post('/zoho/lead-status', async (req, res) => {
         partner_id: lead.partner_id,
         lead_id: lead.id,
         activity_type: 'lead_status_updated',
-        description: `Lead status changed from ${oldStatus} to ${newStatus} via Zoho CRM`,
+        description: `Lead status changed from "${oldStatus}" to "${newStatus}" via Zoho CRM`,
         metadata: { 
           source: 'zoho_webhook',
           zoho_lead_id: zohoLeadId,
+          zoho_status: Lead_Status,
           old_status: oldStatus,
           new_status: newStatus
         }
@@ -163,7 +152,8 @@ router.post('/zoho/lead-status', async (req, res) => {
       data: {
         lead_id: lead.id,
         old_status: oldStatus,
-        new_status: newStatus
+        new_status: newStatus,
+        zoho_status: Lead_Status
       }
     });
   } catch (error) {
