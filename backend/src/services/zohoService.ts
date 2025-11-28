@@ -166,16 +166,35 @@ class ZohoService {
   async getLeadsByVendor(vendorId: string): Promise<any> {
     try {
       const headers = await this.getAuthHeaders();
-      const criteria = `(Vendor.id:equals:${vendorId})`;
       
-      const response = await axios.get(`${this.baseUrl}/Leads/search`, {
-        headers,
-        params: { 
-          criteria,
-          per_page: 200 // Get up to 200 leads per request
-        },
-      });
-      return response.data;
+      // Try multiple criteria variations to be robust
+      const searchVariations = [
+        `(Vendor:equals:${vendorId})`,
+        `(Vendor.id:equals:${vendorId})`,
+        `(Vendor_Name:equals:${vendorId})`,
+        `(Vendor_Name.id:equals:${vendorId})`
+      ];
+
+      for (const criteria of searchVariations) {
+        try {
+          const response = await axios.get(`${this.baseUrl}/Leads/search`, {
+            headers,
+            params: { 
+              criteria,
+              per_page: 200 
+            },
+          });
+
+          if (response.data && response.data.data) {
+            console.log(`✓ Leads found using criteria: ${criteria}`);
+            return response.data;
+          }
+        } catch (err) {
+          // Continue to next variation
+        }
+      }
+
+      return { data: [] };
     } catch (error) {
       console.error('Error getting leads by vendor from Zoho:', error);
       throw error;
