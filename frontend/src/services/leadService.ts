@@ -4,7 +4,7 @@ import { api } from '@/lib/api'
 export interface Lead {
   id: string
   partner_id: string
-  created_by: string // Maps to created_by in database (user UUID)
+  created_by: string
   zoho_lead_id?: string
   first_name: string
   last_name: string
@@ -12,7 +12,7 @@ export interface Lead {
   phone?: string
   company?: string
   status: string
-  lead_source: string // Maps to lead_source in database
+  lead_source: string
   notes?: string
   zoho_sync_status?: 'pending' | 'synced' | 'error'
   last_sync_at?: string
@@ -81,8 +81,14 @@ export const leadService = {
       if (filters.status) params.append('status', filters.status);
       if (filters.date_range) params.append('date_range', filters.date_range);
 
-      const response = await api.get<PaginatedLeadsResponse>(`/api/leads?${params.toString()}`)
-      return response.data || { data: [], pagination: { total: 0, page: 1, limit: 10, pages: 0 } }
+      // FIX: Cast to any to safely access the full response body structure
+      const response = await api.get<any>(`/api/leads?${params.toString()}`) as any;
+      
+      // FIX: Ensure we return the object with both data and pagination
+      return {
+        data: response.data || [],
+        pagination: response.pagination || { total: 0, page: 1, limit: 10, pages: 0 }
+      }
     } catch (error) {
       console.error('Error fetching leads:', error)
       throw error
@@ -151,14 +157,15 @@ export const leadService = {
    */
   async getLeadStats(): Promise<LeadStats> {
     try {
-      const { data } = await this.getLeads({ limit: 1000 }) // Fetch up to 1000 for stats
+      const { data } = await this.getLeads({ limit: 1000 })
       
+      // Updated to match new Phase 3 status values
       const stats: LeadStats = {
         total: data.length,
-        new: data.filter(l => l.status === 'new').length,
-        contacted: data.filter(l => l.status === 'contacted').length,
-        qualified: data.filter(l => l.status === 'qualified').length,
-        converted: data.filter(l => l.status === 'converted' || l.status === 'signed application').length,
+        new: data.filter(l => l.status === 'Pre-Vet / New Lead').length,
+        contacted: data.filter(l => l.status === 'Contacted').length,
+        qualified: data.filter(l => l.status === 'Sent for Signature / Submitted').length,
+        converted: data.filter(l => l.status === 'Approved').length,
       }
 
       return stats
