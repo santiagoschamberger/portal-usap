@@ -142,7 +142,7 @@ router.get('/sub-accounts', authenticateToken, requireAdmin, async (req: Authent
       const email = contact.Email?.toLowerCase();
       const activatedUser = email ? activatedEmailMap.get(email) : null;
 
-      return {
+        return {
         zoho_contact_id: contact.id,
         first_name: contact.First_Name || '',
         last_name: contact.Last_Name || '',
@@ -154,7 +154,7 @@ router.get('/sub-accounts', authenticateToken, requireAdmin, async (req: Authent
         is_active: activatedUser?.is_active || false,
         created_at: contact.Created_Time,
         activated_at: activatedUser?.created_at || null
-      };
+        };
     });
 
     return res.json({
@@ -675,15 +675,15 @@ router.post('/sub-accounts/:zohoContactId/activate', authenticateToken, requireA
       console.log(`✅ User already exists: ${existingUser.id}`);
       
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.toLowerCase(), {
-        redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/reset-password`
-      });
+      redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/reset-password`
+    });
 
-      if (resetError) {
-        console.error('Failed to send password reset email:', resetError);
-        return res.status(500).json({
-          error: 'Failed to send activation email',
-          message: resetError.message
-        });
+    if (resetError) {
+      console.error('Failed to send password reset email:', resetError);
+      return res.status(500).json({
+        error: 'Failed to send activation email',
+        message: resetError.message
+      });
       }
 
       return res.json({

@@ -91,27 +91,14 @@ export default function DealsPage() {
         return stageMap[stage] || stage
       }
 
-      // Combine local deals and Zoho deals
-      const allDeals = [
-        ...response.local_deals,
-        ...response.zoho_deals.map(zd => ({
-          id: zd.id,
-          deal_name: zd.Deal_Name || 'Unnamed Deal',
-          first_name: zd.Contact_Name?.name?.split(' ')[0] || '',
-          last_name: zd.Contact_Name?.name?.split(' ').slice(1).join(' ') || '',
-          email: zd.Contact_Name?.Email,
-          phone: zd.Contact_Name?.Phone,
-          company: zd.Account_Name?.name || zd.Deal_Name,
-          amount: parseFloat(zd.Amount || '0'),
-          stage: normalizeStage(zd.Stage),
-          zoho_stage: zd.Stage, // Keep original for reference
-          close_date: zd.Closing_Date,
-          approval_date: zd.Approval_Time_Stamp,
-          probability: zd.Probability || 0,
-          created_at: zd.Created_Time,
-          lead_source: zd.Lead_Source
-        }))
-      ]
+      // Use only local deals (synced from Zoho via webhooks and sync)
+      // No need to fetch from Zoho API as deals are already synced to database
+      const allDeals = response.local_deals.map(deal => ({
+        ...deal,
+        deal_name: deal.deal_name || 'Unnamed Deal',
+        stage: normalizeStage(deal.stage),
+        company: deal.company || deal.deal_name
+      }))
       
       setDeals(allDeals)
       setFilteredDeals(allDeals)
