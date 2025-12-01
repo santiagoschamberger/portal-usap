@@ -590,6 +590,14 @@ router.post('/sync', authenticateToken, async (req: AuthenticatedRequest, res) =
         }
 
         if (existingLead) {
+          // Debug: Log the status mapping
+          console.log(`📊 Updating Lead ${zohoLead.id} (${email}):`, {
+            zoho_status: zohoLead.Lead_Status,
+            mapped_status: localStatus,
+            current_db_status: existingLead.status,
+            will_update: existingLead.status !== localStatus
+          });
+          
           // Update existing lead
           const { error: updateError } = await supabaseAdmin
             .from('leads')

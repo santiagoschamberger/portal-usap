@@ -338,7 +338,11 @@ export default function DealsPage() {
                     </thead>
                     <tbody>
                       {paginatedDeals.map((deal) => (
-                        <tr key={deal.id} className="border-b hover:bg-gray-50">
+                        <tr 
+                          key={deal.id} 
+                          className="border-b hover:bg-gray-50 cursor-pointer transition-colors"
+                          onClick={() => handleViewDeal(deal.id)}
+                        >
                           <td className="py-3 px-4">
                             <div>
                               <div className="font-medium">

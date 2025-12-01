@@ -103,6 +103,13 @@ router.get('/:id', authenticateToken, async (req: AuthenticatedRequest, res) => 
       .from('deals')
       .select(`
         *,
+        creator:created_by (
+          id,
+          email,
+          first_name,
+          last_name,
+          role
+        ),
         deal_stage_history (
           old_stage,
           new_stage,

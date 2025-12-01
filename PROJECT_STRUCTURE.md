@@ -27,11 +27,13 @@ backend/
 │   │   ├── auth.ts       # Authentication routes
 │   │   ├── partners.ts   # Partner management
 │   │   ├── leads.ts      # Lead management
-│   │   ├── deals.ts      # Deal management
+│   │   ├── deals.ts      # Deal management (NEW)
 │   │   └── webhooks.ts   # Zoho CRM webhooks
 │   ├── services/         # Business logic
 │   │   ├── authService.ts
-│   │   └── zohoService.ts
+│   │   ├── zohoService.ts
+│   │   ├── statusMappingService.ts # Lead status mapping (NEW)
+│   │   └── stageMappingService.ts  # Deal stage mapping (NEW)
 │   ├── utils/            # Utility functions
 │   └── index.ts          # Entry point
 ├── database/             # Database schemas and migrations
@@ -59,17 +61,22 @@ frontend/
 │   ├── app/              # Next.js app directory
 │   │   ├── (auth)/      # Auth pages (login, register)
 │   │   ├── leads/       # Leads management pages
-│   │   ├── deals/       # Deals management pages
+│   │   ├── deals/       # Deals management pages (NEW)
+│   │   │   ├── [id]/    # Deal detail page (NEW)
+│   │   │   └── page.tsx # Deals list
 │   │   ├── sub-accounts/ # Sub-accounts management
 │   │   └── layout.tsx    # Root layout
 │   ├── components/       # Reusable React components
 │   │   ├── layout/      # Layout components
+│   │   ├── leads/       # Lead components
+│   │   ├── deals/       # Deal components (NEW)
 │   │   └── ui/          # UI components (shadcn/ui)
 │   ├── services/         # API service clients
 │   │   ├── api.ts       # API client
 │   │   ├── authService.ts
 │   │   ├── partnerService.ts
-│   │   └── leadService.ts
+│   │   ├── leadService.ts
+│   │   └── dealsService.ts # Deal service (NEW)
 │   ├── lib/              # Utility libraries
 │   └── types/            # TypeScript type definitions
 ├── public/               # Static assets
@@ -300,6 +307,5 @@ For questions or issues:
 
 ---
 
-**Last Updated:** October 27, 2025  
-**Version:** 2.0
-
+**Last Updated:** December 1, 2025  
+**Version:** 2.1
