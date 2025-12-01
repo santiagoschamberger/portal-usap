@@ -98,6 +98,57 @@ router.post('/zoho/lead-status', async (req, res) => {
 
     const oldStatus = lead.status;
     
+    // Check if lead has been converted to a deal
+    if (LeadStatusMappingService.isConvertedStatus(Lead_Status)) {
+      console.log(`🔄 Lead converted to deal - removing from leads table`);
+      
+      // Delete the lead from leads table
+      const { error: deleteError } = await supabaseAdmin
+        .from('leads')
+        .delete()
+        .eq('id', lead.id);
+      
+      if (deleteError) {
+        console.error('Error deleting converted lead:', deleteError);
+        return res.status(500).json({
+          error: 'Failed to delete converted lead',
+          details: deleteError.message
+        });
+      }
+      
+      // Clean up lead status history
+      await supabaseAdmin
+        .from('lead_status_history')
+        .delete()
+        .eq('lead_id', lead.id);
+      
+      // Log activity
+      await supabaseAdmin.from('activity_log').insert({
+        partner_id: lead.partner_id,
+        user_id: strategicPartnerId,
+        activity_type: 'lead_converted',
+        description: `Lead "${lead.first_name} ${lead.last_name}" converted to deal and removed from leads`,
+        metadata: { 
+          source: 'zoho_webhook',
+          zoho_lead_id: zohoLeadId,
+          zoho_status: Lead_Status,
+          strategic_partner_id: strategicPartnerId
+        }
+      });
+      
+      console.log(`✅ Lead ${lead.id} successfully removed after conversion`);
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Lead converted to deal and removed from leads table',
+        data: {
+          lead_id: lead.id,
+          action: 'deleted',
+          reason: 'converted_to_deal'
+        }
+      });
+    }
+    
     // Use LeadStatusMappingService to map Zoho status to Portal display status
     const newStatus = LeadStatusMappingService.mapFromZoho(Lead_Status);
 
@@ -423,6 +474,8 @@ router.post('/zoho/deal', async (req, res) => {
       Business_Name,
       Contact_First_Name,
       Contact_Name,
+      Email, // Email field from deal
+      Phone, // Phone field from deal
       Partners_Id, // From ${Lookup:Partner.Partners Id} - this is our partner identifier
       StrategicPartnerId, // This should identify the original lead submitter
       Approval_Time_Stamp // Approval date field from Zoho
@@ -432,6 +485,8 @@ router.post('/zoho/deal', async (req, res) => {
       zohoDealId,
       Deal_Name,
       Stage,
+      Email,
+      Phone,
       Partners_Id,
       StrategicPartnerId
     });
@@ -517,8 +572,10 @@ router.post('/zoho/deal', async (req, res) => {
     const contactName = Contact_Name || '';
     const firstName = Contact_First_Name || contactName.split(' ')[0] || null;
     const lastName = contactName.split(' ').slice(1).join(' ') || null;
-    const email = null; // We'll need to add email field if available
-    const phone = null; // We'll need to add phone field if available
+    const email = Email || null; // Email from Zoho deal
+    const phone = Phone || null; // Phone from Zoho deal
+    
+    console.log('📧 Contact details extracted:', { firstName, lastName, email, phone, accountName });
 
     // Check if deal already exists
     const { data: existingDeal } = await supabaseAdmin
@@ -603,6 +660,9 @@ router.post('/zoho/deal', async (req, res) => {
       // REQUIREMENT: When creating a new deal, check if this is a lead conversion
       // and remove the corresponding lead from the leads table
       let convertedLeadId: string | null = null;
+      
+      console.log('🔍 Checking for lead conversion...');
+      console.log('   Search criteria:', { partnerId, email, firstName, lastName, accountName });
       
       // Try to find matching lead by partner and contact details
       // Try multiple strategies to find the matching lead
@@ -703,7 +763,12 @@ router.post('/zoho/deal', async (req, res) => {
               console.log(`✅ Created notification for user ${createdBy} about lead conversion`);
             }
           }
+        } else {
+          console.log('⚠️ No matching lead found for conversion');
+          console.log('   This might be a direct deal creation (not from lead conversion)');
         }
+      } else {
+        console.log('⚠️ No partner ID available - skipping lead conversion check');
       }
 
       // Create new deal

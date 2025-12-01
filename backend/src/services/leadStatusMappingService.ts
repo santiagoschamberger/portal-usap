@@ -46,6 +46,9 @@ export class LeadStatusMappingService {
     // Not Qualified category
     'Lost': 'Dead / Withdrawn',
     
+    // Converted status (lead converted to deal)
+    'Converted': 'Converted', // Special status - lead should be removed
+    
     // Legacy/Additional statuses
     'Pre-Vet': 'Pre-Vet / New Lead',
     'Qualified': 'Contacted',
@@ -103,6 +106,13 @@ export class LeadStatusMappingService {
    */
   static isValidPortalStatus(status: string): boolean {
     return this.getAllPortalStatuses().includes(status);
+  }
+
+  /**
+   * Check if a Zoho status indicates the lead has been converted to a deal
+   */
+  static isConvertedStatus(zohoStatus: string): boolean {
+    return zohoStatus === 'Converted' || zohoStatus === 'Converted - Deal';
   }
 }
 

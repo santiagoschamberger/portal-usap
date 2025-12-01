@@ -46,7 +46,7 @@ router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
         )
       `, { count: 'exact' })
       .eq('partner_id', req.user.partner_id)
-      .neq('status', 'converted'); // Exclude converted leads
+      .neq('status', 'Converted'); // Exclude converted leads (should be deleted but filter as safety)
 
     // Sub-account permission check
     // If user is a sub-account, only show their own leads
