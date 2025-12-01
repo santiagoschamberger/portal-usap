@@ -319,23 +319,24 @@ router.post('/zoho/deal', async (req, res) => {
   try {
     // Log the FULL request body to see what Zoho is actually sending
     console.log('📦 Deal webhook - FULL BODY:', JSON.stringify(req.body, null, 2));
-    console.log('📦 Deal webhook - HEADERS:', JSON.stringify(req.headers, null, 2));
     
     const {
-      id: zohoDealId,
+      zohoDealId, // Zoho sends it as "zohoDealId" not "id"
       Deal_Name,
       Stage,
       Lead_Source,
       Business_Name,
       Contact_First_Name,
       Contact_Name,
+      First_Name, // Zoho sends these separately
+      Last_Name,
       Email, // Email field from deal
       Phone, // Phone field from deal
-      Partners_Id, // From ${Lookup:Partner.Partners Id} - this is our partner identifier
-      StrategicPartnerId, // This should identify the original lead submitter
+      Partners_Id, // From ${Lookup:Partner.Partners Id}
+      StrategicPartnerId, // This is the PARTNER ID in this webhook (not user ID!)
       Approval_Time_Stamp, // Approval date field from Zoho
       Vendor, // Vendor object (contains partner info)
-      Account_Name // Account Name object (alternative partner reference)
+      Account_Name // Account Name (string, not object)
     } = req.body;
 
     console.log('Deal webhook received:', {
@@ -350,14 +351,36 @@ router.post('/zoho/deal', async (req, res) => {
       Account_Name
     });
     
-    // Try to extract partner ID from multiple possible sources
-    const vendorId = Partners_Id || Vendor?.id || Account_Name?.id;
+    // Extract partner ID from multiple possible sources
+    // Based on the logs, StrategicPartnerId contains the partner's Zoho ID
+    const vendorId = Partners_Id || StrategicPartnerId || Vendor?.id;
     
     if (!vendorId) {
       console.error('❌ No partner identifier found in webhook payload');
-      console.error('   Checked: Partners_Id, Vendor.id, Account_Name.id');
+      console.error('   Checked: Partners_Id, StrategicPartnerId, Vendor.id');
       console.error('   Available fields:', Object.keys(req.body));
+      return res.status(400).json({
+        error: 'Partner identifier missing',
+        message: 'Webhook must include Partners_Id, StrategicPartnerId, or Vendor.id',
+        debug: {
+          available_fields: Object.keys(req.body)
+        }
+      });
     }
+    
+    console.log(`✅ Using partner identifier: ${vendorId}`);
+
+    // Extract contact info FIRST (needed for partner lookup)
+    const accountName = Business_Name || Deal_Name || Account_Name || 'Unknown';
+    const contactName = Contact_Name || '';
+    
+    // Zoho sends First_Name and Last_Name separately in this webhook
+    const firstName = First_Name || Contact_First_Name || contactName.split(' ')[0] || null;
+    const lastName = Last_Name || contactName.split(' ').slice(1).join(' ') || null;
+    const email = Email || null; // Email from Zoho deal
+    const phone = Phone || null; // Phone from Zoho deal
+    
+    console.log('📧 Contact details extracted:', { firstName, lastName, email, phone, accountName });
 
     // Find the partner using vendorId (from multiple possible sources)
     let partnerId: string | null = null;
@@ -373,52 +396,40 @@ router.post('/zoho/deal', async (req, res) => {
 
       if (partner) {
         partnerId = partner.id;
+        console.log(`✅ Partner found: ${partnerId}`);
         
-        // First, try to find the original submitter using StrategicPartnerId
-        if (StrategicPartnerId) {
-          const { data: originalSubmitter } = await supabaseAdmin
-            .from('users')
-            .select('id')
-            .eq('zoho_user_id', StrategicPartnerId)
-            .eq('partner_id', partner.id)
-            .single();
-            
-          if (originalSubmitter) {
-            createdBy = originalSubmitter.id;
-            console.log('Found original submitter via StrategicPartnerId:', originalSubmitter.id);
-          }
-        }
-        
-        // If no StrategicPartnerId or submitter not found, try to find by matching lead details
-        if (!createdBy) {
-          // Try to find the original lead that matches this deal
+        // Try to find the original lead creator by matching deal details
+        if (firstName && lastName) {
           const { data: matchingLead } = await supabaseAdmin
             .from('leads')
-            .select('created_by')
+            .select('created_by, id, email')
             .eq('partner_id', partner.id)
-            .or(`first_name.eq.${Contact_First_Name || ''},company.eq.${Business_Name || Deal_Name}`)
+            .eq('first_name', firstName)
+            .eq('last_name', lastName)
             .order('created_at', { ascending: false })
             .limit(1)
-            .single();
+            .maybeSingle();
             
           if (matchingLead && matchingLead.created_by) {
             createdBy = matchingLead.created_by;
-            console.log('Found original submitter via lead matching:', matchingLead.created_by);
+            console.log(`✅ Found original lead creator: ${createdBy} (lead: ${matchingLead.id})`);
           }
         }
         
-        // If still no submitter found, fall back to main partner user
+        // If no lead creator found, use the main partner admin user
         if (!createdBy) {
           const { data: mainUser } = await supabaseAdmin
             .from('users')
-            .select('id')
+            .select('id, email')
             .eq('partner_id', partner.id)
             .eq('role', 'admin') // Main partner account
-            .single();
+            .maybeSingle();
             
           if (mainUser) {
             createdBy = mainUser.id;
-            console.log('Falling back to main partner user:', mainUser.id);
+            console.log(`✅ Using main partner admin: ${createdBy} (${mainUser.email})`);
+          } else {
+            console.warn('⚠️ No admin user found for partner, deal will have no created_by');
           }
         }
       }
@@ -441,16 +452,6 @@ router.post('/zoho/deal', async (req, res) => {
 
     // Map Zoho deal stage to our local stage using StageMappingService
     const localStage = StageMappingService.mapFromZoho(Stage);
-
-    // Extract contact info
-    const accountName = Business_Name || Deal_Name || 'Unknown';
-    const contactName = Contact_Name || '';
-    const firstName = Contact_First_Name || contactName.split(' ')[0] || null;
-    const lastName = contactName.split(' ').slice(1).join(' ') || null;
-    const email = Email || null; // Email from Zoho deal
-    const phone = Phone || null; // Phone from Zoho deal
-    
-    console.log('📧 Contact details extracted:', { firstName, lastName, email, phone, accountName });
 
     // Check if deal already exists
     const { data: existingDeal } = await supabaseAdmin
