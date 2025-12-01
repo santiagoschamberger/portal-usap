@@ -631,6 +631,75 @@ router.post('/zoho/deal', async (req, res) => {
         });
       }
 
+      // IMPORTANT: Also check for lead conversion on deal UPDATE
+      // Sometimes Zoho creates the deal first, then sends an update with contact info
+      console.log('🔍 Checking for lead conversion on deal update...');
+      console.log('   Search criteria:', { partnerId, email, firstName, lastName, accountName });
+      
+      if (partnerId && (email || (firstName && lastName))) {
+        let matchingLead = null;
+        
+        // Strategy 1: Try by email (most reliable)
+        if (email) {
+          const { data: leadByEmail } = await supabaseAdmin
+            .from('leads')
+            .select('id, zoho_lead_id, first_name, last_name, email')
+            .eq('partner_id', partnerId)
+            .eq('email', email)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          if (leadByEmail) {
+            matchingLead = leadByEmail;
+            console.log(`✓ Found lead by email: ${email}`);
+          }
+        }
+        
+        // Strategy 2: Try by name + company
+        if (!matchingLead && firstName && lastName && accountName) {
+          const { data: leadByNameCompany } = await supabaseAdmin
+            .from('leads')
+            .select('id, zoho_lead_id, first_name, last_name, email')
+            .eq('partner_id', partnerId)
+            .eq('first_name', firstName)
+            .eq('last_name', lastName)
+            .eq('company', accountName)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          if (leadByNameCompany) {
+            matchingLead = leadByNameCompany;
+            console.log(`✓ Found lead by name + company: ${firstName} ${lastName} at ${accountName}`);
+          }
+        }
+        
+        // If we found a matching lead, delete it
+        if (matchingLead) {
+          console.log(`🔄 Found matching lead for conversion: ${matchingLead.id}`);
+          
+          const { error: deleteLeadError } = await supabaseAdmin
+            .from('leads')
+            .delete()
+            .eq('id', matchingLead.id);
+
+          if (deleteLeadError) {
+            console.error('Error deleting converted lead:', deleteLeadError);
+          } else {
+            console.log(`✅ Successfully removed converted lead ${matchingLead.id} from leads table`);
+            
+            // Clean up lead status history
+            await supabaseAdmin
+              .from('lead_status_history')
+              .delete()
+              .eq('lead_id', matchingLead.id);
+          }
+        } else {
+          console.log('⚠️ No matching lead found for this deal update');
+        }
+      }
+
       // Log activity
       await supabaseAdmin.from('activity_log').insert({
         partner_id: partnerId,
