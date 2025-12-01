@@ -466,6 +466,10 @@ router.post('/zoho/contact', async (req, res) => {
  */
 router.post('/zoho/deal', async (req, res) => {
   try {
+    // Log the FULL request body to see what Zoho is actually sending
+    console.log('📦 Deal webhook - FULL BODY:', JSON.stringify(req.body, null, 2));
+    console.log('📦 Deal webhook - HEADERS:', JSON.stringify(req.headers, null, 2));
+    
     const {
       id: zohoDealId,
       Deal_Name,
@@ -478,7 +482,9 @@ router.post('/zoho/deal', async (req, res) => {
       Phone, // Phone field from deal
       Partners_Id, // From ${Lookup:Partner.Partners Id} - this is our partner identifier
       StrategicPartnerId, // This should identify the original lead submitter
-      Approval_Time_Stamp // Approval date field from Zoho
+      Approval_Time_Stamp, // Approval date field from Zoho
+      Vendor, // Vendor object (contains partner info)
+      Account_Name // Account Name object (alternative partner reference)
     } = req.body;
 
     console.log('Deal webhook received:', {
@@ -488,18 +494,30 @@ router.post('/zoho/deal', async (req, res) => {
       Email,
       Phone,
       Partners_Id,
-      StrategicPartnerId
+      StrategicPartnerId,
+      Vendor,
+      Account_Name
     });
+    
+    // Try to extract partner ID from multiple possible sources
+    const vendorId = Partners_Id || Vendor?.id || Account_Name?.id;
+    
+    if (!vendorId) {
+      console.error('❌ No partner identifier found in webhook payload');
+      console.error('   Checked: Partners_Id, Vendor.id, Account_Name.id');
+      console.error('   Available fields:', Object.keys(req.body));
+    }
 
-    // Find the partner using Partners_Id
+    // Find the partner using vendorId (from multiple possible sources)
     let partnerId: string | null = null;
     let createdBy: string | null = null;
 
-    if (Partners_Id) {
+    if (vendorId) {
+      console.log(`🔍 Looking up partner with Zoho ID: ${vendorId}`);
       const { data: partner } = await supabaseAdmin
         .from('partners')
         .select('id')
-        .eq('zoho_partner_id', Partners_Id)
+        .eq('zoho_partner_id', vendorId)
         .single();
 
       if (partner) {
@@ -557,10 +575,16 @@ router.post('/zoho/deal', async (req, res) => {
 
     // If still no partner found, can't proceed
     if (!partnerId) {
-      console.log('No partner found for deal:', { Partners_Id });
+      console.error('❌ No partner found for deal');
+      console.error('   Searched with Zoho ID:', vendorId);
+      console.error('   Available request body:', Object.keys(req.body));
       return res.status(400).json({
         error: 'Partner not found',
-        message: 'Could not link deal to a partner in the portal'
+        message: 'Could not link deal to a partner in the portal',
+        debug: {
+          vendorId,
+          available_fields: Object.keys(req.body)
+        }
       });
     }
 
