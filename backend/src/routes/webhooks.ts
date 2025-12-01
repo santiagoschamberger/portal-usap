@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { supabase, supabaseAdmin } from '../config/database';
 import { zohoService } from '../services/zohoService';
-import { StatusMappingService } from '../services/statusMappingService';
+import { LeadStatusMappingService } from '../services/leadStatusMappingService';
 import { StageMappingService } from '../services/stageMappingService';
 import crypto from 'crypto';
 
@@ -89,10 +89,10 @@ router.post('/zoho/lead-status', async (req, res) => {
 
     const oldStatus = lead.status;
     
-    // Use StatusMappingService to map Zoho status to Portal display status
-    const newStatus = StatusMappingService.mapFromZoho(Lead_Status);
+    // Use LeadStatusMappingService to map Zoho status to Portal display status
+    const newStatus = LeadStatusMappingService.mapFromZoho(Lead_Status);
 
-    console.log(`Status mapping: Zoho "${Lead_Status}" → Portal "${newStatus}"`);
+    console.log(`📊 Lead Status Webhook - Mapping: Zoho "${Lead_Status}" → Portal "${newStatus}"`);
 
     // Update lead status if it has changed
     if (oldStatus !== newStatus) {

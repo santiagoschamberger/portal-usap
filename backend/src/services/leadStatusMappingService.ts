@@ -34,7 +34,13 @@ export class LeadStatusMappingService {
     'Qualified': 'Contacted',
     'Unqualified': 'Dead / Withdrawn',
     'Junk Lead': 'Dead / Withdrawn',
-    'Not Contacted': 'Pre-Vet / New Lead'
+    'Not Contacted': 'Pre-Vet / New Lead',
+    // Custom statuses from your Zoho
+    'Sent Pre-App': 'Contacted',
+    'sent pre-app': 'Contacted',
+    'Pre-App Sent': 'Contacted',
+    'Sent for Signature': 'Sent for Signature / Submitted',
+    'Signature Sent': 'Sent for Signature / Submitted'
   };
 
   /**
