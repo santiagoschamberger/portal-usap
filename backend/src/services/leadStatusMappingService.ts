@@ -41,6 +41,8 @@ export class LeadStatusMappingService {
     'Pre-App Sent': 'Contacted',
     'Sent for Signature': 'Sent for Signature / Submitted',
     'Signature Sent': 'Sent for Signature / Submitted',
+    'Interested - Needs Follow Up': 'Contacted',
+    'Needs Follow Up': 'Contacted',
     // NOTE: "Signed Application" should ideally trigger lead-to-deal conversion in Zoho
     // If you see this status on a lead, it means the lead should be converted to a deal
     'Signed Application': 'Sent for Signature / Submitted'
