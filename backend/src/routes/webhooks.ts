@@ -370,17 +370,45 @@ router.post('/zoho/deal', async (req, res) => {
     
     console.log(`✅ Using partner identifier: ${vendorId}`);
 
-    // Extract contact info FIRST (needed for partner lookup)
-    const accountName = Business_Name || Deal_Name || Account_Name || 'Unknown';
-    const contactName = Contact_Name || '';
+    // Extract contact info from webhook
+    let accountName = Business_Name || Deal_Name || Account_Name || 'Unknown';
+    let contactName = Contact_Name || '';
+    let firstName = First_Name || Contact_First_Name || contactName.split(' ')[0] || null;
+    let lastName = Last_Name || contactName.split(' ').slice(1).join(' ') || null;
+    let email = Email || null;
+    let phone = Phone || null;
     
-    // Zoho sends First_Name and Last_Name separately in this webhook
-    const firstName = First_Name || Contact_First_Name || contactName.split(' ')[0] || null;
-    const lastName = Last_Name || contactName.split(' ').slice(1).join(' ') || null;
-    const email = Email || null; // Email from Zoho deal
-    const phone = Phone || null; // Phone from Zoho deal
-    
-    console.log('📧 Contact details extracted:', { firstName, lastName, email, phone, accountName });
+    console.log('📧 Contact details from webhook:', { firstName, lastName, email, phone, accountName });
+
+    // If critical contact info is missing, fetch full deal record from Zoho
+    if (zohoDealId && (!email || !firstName || !lastName)) {
+      console.log('⚠️  Contact info incomplete in webhook, fetching full deal from Zoho...');
+      try {
+        const dealResponse = await zohoService.getDealById(zohoDealId);
+        const fullDeal = dealResponse?.data?.[0];
+        
+        if (fullDeal) {
+          console.log('✅ Fetched full deal from Zoho:', {
+            id: fullDeal.id,
+            Deal_Name: fullDeal.Deal_Name,
+            Contact_Name: fullDeal.Contact_Name,
+            Email: fullDeal.Email
+          });
+          
+          // Update with data from Zoho API
+          email = email || fullDeal.Email || fullDeal.Contact_Name?.email || null;
+          phone = phone || fullDeal.Phone || fullDeal.Contact_Name?.phone || null;
+          firstName = firstName || fullDeal.First_Name || fullDeal.Contact_Name?.First_Name || null;
+          lastName = lastName || fullDeal.Last_Name || fullDeal.Contact_Name?.Last_Name || null;
+          accountName = accountName || fullDeal.Account_Name?.name || fullDeal.Deal_Name || 'Unknown';
+          
+          console.log('📧 Contact details after Zoho fetch:', { firstName, lastName, email, phone, accountName });
+        }
+      } catch (fetchError) {
+        console.error('Failed to fetch deal from Zoho:', fetchError);
+        // Continue with webhook data even if fetch fails
+      }
+    }
 
     // Find the partner using vendorId (from multiple possible sources)
     let partnerId: string | null = null;

@@ -202,6 +202,22 @@ class ZohoService {
   }
 
   /**
+   * Get a single deal by ID
+   */
+  async getDealById(dealId: string): Promise<any> {
+    try {
+      const headers = await this.getAuthHeaders();
+      const response = await axios.get(`${this.baseUrl}/Deals/${dealId}`, {
+        headers
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error getting deal from Zoho:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get deals by vendor ID
    */
   async getDealsByVendor(vendorId: string): Promise<any> {
