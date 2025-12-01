@@ -115,6 +115,17 @@ router.get('/:id', authenticateToken, async (req: AuthenticatedRequest, res) => 
           new_stage,
           created_at,
           notes
+        ),
+        related_lead:lead_id (
+          id,
+          first_name,
+          last_name,
+          email,
+          phone,
+          company,
+          status,
+          created_at,
+          zoho_lead_id
         )
       `)
       .eq('id', req.params.id)

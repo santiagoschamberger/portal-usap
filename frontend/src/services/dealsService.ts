@@ -1,5 +1,17 @@
 import { api } from '@/lib/api'
 
+export interface RelatedLead {
+  id: string
+  first_name: string
+  last_name: string
+  email?: string
+  phone?: string
+  company?: string
+  status: string
+  created_at: string
+  zoho_lead_id?: string
+}
+
 export interface Deal {
   id: string
   partner_id: string
@@ -28,6 +40,8 @@ export interface Deal {
     last_name: string
     role: string
   }
+  deal_stage_history?: DealStageHistory[]
+  related_lead?: RelatedLead
 }
 
 export interface DealStageHistory {
@@ -92,6 +106,14 @@ export const dealsService = {
   async syncFromZoho(): Promise<SyncDealsResponse['data']> {
     const response = await api.post<SyncDealsResponse['data']>('/api/deals/sync')
     return response.data!
+  },
+
+  /**
+   * Get stage history for a specific deal
+   */
+  async getStageHistory(dealId: string): Promise<DealStageHistory[]> {
+    const response = await api.get<{ data: DealStageHistory[] }>(`/api/deals/${dealId}/history`)
+    return response.data?.data || []
   }
 }
 

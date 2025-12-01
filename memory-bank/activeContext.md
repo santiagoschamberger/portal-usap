@@ -1,8 +1,48 @@
 # Active Context
 
-## Current Focus: Portal Enhancement Planning ✅ COMPLETED
+## Current Focus: Phase 6 - Sub-Account Management ✅ COMPLETED
 
-### Recent Session: November 14, 2025
+### Recent Session: December 1, 2025
+
+#### Phase 6: Sub-Account Management Implementation
+**Status:** ✅ Complete - All migrations applied successfully
+
+**Completed:**
+- ✅ Created Migration 020: Add lead relationship to deals table
+- ✅ Created Migration 021: Sub-account permissions with RLS policies
+- ✅ Created permission middleware for backend
+- ✅ Verified sub-account management API endpoints (already existed)
+- ✅ Verified lead API permission checks (already in place)
+- ✅ Created sub-accounts management page (frontend)
+- ✅ Verified "Submitted By" column in leads list (already implemented)
+- ✅ Created comprehensive documentation
+- ✅ Applied both migrations in Supabase successfully
+
+**Key Features Implemented:**
+1. **Database-Level Security:** RLS policies enforce sub-account lead isolation
+2. **Permission Fields:** `can_submit_leads` and `can_view_all_partner_leads`
+3. **Sub-Account Management UI:** Activate, deactivate, manage sub-accounts
+4. **Lead Isolation:** Sub-accounts only see their own submitted leads
+5. **Admin Full Access:** Main partners see all partner leads with creator info
+
+**Files Created:**
+- `backend/database/migrations/020_add_lead_relationship_to_deals.sql`
+- `backend/database/migrations/021_sub_account_permissions.sql`
+- `backend/src/middleware/permissions.ts`
+- `backend/scripts/apply-migration-021.js`
+- `frontend/src/app/sub-accounts/page.tsx`
+- `docs/features/SUB_ACCOUNT_PERMISSIONS.md`
+- `docs/PHASE_6_COMPLETION.md`
+
+**Next Steps:**
+- Deploy backend to Railway
+- Deploy frontend to Vercel
+- Test in production
+- Begin Phase 7: Agent/ISO Handling
+
+---
+
+### Previous Session: November 14, 2025
 
 #### Comprehensive Enhancement Planning
 **Stakeholder Requirements:** Michael Kieffer, Norberto, Matthew Mickler

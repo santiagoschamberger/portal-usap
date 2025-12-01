@@ -8,6 +8,8 @@ import { ProtectedRoute } from '@/components/protected-route'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { dealsService, Deal } from '@/services/dealsService'
 import { DealStageBadge } from '@/components/deals/DealStageBadge'
+import { DealStageTimeline } from '@/components/deals/DealStageTimeline'
+import { RelatedLeadInfo } from '@/components/deals/RelatedLeadInfo'
 import { toast } from 'react-hot-toast'
 import Link from 'next/link'
 
@@ -161,7 +163,7 @@ export default function DealDetailPage() {
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-500">Last Sync</label>
-                    <p className="text-lg text-sm text-gray-600">
+                    <p className="text-sm text-gray-600">
                       {deal.last_sync_at ? new Date(deal.last_sync_at).toLocaleString() : 'N/A'}
                     </p>
                   </div>
@@ -201,9 +203,21 @@ export default function DealDetailPage() {
                 </CardContent>
               </Card>
 
-              {/* Status History Placeholder - could be added later */}
+              {/* Related Lead Information */}
+              {deal.related_lead && (
+                <RelatedLeadInfo lead={deal.related_lead} />
+              )}
             </div>
           </div>
+
+          {/* Stage History Timeline */}
+          {deal.deal_stage_history && deal.deal_stage_history.length > 0 && (
+            <Card className="mt-6">
+              <CardContent className="pt-6">
+                <DealStageTimeline history={deal.deal_stage_history} />
+              </CardContent>
+            </Card>
+          )}
         </div>
       </DashboardLayout>
     </ProtectedRoute>
