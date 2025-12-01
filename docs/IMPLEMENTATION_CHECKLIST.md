@@ -182,29 +182,28 @@
 ---
 
 ## Phase 5: Deal Management 💼
-
 ### Backend Tasks
-- [ ] Create `stageMappingService.ts`
-- [ ] Implement stage mapping (13 → 5)
-- [ ] Update deal webhook with mapping
-- [ ] Handle `Approval_Time_Stamp` field
-- [ ] Handle "Submitted By" logic
-- [ ] Create `GET /api/deals` endpoint
-- [ ] Create `GET /api/deals/:id` endpoint
-- [ ] Create `POST /api/deals/sync` endpoint
+- [x] Create `stageMappingService.ts`
+- [x] Implement stage mapping (13 → 5)
+- [x] Update deal webhook with mapping
+- [x] Handle `Approval_Time_Stamp` field
+- [x] Handle "Submitted By" logic
+- [x] Create `GET /api/deals` endpoint
+- [x] Create `GET /api/deals/:id` endpoint
+- [x] Create `POST /api/deals/sync` endpoint
 - [ ] Test deal webhook
 - [ ] Test deal endpoints
 
 ### Frontend Tasks
-- [ ] Create deals list page
+- [x] Create deals list page
 - [ ] Create deal detail page
 - [ ] Create `DealCard` component
-- [ ] Create `DealStageBadge` component
-- [ ] Add pagination (10 per page)
-- [ ] Add search and filters
-- [ ] Add refresh button
-- [ ] Display "Approval Date"
-- [ ] Display "Submitted By" correctly
+- [x] Create `DealStageBadge` component
+- [x] Add pagination (10 per page)
+- [x] Add search and filters
+- [x] Add refresh button
+- [x] Display "Approval Date"
+- [x] Display "Submitted By" correctly
 - [ ] Test all functionality
 
 ### Testing
@@ -220,14 +219,14 @@
 - [ ] Mobile responsive
 
 ### Files Modified
-- [ ] `backend/src/services/stageMappingService.ts` (NEW)
-- [ ] `backend/src/routes/webhooks.ts`
-- [ ] `backend/src/routes/deals.ts` (NEW)
-- [ ] `frontend/src/app/deals/page.tsx` (NEW)
+- [x] `backend/src/services/stageMappingService.ts` (NEW)
+- [x] `backend/src/routes/webhooks.ts`
+- [x] `backend/src/routes/deals.ts` (NEW)
+- [x] `frontend/src/app/deals/page.tsx` (NEW)
 - [ ] `frontend/src/app/deals/[id]/page.tsx` (NEW)
 - [ ] `frontend/src/components/deals/DealCard.tsx` (NEW)
-- [ ] `frontend/src/components/deals/DealStageBadge.tsx` (NEW)
-- [ ] `frontend/src/services/dealService.ts` (NEW)
+- [x] `frontend/src/components/deals/DealStageBadge.tsx` (NEW)
+- [x] `frontend/src/services/dealService.ts` (NEW)
 
 ---
 

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { supabase, supabaseAdmin } from '../config/database';
 import { zohoService } from '../services/zohoService';
 import { StatusMappingService } from '../services/statusMappingService';
+import { StageMappingService } from '../services/stageMappingService';
 import crypto from 'crypto';
 
 const router = Router();
@@ -497,25 +498,8 @@ router.post('/zoho/deal', async (req, res) => {
       });
     }
 
-    // Map Zoho deal stage to our local stage
-    // Updated with actual stages from Zoho CRM API
-    const stageMap: { [key: string]: string } = {
-      'New Deal': 'New Deal',
-      'Pre-Vet': 'Pre-Vet',
-      'Sent for Signature': 'Sent for Signature',
-      'Signed Application': 'Signed Application',
-      'Sent to Underwriting': 'Sent to Underwriting',
-      'App Pended': 'App Pended',
-      'Approved': 'Approved',
-      'Declined': 'Declined',
-      'Dead / Do Not Contact': 'Dead / Do Not Contact',
-      'Merchant Unresponsive': 'Merchant Unresponsive',
-      'App Withdrawn': 'App Withdrawn',
-      'Approved - Closed': 'Approved - Closed',
-      'Conditionally Approved': 'Conditionally Approved'
-    };
-
-    const localStage = stageMap[Stage] || 'New Deal';
+    // Map Zoho deal stage to our local stage using StageMappingService
+    const localStage = StageMappingService.mapFromZoho(Stage);
 
     // Extract contact info
     const accountName = Business_Name || Deal_Name || 'Unknown';

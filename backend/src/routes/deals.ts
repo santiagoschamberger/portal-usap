@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 import { zohoService } from '../services/zohoService';
+import { StageMappingService } from '../services/stageMappingService';
 import { supabase, supabaseAdmin } from '../config/database';
 
 const router = Router();
@@ -187,25 +188,8 @@ router.post('/sync', authenticateToken, async (req: AuthenticatedRequest, res) =
     // Process each deal from Zoho
     for (const zohoDeal of zohoResponse.data) {
       try {
-        // Map Zoho deal stage to our local stage
-        // Updated with actual stages from Zoho CRM API
-        const stageMap: { [key: string]: string } = {
-          'New Deal': 'New Deal',
-          'Pre-Vet': 'Pre-Vet',
-          'Sent for Signature': 'Sent for Signature',
-          'Signed Application': 'Signed Application',
-          'Sent to Underwriting': 'Sent to Underwriting',
-          'App Pended': 'App Pended',
-          'Approved': 'Approved',
-          'Declined': 'Declined',
-          'Dead / Do Not Contact': 'Dead / Do Not Contact',
-          'Merchant Unresponsive': 'Merchant Unresponsive',
-          'App Withdrawn': 'App Withdrawn',
-          'Approved - Closed': 'Approved - Closed',
-          'Conditionally Approved': 'Conditionally Approved'
-        };
-        
-        const localStage = stageMap[zohoDeal.Stage] || 'New Deal';
+        // Map Zoho deal stage to our local stage using StageMappingService
+        const localStage = StageMappingService.mapFromZoho(zohoDeal.Stage);
 
         // Extract contact info from Account_Name if available
         const accountName = zohoDeal.Account_Name?.name || zohoDeal.Deal_Name || 'Unknown';

@@ -9,7 +9,10 @@ import { Label } from '@/components/ui/label'
 import { ProtectedRoute } from '@/components/protected-route'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { dealsService } from '@/services/dealsService'
+import { DealStageBadge } from '@/components/deals/DealStageBadge'
 import { toast } from 'react-hot-toast'
+import { Pagination } from '@/components/ui/Pagination'
+import { useDebounce } from '@/hooks/useDebounce'
 
 interface DealsFilters {
   search: string
@@ -29,8 +32,11 @@ export default function DealsPage() {
     dateRange: ''
   })
   const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
   const [isSubAccount, setIsSubAccount] = useState(false)
+
+  // Debounce search term
+  const debouncedSearch = useDebounce(filters.search, 300)
 
   useEffect(() => {
     fetchDeals()
@@ -38,7 +44,7 @@ export default function DealsPage() {
 
   useEffect(() => {
     applyFilters()
-  }, [filters, deals])
+  }, [filters.stage, filters.dateRange, debouncedSearch, deals])
 
   const fetchDeals = async () => {
     try {
@@ -46,26 +52,40 @@ export default function DealsPage() {
       const response = await dealsService.getAll()
       
       // Helper function to normalize Zoho stage to our internal format
+      // Matches StageMappingService on backend
       const normalizeStage = (zohoStage: string | undefined): string => {
-        if (!zohoStage) return 'New Deal'
+        if (!zohoStage) return 'New Lead / Prevet'
         const stage = zohoStage.trim()
         
-        // Map Zoho stages to our standardized stages
-        // Updated with actual stages from Zoho CRM API
         const stageMap: { [key: string]: string } = {
-          'New Deal': 'New Deal',
-          'Pre-Vet': 'Pre-Vet',
-          'Sent for Signature': 'Sent for Signature',
-          'Signed Application': 'Signed Application',
-          'Sent to Underwriting': 'Sent to Underwriting',
-          'App Pended': 'App Pended',
+          // New Lead / Prevet group
+          'New Deal': 'New Lead / Prevet',
+          'Pre-Vet': 'New Lead / Prevet',
+          'New Lead / Prevet': 'New Lead / Prevet',
+          
+          // Submitted group
+          'Sent for Signature': 'Submitted',
+          'Signed Application': 'Submitted',
+          'Submitted': 'Submitted',
+          
+          // Underwriting group
+          'Sent to Underwriting': 'Underwriting',
+          'App Pended': 'Underwriting',
+          'Underwriting': 'Underwriting',
+          
+          // Approved group
           'Approved': 'Approved',
+          'Conditionally Approved': 'Approved',
+          
+          // Declined group
           'Declined': 'Declined',
-          'Dead / Do Not Contact': 'Dead / Do Not Contact',
-          'Merchant Unresponsive': 'Merchant Unresponsive',
-          'App Withdrawn': 'App Withdrawn',
-          'Approved - Closed': 'Approved - Closed',
-          'Conditionally Approved': 'Conditionally Approved'
+          
+          // Closed group
+          'Approved - Closed': 'Closed',
+          'Dead / Do Not Contact': 'Closed',
+          'Merchant Unresponsive': 'Closed',
+          'App Withdrawn': 'Closed',
+          'Closed': 'Closed'
         }
         
         return stageMap[stage] || stage
@@ -86,6 +106,7 @@ export default function DealsPage() {
           stage: normalizeStage(zd.Stage),
           zoho_stage: zd.Stage, // Keep original for reference
           close_date: zd.Closing_Date,
+          approval_date: zd.Approval_Time_Stamp,
           probability: zd.Probability || 0,
           created_at: zd.Created_Time,
           lead_source: zd.Lead_Source
@@ -94,7 +115,6 @@ export default function DealsPage() {
       
       setDeals(allDeals)
       setFilteredDeals(allDeals)
-      setTotalPages(Math.ceil(allDeals.length / 10))
       setIsSubAccount(response.is_sub_account || false)
     } catch (error) {
       console.error('Error fetching deals:', error)
@@ -108,8 +128,8 @@ export default function DealsPage() {
     let filtered = [...deals]
 
     // Search filter
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase()
+    if (debouncedSearch) {
+      const searchLower = debouncedSearch.toLowerCase()
       filtered = filtered.filter(deal =>
         deal.deal_name?.toLowerCase().includes(searchLower) ||
         deal.first_name?.toLowerCase().includes(searchLower) ||
@@ -148,7 +168,6 @@ export default function DealsPage() {
     }
 
     setFilteredDeals(filtered)
-    setTotalPages(Math.ceil(filtered.length / 10))
     setCurrentPage(1)
   }
 
@@ -158,7 +177,6 @@ export default function DealsPage() {
 
   const handleFilterChange = (key: keyof DealsFilters, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }))
-    setCurrentPage(1) // Reset to first page when filters change
   }
 
   const handleSyncDeals = async () => {
@@ -183,33 +201,20 @@ export default function DealsPage() {
     }
   }
 
-  const getStageColor = (stage: string) => {
-    switch (stage) {
-      case 'Qualification':
-        return 'bg-blue-100 text-blue-800'
-      case 'Needs Analysis':
-        return 'bg-indigo-100 text-indigo-800'
-      case 'Value Proposition':
-        return 'bg-purple-100 text-purple-800'
-      case 'Proposal':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'Negotiation':
-        return 'bg-orange-100 text-orange-800'
-      case 'Closed Won':
-        return 'bg-green-100 text-green-800'
-      case 'Closed Lost':
-        return 'bg-red-100 text-red-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
     }).format(amount)
   }
+  
+  // Calculate pagination
+  const totalItems = filteredDeals.length
+  const totalPages = Math.ceil(totalItems / itemsPerPage)
+  const paginatedDeals = filteredDeals.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  )
 
   return (
     <ProtectedRoute allowedRoles={['admin', 'user']}>
@@ -275,19 +280,12 @@ export default function DealsPage() {
                     onChange={(e) => handleFilterChange('stage', e.target.value)}
                   >
                     <option value="">All Stages</option>
-                    <option value="New Deal">New Deal</option>
-                    <option value="Pre-Vet">Pre-Vet</option>
-                    <option value="Sent for Signature">Sent for Signature</option>
-                    <option value="Signed Application">Signed Application</option>
-                    <option value="Sent to Underwriting">Sent to Underwriting</option>
-                    <option value="App Pended">App Pended</option>
+                    <option value="New Lead / Prevet">New Lead / Prevet</option>
+                    <option value="Submitted">Submitted</option>
+                    <option value="Underwriting">Underwriting</option>
                     <option value="Approved">Approved</option>
                     <option value="Declined">Declined</option>
-                    <option value="Dead / Do Not Contact">Dead / Do Not Contact</option>
-                    <option value="Merchant Unresponsive">Merchant Unresponsive</option>
-                    <option value="App Withdrawn">App Withdrawn</option>
-                    <option value="Approved - Closed">Approved - Closed</option>
-                    <option value="Conditionally Approved">Conditionally Approved</option>
+                    <option value="Closed">Closed</option>
                   </select>
                 </div>
                 <div>
@@ -339,9 +337,7 @@ export default function DealsPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredDeals
-                        .slice((currentPage - 1) * 10, currentPage * 10)
-                        .map((deal) => (
+                      {paginatedDeals.map((deal) => (
                         <tr key={deal.id} className="border-b hover:bg-gray-50">
                           <td className="py-3 px-4">
                             <div>
@@ -360,9 +356,7 @@ export default function DealsPage() {
                             {formatCurrency(deal.amount || 0)}
                           </td>
                           <td className="py-3 px-4">
-                            <span className={`px-2 py-1 text-xs rounded-full ${getStageColor(deal.stage)}`}>
-                              {deal.stage}
-                            </span>
+                            <DealStageBadge stage={deal.stage} size="sm" />
                           </td>
                           {!isSubAccount && (
                             <td className="py-3 px-4">
@@ -402,29 +396,17 @@ export default function DealsPage() {
 
           {/* Pagination */}
           {filteredDeals.length > 0 && (
-            <div className="flex justify-between items-center mt-6">
-              <div className="text-sm text-gray-600">
-                Showing {((currentPage - 1) * 10) + 1} to {Math.min(currentPage * 10, filteredDeals.length)} of {filteredDeals.length} results
-              </div>
-              <div className="flex space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage(prev => prev - 1)}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage(prev => prev + 1)}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              itemsPerPage={itemsPerPage}
+              totalItems={totalItems}
+              onItemsPerPageChange={(size) => {
+                setItemsPerPage(size)
+                setCurrentPage(1)
+              }}
+            />
           )}
         </div>
       </DashboardLayout>

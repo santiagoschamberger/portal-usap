@@ -3,7 +3,7 @@ import axios from 'axios';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 import { zohoService } from '../services/zohoService';
 import { supabaseAdmin } from '../config/database';
-import { StatusMappingService } from '../services/statusMappingService';
+import { LeadStatusMappingService } from '../services/leadStatusMappingService';
 
 const router = Router();
 
@@ -548,8 +548,8 @@ router.post('/sync', authenticateToken, async (req: AuthenticatedRequest, res) =
           continue;
         }
 
-        // Map Zoho lead status to our local status using StatusMappingService
-        const localStatus = StatusMappingService.mapFromZoho(zohoLead.Lead_Status);
+        // Map Zoho lead status to our local status using LeadStatusMappingService
+        const localStatus = LeadStatusMappingService.mapFromZoho(zohoLead.Lead_Status);
 
         // Check if lead already exists in our database (multiple ways to prevent duplicates)
         let existingLead = null;
@@ -809,7 +809,7 @@ router.post('/public', async (req, res) => {
         email,
         phone,
         company,
-        status: 'new',
+        status: 'Pre-Vet / New Lead',
         lead_source: source || 'Public Form',
         created_by: partner_id,
         notes: notes || null

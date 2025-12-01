@@ -23,6 +23,11 @@ export interface Deal {
   last_sync_at?: string
   created_at: string
   updated_at: string
+  creator?: {
+    first_name: string
+    last_name: string
+    role: string
+  }
 }
 
 export interface DealStageHistory {
@@ -57,8 +62,8 @@ export const dealsService = {
   /**
    * Get all deals for the authenticated partner
    */
-  async getAll(): Promise<{ local_deals: Deal[]; zoho_deals: any[] }> {
-    const response = await api.get<{ local_deals: Deal[]; zoho_deals: any[] }>('/api/deals')
+  async getAll(): Promise<{ local_deals: Deal[]; zoho_deals: any[]; is_sub_account?: boolean }> {
+    const response = await api.get<{ local_deals: Deal[]; zoho_deals: any[]; is_sub_account?: boolean }>('/api/deals')
     return response.data || { local_deals: [], zoho_deals: [] }
   },
 

@@ -207,13 +207,38 @@ class ZohoService {
   async getDealsByVendor(vendorId: string): Promise<any> {
     try {
       const headers = await this.getAuthHeaders();
-      const criteria = `(Vendor.id:equals:${vendorId})`;
       
-      const response = await axios.get(`${this.baseUrl}/Deals/search`, {
-        headers,
-        params: { criteria },
-      });
-      return response.data;
+      // Try multiple criteria variations to be robust
+      // Similar to leads, the field linking to Partner/Vendor might vary
+      const searchVariations = [
+        `(Vendor:equals:${vendorId})`,
+        `(Vendor.id:equals:${vendorId})`,
+        `(Vendor_Name:equals:${vendorId})`,
+        `(Vendor_Name.id:equals:${vendorId})`,
+        `(Partners_Id:equals:${vendorId})`, // Added based on deal webhook payload knowledge
+        `(StrategicPartnerId:equals:${vendorId})` // Added based on deal webhook payload knowledge
+      ];
+
+      for (const criteria of searchVariations) {
+        try {
+          const response = await axios.get(`${this.baseUrl}/Deals/search`, {
+            headers,
+            params: { 
+              criteria,
+              per_page: 200
+            },
+          });
+
+          if (response.data && response.data.data) {
+            console.log(`✓ Deals found using criteria: ${criteria}`);
+            return response.data;
+          }
+        } catch (err) {
+          // Continue to next variation
+        }
+      }
+
+      return { data: [] };
     } catch (error) {
       console.error('Error getting deals from Zoho:', error);
       throw error;
