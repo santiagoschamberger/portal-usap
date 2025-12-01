@@ -49,12 +49,12 @@ async function applyMigration() {
     for (let i = 0; i < statements.length; i++) {
       const statement = statements[i];
       console.log(`⏳ Executing statement ${i + 1}/${statements.length}...`);
-      
+    
       const { data, error } = await supabase.rpc('exec_sql', { 
         sql_query: statement + ';' 
-      });
+    });
 
-      if (error) {
+    if (error) {
         // Try direct execution as fallback
         const { error: directError } = await supabase
           .from('_sql_exec')

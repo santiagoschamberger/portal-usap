@@ -1,23 +1,40 @@
+/**
+ * Deal Stage Mapping Service
+ * Maps between Zoho CRM deal stages and Portal display stages
+ * 
+ * Zoho Deal Stages (from CRM):
+ * - Sent to Underwriting (75%, Open, Pipeline)
+ * - App Pended (90%, Open, Pipeline)
+ * - Approved (100%, Closed Won, Closed)
+ * - Approved - Closed (0%, Closed Lost, Omitted)
+ * - Declined (0%, Closed Lost, Omitted)
+ * - Dead / Do Not Contact (0%, Closed Lost, Omitted)
+ * - Merchant Unresponsive (0%, Closed Lost, Omitted)
+ * - App Withdrawn (0%, Closed Lost, Omitted)
+ * - Conditionally Approved (95%, Open, Pipeline)
+ */
 export class StageMappingService {
   private static zohoToPortal: Record<string, string> = {
-    // New Lead / Prevet group
+    // New Lead / Prevet group (initial stages)
     'New Deal': 'New Lead / Prevet',
     'Pre-Vet': 'New Lead / Prevet',
     
-    // Submitted group
+    // Submitted group (application sent/signed)
     'Sent for Signature': 'Submitted',
     'Signed Application': 'Submitted',
     
-    // Underwriting group
+    // Underwriting group (Open/Pipeline - 75-90%)
     'Sent to Underwriting': 'Underwriting',
     'App Pended': 'Underwriting',
     
-    // Approved / Declined group
+    // Approved group (Closed Won - 100% OR Conditionally Approved - 95%)
     'Approved': 'Approved',
-    'Declined': 'Declined',
-    'Conditionally Approved': 'Approved', // Mapped to Approved per plan
+    'Conditionally Approved': 'Approved',
     
-    // Closed group
+    // Declined group (Closed Lost - 0%)
+    'Declined': 'Declined',
+    
+    // Closed group (Closed Lost - 0%, Omitted from forecast)
     'Approved - Closed': 'Closed',
     'Dead / Do Not Contact': 'Closed',
     'Merchant Unresponsive': 'Closed',
