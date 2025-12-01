@@ -288,167 +288,18 @@ router.post('/zoho/contact', async (req, res) => {
       });
     }
 
-    // Check if parent partner ID is provided
-    // IMPORTANT: Only create sub-accounts for contacts that are EXPLICITLY linked to a partner
-    // Do NOT create sub-accounts for contacts that are auto-generated from leads
-    if (!parentid) {
-      console.log('✅ No parent partner ID - skipping sub-account creation (this is normal for lead-generated contacts)');
-      return res.status(200).json({
-        success: false,
-        message: 'No parent partner linked - sub-account not created',
-        reason: 'Contact must be linked to a Partner in Zoho CRM (parentid, Vendor.id, or Account_Name.id)',
-        note: 'This is expected behavior for contacts generated from leads',
-        received: req.body
-      });
-    }
-
-    console.log(`✅ Parent partner ID found: ${parentid} - proceeding with sub-account creation`);
-
-    // Find parent partner in portal using admin client to bypass RLS
-    const { data: partner, error: partnerError } = await supabaseAdmin
-      .from('partners')
-      .select('id, name, approved')
-      .eq('zoho_partner_id', parentid)
-      .single();
-
-    if (partnerError || !partner) {
-      console.log('Parent partner not found in portal:', parentid);
-      return res.status(200).json({
-        success: false,
-        message: 'Parent partner not found in portal',
-        reason: 'Partner must be approved and exist in portal before creating sub-accounts',
-        zoho_partner_id: parentid
-      });
-    }
-
-    // Verify parent partner is approved
-    if (!partner.approved) {
-      console.log('Parent partner not approved:', partner.id);
-      return res.status(200).json({
-        success: false,
-        message: 'Parent partner not approved',
-        reason: 'Partner must be approved before sub-accounts can be created',
-        partner_id: partner.id
-      });
-    }
-
-    // Check if user with this email already exists (including main accounts)
-    const { data: existingUser } = await supabaseAdmin
-      .from('users')
-      .select('id, email, role, partner_id')
-      .eq('email', email.toLowerCase())
-      .single();
-
-    if (existingUser) {
-      console.log('User with this email already exists:', { 
-        id: existingUser.id, 
-        role: existingUser.role,
-        partner_id: existingUser.partner_id
-      });
-      
-      // If this is the MAIN account of the partner, don't create a duplicate sub-account
-      // This happens when a partner submits a lead and Zoho auto-creates a contact
-      if (existingUser.partner_id === partner.id) {
-        console.log('⚠️ This email belongs to the main partner account - skipping sub-account creation');
-        return res.status(200).json({
-          success: false,
-          message: 'User already exists as main account',
-          reason: 'Cannot create sub-account for email that belongs to the main partner account',
-          user_id: existingUser.id
-        });
-      }
-      
-      // User exists but for a different partner
-      console.log('✅ Sub-account already exists:', existingUser.id);
-      return res.status(200).json({
-        success: true,
-        message: 'Sub-account already exists',
-        user_id: existingUser.id
-      });
-    }
-
-    // Generate a temporary password
-    const tempPassword = crypto.randomBytes(16).toString('hex');
-
-    // Create user in Supabase Auth
-    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: email.toLowerCase(),
-      password: tempPassword,
-      email_confirm: true,
-      user_metadata: {
-        first_name: firstName,
-        last_name: lastName,
-        partner_id: partner.id,
-        role: 'sub_account',
-        zoho_contact_id: contactId
-      }
-    });
-
-    if (authError || !authUser.user) {
-      console.error('Error creating auth user for contact:', authError);
-      return res.status(500).json({
-        error: 'Failed to create user account',
-        details: authError?.message || 'Unknown error'
-      });
-    }
-
-    // Create user record in portal users table
-    const { error: userError } = await supabaseAdmin
-      .from('users')
-      .insert({
-        id: authUser.user.id,
-        email: email.toLowerCase(),
-        partner_id: partner.id,
-        role: 'sub_account',
-        first_name: firstName,
-        last_name: lastName,
-        password_hash: 'placeholder', // Placeholder since auth is handled by Supabase Auth
-        is_active: true
-      });
-
-    if (userError) {
-      console.error('Error creating contact user record:', userError);
-      // Rollback: delete auth user
-      await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
-      return res.status(500).json({
-        error: 'Failed to create user record',
-        details: userError.message
-      });
-    }
-
-    // Log activity
-    await supabaseAdmin.from('activity_log').insert({
-      partner_id: partner.id,
-      user_id: authUser.user.id,
-      activity_type: 'sub_account_created',
-      description: `Sub-account created for ${firstName} ${lastName} via Zoho webhook`,
-      metadata: { 
-        zoho_contact_id: contactId,
-        zoho_partner_id: parentid
-      }
-    });
-
-    // Send password reset email
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.toLowerCase(), {
-      redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/reset-password`
-    });
-
-    if (resetError) {
-      console.error('Failed to send password reset email:', resetError);
-      // Continue anyway - user created successfully
-    }
-
-    console.log('Sub-account created successfully:', authUser.user.id);
-
-    return res.status(201).json({
+    // IMPORTANT: Sub-accounts should NOT be created automatically from Zoho contacts
+    // Sub-accounts should only be created manually by the main partner through the portal
+    // This webhook is kept for potential future use, but currently disabled
+    console.log('ℹ️  Contact webhook received but automatic sub-account creation is DISABLED');
+    console.log('   Sub-accounts should be created manually by partners through the portal');
+    console.log('   Contact info:', { firstName, lastName, email, parentid });
+    
+    return res.status(200).json({
       success: true,
-      message: 'Sub-account created successfully. Password reset email sent.',
-      data: {
-        user_id: authUser.user.id,
-        partner_id: partner.id,
-        email: email.toLowerCase(),
-        zoho_contact_id: contactId
-      }
+      message: 'Contact webhook received but automatic sub-account creation is disabled',
+      note: 'Sub-accounts should be created manually by partners through the portal',
+      contact: { firstName, lastName, email }
     });
   } catch (error) {
     console.error('Contact webhook error:', error);
