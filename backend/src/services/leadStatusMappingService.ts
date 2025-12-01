@@ -22,29 +22,42 @@ export class LeadStatusMappingService {
    * Zoho CRM status → Portal display status
    */
   private static zohoToPortal: Record<string, string> = {
+    // Base mappings
     'Lead': 'Pre-Vet / New Lead',
     'Contacted': 'Contacted',
     'Application Submitted': 'Sent for Signature / Submitted',
     'Approved': 'Approved',
     'Declined': 'Declined',
-    'Lost': 'Dead / Withdrawn',
-    // Additional Zoho statuses that might come through
+    
+    // All Zoho Lead Statuses (Open category)
     'New': 'Pre-Vet / New Lead',
+    'Contact Attempt 1': 'Contacted',
+    'Contact Attempt 2': 'Contacted',
+    'Interested': 'Contacted',
+    'Reset Appointment': 'Contacted',
+    'Sent Agreement for Signature': 'Sent for Signature / Submitted',
+    'Signed Agreement': 'Sent for Signature / Submitted', // Should trigger conversion
+    'Contacted - Needs Follow up': 'Contacted',
+    'Needs Follow Up': 'Contacted',
+    'Interested - SP Lead': 'Contacted',
+    'Interested - Merchant Lead': 'Contacted',
+    'Interested - Needs Follow Up': 'Contacted',
+    
+    // Not Qualified category
+    'Lost': 'Dead / Withdrawn',
+    
+    // Legacy/Additional statuses
     'Pre-Vet': 'Pre-Vet / New Lead',
     'Qualified': 'Contacted',
     'Unqualified': 'Dead / Withdrawn',
     'Junk Lead': 'Dead / Withdrawn',
     'Not Contacted': 'Pre-Vet / New Lead',
-    // Custom statuses from your Zoho
     'Sent Pre-App': 'Contacted',
     'sent pre-app': 'Contacted',
     'Pre-App Sent': 'Contacted',
     'Sent for Signature': 'Sent for Signature / Submitted',
     'Signature Sent': 'Sent for Signature / Submitted',
-    'Interested - Needs Follow Up': 'Contacted',
-    'Needs Follow Up': 'Contacted',
-    // NOTE: "Signed Application" should ideally trigger lead-to-deal conversion in Zoho
-    // If you see this status on a lead, it means the lead should be converted to a deal
+    // NOTE: "Signed Agreement" and "Signed Application" should trigger lead-to-deal conversion in Zoho
     'Signed Application': 'Sent for Signature / Submitted'
   };
 
