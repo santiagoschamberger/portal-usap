@@ -72,20 +72,29 @@ router.post('/zoho/lead-status', async (req, res) => {
 
     console.log('Lead status webhook received:', { zohoLeadId, Lead_Status, StrategicPartnerId });
 
-    // Find the lead in our database
-    const { data: lead, error: leadError } = await supabase
+    // Find the lead in our database using admin client to bypass RLS
+    // Also fetch created_by to use as StrategicPartnerId (webhook may not include it)
+    const { data: lead, error: leadError } = await supabaseAdmin
       .from('leads')
-      .select('id, partner_id, status')
+      .select('id, partner_id, status, created_by, first_name, last_name, email')
       .eq('zoho_lead_id', zohoLeadId)
       .single();
 
     if (leadError || !lead) {
-      console.log('Lead not found in local database:', zohoLeadId);
+      console.error('Lead not found in local database:', { zohoLeadId, error: leadError });
       return res.status(404).json({
         error: 'Lead not found',
-        zoho_lead_id: zohoLeadId
+        zoho_lead_id: zohoLeadId,
+        details: leadError?.message
       });
     }
+
+    // Use local database's created_by as StrategicPartnerId if webhook didn't provide it
+    const strategicPartnerId = StrategicPartnerId || lead.created_by;
+    
+    console.log(`✅ Lead found: ${lead.first_name} ${lead.last_name} (${lead.email})`);
+    console.log(`   Partner ID: ${lead.partner_id}`);
+    console.log(`   Created By (StrategicPartnerId): ${strategicPartnerId}`);
 
     const oldStatus = lead.status;
     
@@ -96,7 +105,7 @@ router.post('/zoho/lead-status', async (req, res) => {
 
     // Update lead status if it has changed
     if (oldStatus !== newStatus) {
-      const { error: updateError } = await supabase
+      const { error: updateError } = await supabaseAdmin
         .from('leads')
         .update({
           status: newStatus,
@@ -114,13 +123,13 @@ router.post('/zoho/lead-status', async (req, res) => {
       }
 
       // REQUIREMENT: Delete previous status history records (keep only 1 record per lead)
-      await supabase
+      await supabaseAdmin
         .from('lead_status_history')
         .delete()
         .eq('lead_id', lead.id);
 
       // Add new status history record (only the current one)
-      await supabase.from('lead_status_history').insert({
+      await supabaseAdmin.from('lead_status_history').insert({
         lead_id: lead.id,
         old_status: oldStatus,
         new_status: newStatus,
@@ -128,9 +137,10 @@ router.post('/zoho/lead-status', async (req, res) => {
         notes: `Status updated via Zoho CRM webhook (Zoho: "${Lead_Status}")`
       });
 
-      // Log activity
-      await supabase.from('activity_log').insert({
+      // Log activity with StrategicPartnerId
+      await supabaseAdmin.from('activity_log').insert({
         partner_id: lead.partner_id,
+        user_id: strategicPartnerId, // Log which user's lead this is
         lead_id: lead.id,
         activity_type: 'lead_status_updated',
         description: `Lead status changed from "${oldStatus}" to "${newStatus}" via Zoho CRM`,
@@ -139,7 +149,8 @@ router.post('/zoho/lead-status', async (req, res) => {
           zoho_lead_id: zohoLeadId,
           zoho_status: Lead_Status,
           old_status: oldStatus,
-          new_status: newStatus
+          new_status: newStatus,
+          strategic_partner_id: strategicPartnerId
         }
       });
 
