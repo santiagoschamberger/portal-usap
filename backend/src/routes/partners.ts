@@ -91,7 +91,8 @@ router.put('/profile', authenticateToken, requireAdmin, async (req: Authenticate
 
 /**
  * GET /api/partners/sub-accounts
- * List all sub-accounts for the current partner WITH lead counts
+ * Fetch contacts from Zoho CRM and show which ones are activated in the portal
+ * This is the NEW approach: fetch from Zoho (single source of truth)
  */
 router.get('/sub-accounts', authenticateToken, requireAdmin, async (req: AuthenticatedRequest, res) => {
   try {
@@ -99,51 +100,72 @@ router.get('/sub-accounts', authenticateToken, requireAdmin, async (req: Authent
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    // Get all users (sub-accounts) under this partner
-    const { data: subAccounts, error } = await supabaseAdmin
-      .from('users')
-      .select('id, email, first_name, last_name, role, is_active, created_at, updated_at')
-      .eq('partner_id', req.user.partner_id)
-      .neq('id', req.user.id) // Exclude the current user (main admin)
-      .order('created_at', { ascending: false });
+    // Get partner's Zoho ID
+    const { data: partner, error: partnerError } = await supabaseAdmin
+      .from('partners')
+      .select('zoho_partner_id, name')
+      .eq('id', req.user.partner_id)
+      .single();
 
-    if (error) {
-      console.error('Error fetching sub-accounts:', error);
-      return res.status(500).json({
-        error: 'Failed to fetch sub-accounts',
-        details: error.message
+    if (partnerError || !partner) {
+      return res.status(404).json({
+        error: 'Partner not found',
+        message: 'Unable to find partner information'
       });
     }
 
-    // For each sub-account, fetch their lead statistics
-    const subAccountsWithStats = await Promise.all(
-      (subAccounts || []).map(async (subAccount) => {
-        const { data: leads } = await supabaseAdmin
-          .from('leads')
-          .select('id, status')
-          .eq('created_by_user_id', subAccount.id);
+    // Fetch contacts from Zoho CRM
+    let zohoContacts: any[] = [];
+    try {
+      const zohoResponse = await zohoService.getContactsByVendor(partner.zoho_partner_id);
+      zohoContacts = zohoResponse?.data || [];
+      console.log(`📋 Found ${zohoContacts.length} contacts in Zoho for partner ${partner.name}`);
+    } catch (zohoError) {
+      console.error('Error fetching contacts from Zoho:', zohoError);
+      // Continue with empty array - don't fail the request
+    }
 
-        const stats = {
-          total_leads: leads?.length || 0,
-          new_leads: leads?.filter(l => l.status === 'new').length || 0,
-          contacted: leads?.filter(l => l.status === 'contacted').length || 0,
-          qualified: leads?.filter(l => l.status === 'qualified').length || 0,
-          proposal: leads?.filter(l => l.status === 'proposal').length || 0,
-          closed_won: leads?.filter(l => l.status === 'closed_won').length || 0,
-          closed_lost: leads?.filter(l => l.status === 'closed_lost').length || 0
-        };
+    // Get all activated users (sub-accounts) from our database
+    const { data: activatedUsers } = await supabaseAdmin
+      .from('users')
+      .select('id, email, first_name, last_name, role, is_active, created_at')
+      .eq('partner_id', req.user.partner_id)
+      .neq('id', req.user.id); // Exclude the main admin
 
-        return {
-          ...subAccount,
-          lead_stats: stats
-        };
-      })
+    // Create a map of activated emails for quick lookup
+    const activatedEmailMap = new Map(
+      (activatedUsers || []).map(user => [user.email.toLowerCase(), user])
     );
+
+    // Merge Zoho contacts with activation status
+    const contactsWithStatus = zohoContacts.map(contact => {
+      const email = contact.Email?.toLowerCase();
+      const activatedUser = email ? activatedEmailMap.get(email) : null;
+
+      return {
+        zoho_contact_id: contact.id,
+        first_name: contact.First_Name || '',
+        last_name: contact.Last_Name || '',
+        email: contact.Email || '',
+        phone: contact.Phone || '',
+        title: contact.Title || '',
+        is_activated: !!activatedUser,
+        portal_user_id: activatedUser?.id || null,
+        is_active: activatedUser?.is_active || false,
+        created_at: contact.Created_Time,
+        activated_at: activatedUser?.created_at || null
+      };
+    });
 
     return res.json({
       success: true,
-      data: subAccountsWithStats,
-      total: subAccountsWithStats.length
+      data: contactsWithStatus,
+      total: contactsWithStatus.length,
+      stats: {
+        total_contacts: contactsWithStatus.length,
+        activated: contactsWithStatus.filter(c => c.is_activated).length,
+        not_activated: contactsWithStatus.filter(c => !c.is_activated).length
+      }
     });
   } catch (error) {
     console.error('Error fetching sub-accounts:', error);
@@ -593,60 +615,169 @@ router.post('/sync-contacts', authenticateToken, requireAdmin, async (req: Authe
 });
 
 /**
- * POST /api/partners/sub-accounts/:id/activate
- * Send password reset email to activate a sub-account
+ * POST /api/partners/sub-accounts/:zohoContactId/activate
+ * Activate a contact from Zoho: create portal account + send password reset email
+ * The :zohoContactId is the Zoho Contact ID, not the portal user ID
  */
-router.post('/sub-accounts/:id/activate', authenticateToken, requireAdmin, async (req: AuthenticatedRequest, res) => {
+router.post('/sub-accounts/:zohoContactId/activate', authenticateToken, requireAdmin, async (req: AuthenticatedRequest, res) => {
   try {
     if (!req.user) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    // Verify sub-account belongs to this partner
-    const { data: subAccount } = await supabaseAdmin
-      .from('users')
-      .select('id, email, first_name, last_name')
-      .eq('id', req.params.id)
-      .eq('partner_id', req.user.partner_id)
+    const zohoContactId = req.params.zohoContactId;
+
+    // Get partner's Zoho ID
+    const { data: partner, error: partnerError } = await supabaseAdmin
+      .from('partners')
+      .select('id, zoho_partner_id, name')
+      .eq('id', req.user.partner_id)
       .single();
 
-    if (!subAccount) {
+    if (partnerError || !partner) {
       return res.status(404).json({
-        error: 'Sub-account not found',
-        message: 'Sub-account does not exist or you do not have access to it'
+        error: 'Partner not found'
+      });
+    }
+
+    // Fetch the contact from Zoho to get their details
+    console.log(`🔍 Fetching contact ${zohoContactId} from Zoho...`);
+    const zohoResponse = await zohoService.getContactsByVendor(partner.zoho_partner_id);
+    const contact = zohoResponse?.data?.find((c: any) => c.id === zohoContactId);
+
+    if (!contact) {
+      return res.status(404).json({
+        error: 'Contact not found in Zoho CRM',
+        message: 'This contact does not exist or is not linked to your partner account'
+      });
+    }
+
+    const email = contact.Email;
+    const firstName = contact.First_Name || '';
+    const lastName = contact.Last_Name || '';
+
+    if (!email) {
+      return res.status(400).json({
+        error: 'Contact has no email',
+        message: 'Cannot activate a contact without an email address'
+      });
+    }
+
+    // Check if user already exists
+    const { data: existingUser } = await supabaseAdmin
+      .from('users')
+      .select('id, email, is_active')
+      .eq('email', email.toLowerCase())
+      .single();
+
+    if (existingUser) {
+      // User already exists - just send password reset email
+      console.log(`✅ User already exists: ${existingUser.id}`);
+      
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.toLowerCase(), {
+        redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/reset-password`
+      });
+
+      if (resetError) {
+        console.error('Failed to send password reset email:', resetError);
+        return res.status(500).json({
+          error: 'Failed to send activation email',
+          message: resetError.message
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: `Activation email sent to ${email}`,
+        user_id: existingUser.id
+      });
+    }
+
+    // Create new user account
+    console.log(`🆕 Creating new user account for ${email}...`);
+    
+    // Generate a temporary password
+    const tempPassword = crypto.randomBytes(16).toString('hex');
+
+    // Create user in Supabase Auth
+    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: email.toLowerCase(),
+      password: tempPassword,
+      email_confirm: true,
+      user_metadata: {
+        first_name: firstName,
+        last_name: lastName,
+        partner_id: partner.id,
+        role: 'sub_account',
+        zoho_contact_id: zohoContactId
+      }
+    });
+
+    if (authError || !authUser.user) {
+      console.error('Error creating auth user:', authError);
+      return res.status(500).json({
+        error: 'Failed to create user account',
+        details: authError?.message || 'Unknown error'
+      });
+    }
+
+    // Create user record in portal users table
+    const { error: userError } = await supabaseAdmin
+      .from('users')
+      .insert({
+        id: authUser.user.id,
+        email: email.toLowerCase(),
+        partner_id: partner.id,
+        role: 'sub_account',
+        first_name: firstName,
+        last_name: lastName,
+        password_hash: 'placeholder',
+        is_active: true
+      });
+
+    if (userError) {
+      console.error('Error creating user record:', userError);
+      // Rollback: delete auth user
+      await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
+      return res.status(500).json({
+        error: 'Failed to create user record',
+        details: userError.message
       });
     }
 
     // Send password reset email
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(subAccount.email, {
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.toLowerCase(), {
       redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/reset-password`
     });
 
     if (resetError) {
       console.error('Failed to send password reset email:', resetError);
-      return res.status(500).json({
-        error: 'Failed to send activation email',
-        message: resetError.message
-      });
+      // Don't fail the request - user was created successfully
     }
 
     // Log activity
     await supabaseAdmin.from('activity_log').insert({
-      partner_id: req.user.partner_id,
+      partner_id: partner.id,
       user_id: req.user.id,
-      activity_type: 'sub_account_activation_sent',
-      description: `Activation email sent to ${subAccount.first_name} ${subAccount.last_name} (${subAccount.email})`,
-      metadata: { sub_account_id: req.params.id }
+      activity_type: 'sub_account_activated',
+      description: `Sub-account activated for ${firstName} ${lastName} (${email})`,
+      metadata: { 
+        sub_account_id: authUser.user.id,
+        zoho_contact_id: zohoContactId
+      }
     });
+
+    console.log(`✅ Sub-account created and activated: ${authUser.user.id}`);
 
     return res.json({
       success: true,
-      message: `Activation email sent to ${subAccount.email}`
+      message: `Sub-account activated and email sent to ${email}`,
+      user_id: authUser.user.id
     });
   } catch (error) {
-    console.error('Error sending activation email:', error);
+    console.error('Error activating sub-account:', error);
     return res.status(500).json({
-      error: 'Failed to send activation email',
+      error: 'Failed to activate sub-account',
       message: error instanceof Error ? error.message : 'Unknown error'
     });
   }
