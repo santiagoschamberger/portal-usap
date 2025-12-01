@@ -594,16 +594,63 @@ router.post('/zoho/deal', async (req, res) => {
       let convertedLeadId: string | null = null;
       
       // Try to find matching lead by partner and contact details
-      if (partnerId && firstName && lastName) {
-        const { data: matchingLead } = await supabaseAdmin
-          .from('leads')
-          .select('id, zoho_lead_id')
-          .eq('partner_id', partnerId)
-          .eq('first_name', firstName)
-          .eq('last_name', lastName)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
+      // Try multiple strategies to find the matching lead
+      let matchingLead = null;
+      
+      if (partnerId) {
+        // Strategy 1: Try by email (most reliable if available)
+        if (email) {
+          const { data: leadByEmail } = await supabaseAdmin
+            .from('leads')
+            .select('id, zoho_lead_id, first_name, last_name')
+            .eq('partner_id', partnerId)
+            .eq('email', email)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+          
+          if (leadByEmail) {
+            matchingLead = leadByEmail;
+            console.log(`✓ Found lead by email: ${email}`);
+          }
+        }
+        
+        // Strategy 2: Try by first_name + last_name + company
+        if (!matchingLead && firstName && lastName && accountName) {
+          const { data: leadByNameCompany } = await supabaseAdmin
+            .from('leads')
+            .select('id, zoho_lead_id, first_name, last_name')
+            .eq('partner_id', partnerId)
+            .eq('first_name', firstName)
+            .eq('last_name', lastName)
+            .eq('company', accountName)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+          
+          if (leadByNameCompany) {
+            matchingLead = leadByNameCompany;
+            console.log(`✓ Found lead by name + company: ${firstName} ${lastName} at ${accountName}`);
+          }
+        }
+        
+        // Strategy 3: Try by first_name + last_name only (fallback)
+        if (!matchingLead && firstName && lastName) {
+          const { data: leadByName } = await supabaseAdmin
+            .from('leads')
+            .select('id, zoho_lead_id, first_name, last_name')
+            .eq('partner_id', partnerId)
+            .eq('first_name', firstName)
+            .eq('last_name', lastName)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+          
+          if (leadByName) {
+            matchingLead = leadByName;
+            console.log(`✓ Found lead by name only: ${firstName} ${lastName}`);
+          }
+        }
 
         if (matchingLead) {
           convertedLeadId = matchingLead.id;
@@ -626,6 +673,24 @@ router.post('/zoho/deal', async (req, res) => {
               .from('lead_status_history')
               .delete()
               .eq('lead_id', matchingLead.id);
+            
+            // Create notification for the user who created the lead
+            if (createdBy) {
+              await supabaseAdmin.from('notifications').insert({
+                user_id: createdBy,
+                partner_id: partnerId,
+                type: 'lead_converted',
+                title: 'Lead Converted to Deal! 🎉',
+                message: `Your lead "${firstName} ${lastName}" has been converted to a deal and moved to the Deals section. You can now track its progress through the approval stages.`,
+                metadata: {
+                  lead_id: matchingLead.id,
+                  deal_name: Deal_Name,
+                  stage: localStage,
+                  zoho_deal_id: zohoDealId
+                }
+              });
+              console.log(`✅ Created notification for user ${createdBy} about lead conversion`);
+            }
           }
         }
       }
