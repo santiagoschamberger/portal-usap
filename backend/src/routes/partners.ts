@@ -234,7 +234,7 @@ router.post('/sub-accounts', authenticateToken, requireAdmin, async (req: Authen
       });
     }
 
-    // Create user in public.users table
+    // Create user in public.users table (deactivated by default)
     const { data: userData, error: userError } = await supabaseAdmin
       .from('users')
       .insert({
@@ -245,7 +245,7 @@ router.post('/sub-accounts', authenticateToken, requireAdmin, async (req: Authen
         partner_id: req.user.partner_id,
         role: 'sub_account',
         password_hash: 'placeholder', // Placeholder since auth is handled by Supabase Auth
-        is_active: true
+        is_active: false
       })
       .select()
       .single();
@@ -539,7 +539,7 @@ router.post('/sync-contacts', authenticateToken, requireAdmin, async (req: Authe
             continue;
           }
 
-          // Create user in public.users table
+          // Create user in public.users table (deactivated by default)
           const { error: userError } = await supabaseAdmin
             .from('users')
             .insert({
@@ -550,7 +550,7 @@ router.post('/sync-contacts', authenticateToken, requireAdmin, async (req: Authe
               partner_id: partner.id,
               role: 'sub_account',
               password_hash: 'placeholder', // Placeholder since auth is handled by Supabase Auth
-              is_active: true
+              is_active: false
             });
 
           if (userError) {
@@ -721,7 +721,7 @@ router.post('/sub-accounts/:zohoContactId/activate', authenticateToken, requireA
       });
     }
 
-    // Create user record in portal users table
+    // Create user record in portal users table (deactivated by default)
     const { error: userError } = await supabaseAdmin
       .from('users')
       .insert({
@@ -732,7 +732,7 @@ router.post('/sub-accounts/:zohoContactId/activate', authenticateToken, requireA
         first_name: firstName,
         last_name: lastName,
         password_hash: 'placeholder',
-        is_active: true
+        is_active: false
       });
 
     if (userError) {
