@@ -107,6 +107,12 @@ const adminNavigationItems: NavItem[] = [
     icon: DollarSign,
     roles: ['admin'],
   },
+  {
+    title: 'Cliq Report',
+    href: '/admin/cliq',
+    icon: Briefcase,
+    roles: ['admin'],
+  },
 ]
 
 export function Sidebar() {
