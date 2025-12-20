@@ -8,14 +8,9 @@ import { api } from "@/lib/api";
 import MerchantSelect from "./MerchantSelect";
 import useNormalizedTableData from "./useNormalizedTableData";
 
-type CliqTransaction = {
-  id: number;
-  batchDate: string; // "09/16/2022"
-  batchNumber: string;
-  amountCents: number;
-  transactionCount: number;
-  merchantName?: string;
-  merchantId?: string;
+type Merchant = {
+  mid: string;
+  name: string;   
 };
 
 type MonthlySummary = {
@@ -33,10 +28,10 @@ type cliqDeposits = {
 };
 
 export default function CliqReportPage() {
-  const [merchants, setMerchants] = useState([]);
-  const [selectedMerchant, setSelectedMerchant] = useState(null);
-  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [merchants, setMerchants] = useState<Merchant[]>([]);
+  const [selectedMerchant, setSelectedMerchant] = useState<Merchant | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<string | null>("");
+  const [selectedDate, setSelectedDate] = useState<string | null>("");
   const todayStr = format(new Date(), "yyyy-MM-dd");
   const firstOfMonth = format(startOfMonth(new Date()), "yyyy-MM-dd");
   const [fromDate, setFromDate] = useState(firstOfMonth);
@@ -53,9 +48,9 @@ export default function CliqReportPage() {
       setLoadingMerchants(true);
       setError(null);
 
-      const res = await api.get("/api/cliq/cliq-merchants");
+      const res = await api.get<Merchant[]>("/api/cliq/cliq-merchants");
 
-      const data = res.data;
+      const data = res.data as Merchant[];
 
       setMerchants(data);
 
@@ -132,7 +127,7 @@ export default function CliqReportPage() {
       ]);
       // ---- Deposits ----
       if (dqResult.status === "fulfilled") {
-        setDeposits(dqResult.value.deposits);
+        setDeposits(dqResult.value?.deposits as cliqDeposits[]);
         setTotals(dqResult.value.totals);
       } else {
         setError((prev) => prev ?? "Failed to load deposits");
@@ -201,12 +196,7 @@ export default function CliqReportPage() {
           .filter((t: any) => {
             return t.batchDate === selectedDate;
           })
-          .sort((a, b) => a.reference_number.localeCompare(b.reference_number));
-          // .filter((t: any) => {
-          //   return t.batchDate === selectedDate;
-          // })
-          // .sort((a, b) => a.batchNumber.localeCompare(b.batchNumber));
-          console.log('transactions===>', tt);
+          .sort((a: { reference_number: string; }, b: { reference_number: any; }) => a.reference_number.localeCompare(b.reference_number));
         setTransactions(tt);
       } else {
         setTransactions([]);
@@ -315,7 +305,7 @@ export default function CliqReportPage() {
 
  const tableData = useNormalizedTableData(transactions);
 
-console.log('tableData', tableData);
+  //console.log('tableData', tableData);
 
   return (
     <ProtectedRoute allowedRoles={["admin"]}>

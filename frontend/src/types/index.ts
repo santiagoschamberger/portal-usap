@@ -153,6 +153,9 @@ export interface SubmitReferralFormData {
 
 // API Response Types
 export interface ApiResponse<T = unknown> {
+  flatMap: any
+  totals: any
+  deposits: any
   data?: T
   message?: string
   error?: string
