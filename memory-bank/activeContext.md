@@ -1,8 +1,36 @@
 # Active Context
 
-## Current Focus: Phase 6 - Sub-Account Management ✅ COMPLETED
+## Current Focus: Phase 7 - Agent/ISO Handling 🚧 IN PROGRESS
 
-### Recent Session: December 1, 2025
+### Recent Session: December 10, 2025
+
+#### Phase 7: Agent/ISO Handling - Database Layer
+**Status:** ✅ Database migration complete | ⏳ Backend/Frontend implementation needed
+
+**Database Completed:**
+- ✅ Applied Migration 022: Agent/ISO handling
+- ✅ Added partner_type column to partners table
+- ✅ Added assigned_agent_id to leads and deals tables
+- ✅ Created 4 performance indexes
+- ✅ Updated 7 RLS policies for agent access control
+- ✅ Created 3 helper functions (is_agent_or_iso, get_agent_assigned_leads, get_agent_assigned_deals)
+- ✅ Created 2 triggers for agent assignment logging
+
+**Key Features:**
+1. **Partner Types:** 'partner' (default), 'agent', 'iso'
+2. **Agent Restrictions:** Cannot submit leads, view only assigned records
+3. **RLS Enforcement:** Database-level security for agent isolation
+4. **Activity Logging:** Automatic tracking of agent assignments
+
+**Next Steps:**
+- Backend API updates for partner type handling
+- Frontend UI updates for agent-specific views
+- Webhook updates to capture agent assignments from Zoho
+- Testing agent restrictions and permissions
+
+---
+
+### Previous Session: December 1, 2025
 
 #### Phase 6: Sub-Account Management Implementation
 **Status:** ✅ Complete - All migrations applied successfully

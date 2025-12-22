@@ -2,81 +2,89 @@
  * Lead Status Mapping Service
  * Maps between Zoho CRM lead statuses and Portal display statuses
  * 
- * Reference: docs/STATUS_STAGE_MAPPING_REFERENCE.md
+ * Client Requirements (December 2025):
+ * - New -> New
+ * - Contact Attempt 1-5 -> Contact Attempt
+ * - Interested - Needs Follow Up -> Contacted - In Progress
+ * - Sent Pre-App -> Contacted - In Progress
+ * - Pre-App Received -> Contacted - In Progress
+ * - Awaiting Signature - No Motion.io -> Sent for Signature
+ * - Send to Motion.io -> Sent for Signature
+ * - Signed Application -> Application Signed
+ * - Notify Apps Team -> Application Signed
+ * - Convert -> Application Signed
+ * - Lost -> Lost
+ * - Junk -> (Hidden/Filtered)
+ * 
+ * Reference: docs/reference/STATUS_STAGE_MAPPING_REFERENCE.md
  */
 
 export class LeadStatusMappingService {
   /**
-   * Portal display status → Zoho CRM status
+   * Portal display status → Zoho CRM status (for outbound updates)
+   * Note: Portal typically doesn't update Zoho lead statuses, but this is here for completeness
    */
   private static portalToZoho: Record<string, string> = {
-    'Pre-Vet / New Lead': 'Lead',
-    'Contacted': 'Contacted',
-    'Sent for Signature / Submitted': 'Application Submitted',
-    'Approved': 'Approved',
-    'Declined': 'Declined',
-    'Dead / Withdrawn': 'Lost'
+    'New': 'New',
+    'Contact Attempt': 'Contact Attempt 1',
+    'Contacted - In Progress': 'Interested - Needs Follow Up',
+    'Sent for Signature': 'Send to Motion.io',
+    'Application Signed': 'Signed Application',
+    'Lost': 'Lost'
   };
 
   /**
-   * Zoho CRM status → Portal display status
+   * Zoho CRM status → Portal display status (for inbound webhook updates)
+   * This is the primary mapping used when Zoho sends status updates
    */
   private static zohoToPortal: Record<string, string> = {
-    // Base mappings
-    'Lead': 'Pre-Vet / New Lead',
-    'Contacted': 'Contacted',
-    'Application Submitted': 'Sent for Signature / Submitted',
-    'Approved': 'Approved',
-    'Declined': 'Declined',
+    // New status
+    'New': 'New',
     
-    // All Zoho Lead Statuses (Open category)
-    'New': 'Pre-Vet / New Lead',
-    'Contact Attempt 1': 'Contacted',
-    'Contact Attempt 2': 'Contacted',
-    'Interested': 'Contacted',
-    'Reset Appointment': 'Contacted',
-    'Sent Agreement for Signature': 'Sent for Signature / Submitted',
-    'Signed Agreement': 'Sent for Signature / Submitted', // Should trigger conversion
-    'Contacted - Needs Follow up': 'Contacted',
-    'Needs Follow Up': 'Contacted',
-    'Interested - SP Lead': 'Contacted',
-    'Interested - Merchant Lead': 'Contacted',
-    'Interested - Needs Follow Up': 'Contacted',
+    // Contact Attempt statuses (all map to "Contact Attempt")
+    'Contact Attempt 1': 'Contact Attempt',
+    'Contact Attempt 2': 'Contact Attempt',
+    'Contact Attempt 3': 'Contact Attempt',
+    'Contact Attempt 4': 'Contact Attempt',
+    'Contact Attempt 5': 'Contact Attempt',
     
-    // Not Qualified category
-    'Lost': 'Dead / Withdrawn',
+    // Contacted - In Progress statuses
+    'Interested - Needs Follow Up': 'Contacted - In Progress',
+    'Sent Pre-App': 'Contacted - In Progress',
+    'Pre-App Received': 'Contacted - In Progress',
     
-    // Converted status (lead converted to deal)
-    'Converted': 'Converted', // Special status - lead should be removed
+    // Sent for Signature statuses
+    'Awaiting Signature - No Motion.io': 'Sent for Signature',
+    'Send to Motion.io': 'Sent for Signature',
     
-    // Legacy/Additional statuses
-    'Pre-Vet': 'Pre-Vet / New Lead',
-    'Qualified': 'Contacted',
-    'Unqualified': 'Dead / Withdrawn',
-    'Junk Lead': 'Dead / Withdrawn',
-    'Not Contacted': 'Pre-Vet / New Lead',
-    'Sent Pre-App': 'Contacted',
-    'sent pre-app': 'Contacted',
-    'Pre-App Sent': 'Contacted',
-    'Sent for Signature': 'Sent for Signature / Submitted',
-    'Signature Sent': 'Sent for Signature / Submitted',
-    // NOTE: "Signed Agreement" and "Signed Application" should trigger lead-to-deal conversion in Zoho
-    'Signed Application': 'Sent for Signature / Submitted'
+    // Application Signed statuses
+    'Signed Application': 'Application Signed',
+    'Notify Apps Team': 'Application Signed',
+    'Convert': 'Application Signed',
+    
+    // Lost status
+    'Lost': 'Lost',
+    
+    // Junk - mapped to Lost for now (can be filtered in UI)
+    'Junk': 'Lost',
+    
+    // Converted status (lead converted to deal) - special handling
+    'Converted': 'Converted' // This triggers lead deletion
   };
 
   /**
-   * Map Portal status to Zoho CRM status
+   * Map Portal status to Zoho CRM status (for outbound updates)
    */
   static mapToZoho(portalStatus: string): string {
-    return this.portalToZoho[portalStatus] || 'Lead';
+    return this.portalToZoho[portalStatus] || 'New';
   }
 
   /**
-   * Map Zoho CRM status to Portal display status
+   * Map Zoho CRM status to Portal display status (for inbound webhook updates)
    */
   static mapFromZoho(zohoStatus: string): string {
-    if (!zohoStatus) return 'Pre-Vet / New Lead';
-    return this.zohoToPortal[zohoStatus] || 'Pre-Vet / New Lead';
+    if (!zohoStatus) return 'New';
+    return this.zohoToPortal[zohoStatus] || 'New';
   }
 
   /**
@@ -91,12 +99,12 @@ export class LeadStatusMappingService {
    */
   static getStatusCategory(portalStatus: string): string {
     const categories: Record<string, string> = {
-      'Pre-Vet / New Lead': 'new',
-      'Contacted': 'in_progress',
-      'Sent for Signature / Submitted': 'waiting',
-      'Approved': 'success',
-      'Declined': 'rejected',
-      'Dead / Withdrawn': 'closed'
+      'New': 'new',
+      'Contact Attempt': 'in_progress',
+      'Contacted - In Progress': 'in_progress',
+      'Sent for Signature': 'waiting',
+      'Application Signed': 'success',
+      'Lost': 'closed'
     };
     return categories[portalStatus] || 'unknown';
   }
@@ -112,7 +120,7 @@ export class LeadStatusMappingService {
    * Check if a Zoho status indicates the lead has been converted to a deal
    */
   static isConvertedStatus(zohoStatus: string): boolean {
-    return zohoStatus === 'Converted' || zohoStatus === 'Converted - Deal';
+    return zohoStatus === 'Converted' || zohoStatus === 'Converted - Deal' || zohoStatus === 'Convert';
   }
 }
 

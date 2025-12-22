@@ -2,51 +2,50 @@
  * Deal Stage Mapping Service
  * Maps between Zoho CRM deal stages and Portal display stages
  * 
- * Zoho Deal Stages (from CRM):
- * - Sent to Underwriting (75%, Open, Pipeline)
- * - App Pended (90%, Open, Pipeline)
- * - Approved (100%, Closed Won, Closed)
- * - Approved - Closed (0%, Closed Lost, Omitted)
- * - Declined (0%, Closed Lost, Omitted)
- * - Dead / Do Not Contact (0%, Closed Lost, Omitted)
- * - Merchant Unresponsive (0%, Closed Lost, Omitted)
- * - App Withdrawn (0%, Closed Lost, Omitted)
- * - Conditionally Approved (95%, Open, Pipeline)
+ * Client Requirements (December 2025):
+ * - Sent to Underwriting -> In Underwriting
+ * - App Pended -> In Underwriting
+ * - Conditionally Approved -> Conditionally Approved
+ * - Approved -> Approved
+ * - App Withdrawn -> Lost
+ * - Merchant Unresponsive -> Lost
+ * - Dead/Do Not contact -> Lost
+ * - Declined -> Declined
+ * - Approved - Closed -> Closed
+ * 
+ * Reference: docs/reference/STATUS_STAGE_MAPPING_REFERENCE.md
  */
 export class StageMappingService {
   private static zohoToPortal: Record<string, string> = {
-    // New Lead / Prevet group (initial stages)
-    'New Deal': 'New Lead / Prevet',
-    'Pre-Vet': 'New Lead / Prevet',
+    // In Underwriting group
+    'Sent to Underwriting': 'In Underwriting',
+    'App Pended': 'In Underwriting',
     
-    // Submitted group (application sent/signed)
-    'Sent for Signature': 'Submitted',
-    'Signed Application': 'Submitted',
+    // Conditionally Approved (separate from Approved per client requirements)
+    'Conditionally Approved': 'Conditionally Approved',
     
-    // Underwriting group (Open/Pipeline - 75-90%)
-    'Sent to Underwriting': 'Underwriting',
-    'App Pended': 'Underwriting',
-    
-    // Approved group (Closed Won - 100% OR Conditionally Approved - 95%)
+    // Approved
     'Approved': 'Approved',
-    'Conditionally Approved': 'Approved',
     
-    // Declined group (Closed Lost - 0%)
+    // Lost group (all negative outcomes except Declined)
+    'App Withdrawn': 'Lost',
+    'Merchant Unresponsive': 'Lost',
+    'Dead/Do Not contact': 'Lost',
+    'Dead / Do Not Contact': 'Lost', // Handle both variations
+    
+    // Declined (separate from Lost per client requirements)
     'Declined': 'Declined',
     
-    // Closed group (Closed Lost - 0%, Omitted from forecast)
-    'Approved - Closed': 'Closed',
-    'Dead / Do Not Contact': 'Closed',
-    'Merchant Unresponsive': 'Closed',
-    'App Withdrawn': 'Closed'
+    // Closed (final positive outcome)
+    'Approved - Closed': 'Closed'
   };
 
   /**
    * Maps a Zoho deal stage to a Portal display stage
    */
   static mapFromZoho(zohoStage: string): string {
-    if (!zohoStage) return 'New Lead / Prevet';
-    return this.zohoToPortal[zohoStage] || 'New Lead / Prevet';
+    if (!zohoStage) return 'In Underwriting';
+    return this.zohoToPortal[zohoStage] || 'In Underwriting';
   }
 
   /**
@@ -54,13 +53,28 @@ export class StageMappingService {
    */
   static getAllPortalStages(): string[] {
     return [
-      'New Lead / Prevet',
-      'Submitted',
-      'Underwriting',
+      'In Underwriting',
+      'Conditionally Approved',
       'Approved',
+      'Lost',
       'Declined',
       'Closed'
     ];
+  }
+  
+  /**
+   * Get stage category for UI styling
+   */
+  static getStageCategory(portalStage: string): string {
+    const categories: Record<string, string> = {
+      'In Underwriting': 'review',
+      'Conditionally Approved': 'conditional',
+      'Approved': 'success',
+      'Lost': 'closed',
+      'Declined': 'rejected',
+      'Closed': 'final'
+    };
+    return categories[portalStage] || 'unknown';
   }
 }
 
