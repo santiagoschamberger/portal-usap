@@ -1,206 +1,268 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
-import { api } from "@/lib/api";
+
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ProtectedRoute } from "@/components/protected-route";
+import { useEffect, useMemo, useState } from "react";
 import { format, startOfMonth } from "date-fns";
-import "react-datepicker/dist/react-datepicker.css";
-import MerchantSelect, { MerchantAccount } from "./MerchantSelect";
+import { api } from "@/lib/api";
+import MerchantSelect from "./MerchantSelect";
+import useNormalizedTableData from "./useNormalizedTableData";
 
-
-type RawTransaction = {
-  merchantName: string;
-  merchantId: string;
-  batchDate: string;      // "2025-11-01"
-  amountCents: number;    // 414575
-  transactionCount: number;
-  batchNumber: string;
+type Merchant = {
+  mid: string;
+  name: string;   
 };
 
 type MonthlySummary = {
-  monthKey: string;     // "2025-11"
-  monthLabel: string;   // "November 2025"
-  totalAmountCents: number;
-  totalTransactions: number;
+  monthKey: string; // "2025-12"
+  monthLabel: string; // "December 2025"
+  totalAmountCents: number; // summed
+  totalTransactions: number; // summed
 };
 
-type DailySummary = {
-  date: string;         // "2025-11-02"
-  totalAmountCents: number;
-  totalTransactions: number;
+type cliqDeposits = {
+  date: string; // "12/01/2025"
+  amount: number;
+  transactions: number;
+  batch: string;
 };
 
-type Account = {
-  merchantName: string;
-  merchantId: string;
-};
-
-const formatMoney = (cents: number) =>
-  (cents / 100).toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-
-const formatDate = (dateStr: string) =>
-  new Date(dateStr).toLocaleDateString("en-US");
-
-const getMonthKey = (dateStr: string) => dateStr.slice(0, 7); // "YYYY-MM"
-
-const getMonthLabel = (monthKey: string) => {
-  const [y, m] = monthKey.split("-");
-  const date = new Date(Number(y), Number(m) - 1, 1);
-  return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-};
-
-export default function PayarcReportPage() {
-  const [transactions, setTransactions] = useState<RawTransaction[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
+export default function CliqReportPage() {
+  const [merchants, setMerchants] = useState<Merchant[]>([]);
+  const [selectedMerchant, setSelectedMerchant] = useState<Merchant | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<string | null>("");
+  const [selectedDate, setSelectedDate] = useState<string | null>("");
   const todayStr = format(new Date(), "yyyy-MM-dd");
   const firstOfMonth = format(startOfMonth(new Date()), "yyyy-MM-dd");
-
   const [fromDate, setFromDate] = useState(firstOfMonth);
   const [toDate, setToDate] = useState(todayStr);
+  const [loadingMerchants, setLoadingMerchants] = useState(false);
+  const [loadingReport, setLoadingReport] = useState(false);
+  const [transactions, setTransactions] = useState([]);
+  const [error, setError] = useState<string | null>(null);
+  const [deposits, setDeposits] = useState<cliqDeposits[]>([]);
+  const [totals, setTotals] = useState(null);
 
-  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-
-  //const [accounts, setAccounts] = useState<Account[]>([]);
-  const [accountSearch, setAccountSearch] = useState("");
-  //const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
-   const [accounts, setAccounts] = useState<MerchantAccount[]>([]);
-  const [selectedAccount, setSelectedAccount] = useState<MerchantAccount | null>(null);
-  const [loadingAccounts, setLoadingAccounts] = useState(false);
-  const [errorAccounts, setErrorAccounts] = useState<string | null>(null);
-
-  // Fetch raw data from your backend
-  async function loadData() {
+  const fetchMerchants = async () => {
     try {
-      setLoading(true);
+      setLoadingMerchants(true);
       setError(null);
 
-     const res = await api.get("/api/payarc/payarc-report", {
-        params: {
-          from: fromDate,          // already "YYYY-MM-DD"
-          to: toDate,
-        },
-      });
+      const res = await api.get<Merchant[]>("/api/cliq/cliq-merchants");
 
-      // Your API returns an array directly, not { success, data }
-      const rows = res.data as any[];
+      const data = res.data as Merchant[];
 
-      if (!Array.isArray(rows)) {
-        throw new Error("Unexpected API response format (expected an array)");
+      setMerchants(data);
+
+      if (data.length > 0) {
+        setSelectedMerchant(data[0]);
       }
-
-      const mapped: RawTransaction[] = rows.map((row) => ({
-        merchantName: row.dba_name,
-        merchantId: row.Merchant_Account_Number,
-        batchDate: row.Settlement_Date,
-        amountCents: row.Amounts ?? 0,
-        transactionCount: row.Transactions ?? 0,
-        batchNumber: String(row.Batch_Reference_Number ?? ""),
-      }));
-
-      setTransactions(mapped);
-      setSelectedMonth(null);
-      setSelectedDate(null);
     } catch (err: any) {
-      console.error("Error loading Payarc data:", err);
-      setError(err.message || "Unknown error");
+      setError(
+        err.response?.data?.error || err.message || "Failed to load merchants"
+      );
     } finally {
-      setLoading(false);
+      setLoadingMerchants(false);
     }
-  }
-
-  async function loadAccounts() {
-    try {
-      setLoadingAccounts(true);
-      setErrorAccounts(null);
-
-      console.log("Fetching accounts from backend...");
-      const res = await api.get("/api/payarc/my-accounts");
-      const rows = res;
-
-      if (!Array.isArray(rows)) {
-        throw new Error("Unexpected API response (expected an array)");
-      }
-
-      // Map to simplified structure
-      const filtered = rows.filter((r:any) => r.isActive)
-      //console.log('filtered', filtered, filtered.length)
-      // Map to simplified structure
-      const mapped: MerchantAccount[] = filtered.map((row: any) => ({
-          merchantName: row.dba_name || row.business_name || "Unknown Merchant",
-          merchantId: String(row.Merchant_Account_Number || row.mid || ""),
-        }));
-
-      setAccounts(mapped);
-      console.log(`Loaded ${mapped.length} PayArc accounts`);
-    } catch (err: any) {
-      console.error("Error loading accounts:", err);
-      setErrorAccounts(err.message || "Failed to load accounts");
-    } finally {    
-      setLoadingAccounts(false);
-    }
-  }
+  };
 
   useEffect(() => {
-    // Optionally load with default range on first render
-    loadData();
-    loadAccounts();
+    fetchMerchants();
   }, []);
 
-  const merchantOptions = useMemo(() => {
-    const set = new Set<string>();
-    transactions.forEach((t) => {
-      if (t.merchantName) set.add(t.merchantName);
+  useEffect(() => {
+    handleViewReport();
+  }, [selectedMerchant, fromDate, toDate]);
+
+  const parseMMDDYYYY = (dateStr: string): Date => {
+    const [mm, dd, yyyy] = dateStr.split("/");
+    return new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+  };
+
+  const yyyyMMddToMMDDYYYY = (dateStr: string): string => {
+    const [yyyy, mm, dd] = dateStr.split("-");
+    return `${mm}/${dd}/${yyyy}`;
+  };
+
+  const handleViewReport = async () => {
+    if (!selectedMerchant) {
+      setError("Please select a merchant.");
+      return;
+    }
+
+    if (!fromDate) {
+      setError("Please select From Date.");
+      return;
+    }
+
+    setError(null);
+    setLoadingReport(true);
+
+    try {
+      // ---- Transactions params ----
+      const params = {
+        merchantNumber: selectedMerchant.mid,
+        ...(fromDate && { fromDate }),
+        ...(toDate && { toDate }),
+      };
+
+      // ---- Extract Y/M/D safely ----
+      const date = new Date(fromDate + "T00:00:00");
+
+      const day = date.getDate();
+      const month = date.getMonth() + 1; // 0-based
+      const year = date.getFullYear();
+
+      // ---- Deposits params (MANDATORY) ----
+      const params1 = {
+        merchantNumber: selectedMerchant.mid,
+        year,
+        month,
+        day,
+        ...(toDate && { toDate }),
+      };
+
+      const [dqResult] = await Promise.allSettled([
+        api.get("/api/cliq/cliq-deposits", { params: params1 }),
+      ]);
+      // ---- Deposits ----
+      if (dqResult.status === "fulfilled") {
+        setDeposits(dqResult.value?.deposits as cliqDeposits[]);
+        setTotals(dqResult.value.totals);
+      } else {
+        setError((prev) => prev ?? "Failed to load deposits");
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to load report");
+    } finally {
+      setLoadingReport(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedDate) fetchDetails(selectedDate);
+  }, [selectedDate]);
+
+  const fetchDetails = async (selectedDate: string) => {
+    if (!selectedMerchant) {
+      setError("Please select a merchant.");
+      return;
+    }
+
+    setError(null);
+    setLoadingReport(true);
+
+    try {
+      const [mm, dd, yyyy] = selectedDate.split("/");
+      const formattedDate = `${yyyy}-${mm}-${dd}`;
+
+      const params = {
+        merchantNumber: selectedMerchant.mid,
+        fromDate: formattedDate,
+        toDate: formattedDate,
+      };
+      console.log(params);
+      const [txResult] = await Promise.allSettled([
+        api.get("/api/cliq/cliq-transactions", { params }),
+      ]);
+
+      // console.log(txResult);
+
+      if (txResult.status === "fulfilled") {
+        const rawBatches = txResult.value; // adjust if API nests under .data
+
+        const tt = rawBatches
+          .flatMap((batch: any) =>
+            batch.transactions.map((txn: any) => ({
+              id: txn.id,
+              count: batch.count,
+              totalAmount: batch.amount,
+              reference_number: batch.reference_number,
+              amount: txn.amount,
+              auth_code: txn.auth_code,
+              card_type: txn.card_type,
+              cardholder: txn.cardholder,
+              transDate: txn.date,
+              batchDate: batch.date,
+              merchantId: selectedMerchant.mid,
+              // batchDate: batch.date, // YYYY-MM-DD from API
+              // batchNumber: batch.reference_number,
+              // amountCents: Math.round(Number(txn.amount) * 100),
+              // transactionCount: 1,
+              // merchantName: txn.card_type,
+              // merchantId: txn.cardholder,
+            }))
+          )
+          .filter((t: any) => {
+            return t.batchDate === selectedDate;
+          })
+          .sort((a: { reference_number: string; }, b: { reference_number: any; }) => a.reference_number.localeCompare(b.reference_number));
+        setTransactions(tt);
+      } else {
+        setTransactions([]);
+        setError("Failed to load transactions");
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to load report");
+    } finally {
+      setLoadingReport(false);
+    }
+  };
+
+  const formatMoney = (cents: number) =>
+    (cents / 100).toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     });
-    return Array.from(set).sort();
-  }, [transactions]);
 
-  function normalizeNumber(str: string) {
-    return str.startsWith("0") ? str : "0" + str;
-  }
+  const formatDate = (dateStr: string) =>
+    new Date(dateStr).toLocaleDateString("en-US");
 
-  // Filter by merchant + date range on the client as an extra layer
-const filtered = useMemo(() => {
-  return transactions.filter((t) => {
-    // filter by selected merchant MID (if selected)
-    const matchMerchant = selectedAccount
-      ? t.merchantId === normalizeNumber(selectedAccount.merchantId)
-      : true;
+  const getMonthKey = (dateStr: string): string => {
+    if (!dateStr) return "invalid";
 
-    // filter by date range
-    const d = t.batchDate; // "YYYY-MM-DD"
-    const inFrom = !fromDate || d >= fromDate;
-    const inTo = !toDate || d <= toDate;
+    const [mm, dd, yyyy] = dateStr.split("/");
 
-    return matchMerchant && inFrom && inTo;
-  });
-}, [transactions, selectedAccount, fromDate, toDate]);
+    if (!mm || !yyyy) return "invalid";
 
+    return `${yyyy}-${mm.padStart(2, "0")}`; // 2022-09
+  };
 
-  const filteredAccounts = useMemo(() => {
-    const q = accountSearch.toLowerCase().trim();
-    if (!q) return accounts.slice(0, 20);
-    return accounts.filter((acc) => {
-      const name = acc.merchantName.toLowerCase();
-      const mid = acc.merchantId.toLowerCase();
-      return name.includes(q) || mid.includes(q);
+  const getMonthLabel = (monthKey: string): string => {
+    const [year, month] = monthKey.split("-");
+
+    if (!year || !month) return "Invalid Date";
+
+    return new Date(Number(year), Number(month) - 1).toLocaleString("default", {
+      month: "long",
+      year: "numeric",
     });
-  }, [accounts, accountSearch]);
+  };
 
-  // LAYER 1: Monthly summary
-  const monthlySummary: MonthlySummary[] = useMemo(() => {
+  const filteredDeposites = useMemo(() => {
+    if (!fromDate || !toDate) return deposits;
+
+    const from = parseMMDDYYYY(yyyyMMddToMMDDYYYY(fromDate));
+    const to = parseMMDDYYYY(yyyyMMddToMMDDYYYY(toDate));
+
+    return deposits.filter((t) => {
+      const d = parseMMDDYYYY(t.date);
+      return d >= from && d <= to;
+    });
+  }, [deposits, fromDate, toDate]); // ✅ FIX
+
+  const monthlySummary = useMemo(() => {
     const map = new Map<string, { amount: number; txns: number }>();
 
-    filtered.forEach((t) => {
-      const key = getMonthKey(t.batchDate);
+    filteredDeposites.forEach((d) => {
+      const key = getMonthKey(d.date);
+
       const current = map.get(key) || { amount: 0, txns: 0 };
-      current.amount += t.amountCents;
-      current.txns += t.transactionCount;
+
+      // amount is in rupees/dollars → convert to cents if needed
+      current.amount += Math.round(d.amount * 100);
+      current.txns += d.transactions;
+
       map.set(key, current);
     });
 
@@ -212,20 +274,22 @@ const filtered = useMemo(() => {
         totalTransactions: v.txns,
       }))
       .sort((a, b) => (a.monthKey < b.monthKey ? 1 : -1));
-  }, [filtered]);
+  }, [filteredDeposites]);
 
-  // LAYER 2: Daily summary for selectedMonth
-  const dailySummary: DailySummary[] = useMemo(() => {
+  const dailySummary = useMemo(() => {
     if (!selectedMonth) return [];
 
     const map = new Map<string, { amount: number; txns: number }>();
-    filtered
-      .filter((t) => getMonthKey(t.batchDate) === selectedMonth)
-      .forEach((t) => {
-        const key = t.batchDate;
+
+    filteredDeposites
+      .filter((d) => getMonthKey(d.date) === selectedMonth)
+      .forEach((d) => {
+        const key = d.date;
         const current = map.get(key) || { amount: 0, txns: 0 };
-        current.amount += t.amountCents;
-        current.txns += t.transactionCount;
+
+        current.amount += Math.round(d.amount * 100);
+        current.txns += d.transactions;
+
         map.set(key, current);
       });
 
@@ -235,16 +299,13 @@ const filtered = useMemo(() => {
         totalAmountCents: v.amount,
         totalTransactions: v.txns,
       }))
-      .sort((a, b) => (a.date < b.date ? 1 : -1));
-  }, [filtered, selectedMonth]);
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [filteredDeposites, selectedMonth]);
 
-  // LAYER 3: Detailed rows for selectedDate
-  const detailRows = useMemo(() => {
-    if (!selectedDate) return [];
-    return filtered
-      .filter((t) => t.batchDate === selectedDate)
-      .sort((a, b) => a.batchNumber.localeCompare(b.batchNumber));
-  }, [filtered, selectedDate]);
+
+ const tableData = useNormalizedTableData(transactions);
+
+  //console.log('tableData', tableData);
 
   return (
     <ProtectedRoute allowedRoles={["admin"]}>
@@ -254,25 +315,29 @@ const filtered = useMemo(() => {
             <header className="mb-6 flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-semibold text-slate-900">
-                  Payarc Transactions
+                  Cliq Transactions
                 </h1>
                 <p className="text-sm text-slate-500">
-                  Search by merchant and drill down from monthly to daily and batch
-                  details.
+                  Search by merchant and drill down from monthly to daily and
+                  batch details.
                 </p>
               </div>
             </header>
-
             <div className="mb-4 rounded-2xl bg-white p-4 shadow-sm">
               <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                 <div className="flex flex-1 flex-col gap-2 md:flex-row">
                   <div className="flex-1 relative">
-                      <MerchantSelect
-                        accounts={accounts}
-                        value={selectedAccount}
-                        onChange={setSelectedAccount}
-                        loading={loadingAccounts}
-                      />
+                    <MerchantSelect
+                      merchants={merchants}
+                      value={selectedMerchant}
+                      onChange={setSelectedMerchant}
+                      loading={loadingMerchants}
+                      onClearParent={() => {
+                        setSelectedMonth(null);
+                        setSelectedDate(null);
+                        setDeposits([]);
+                      }}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-500">
@@ -298,17 +363,18 @@ const filtered = useMemo(() => {
                   </div>
                 </div>
                 <button
-                  onClick={loadData}
+                  onClick={handleViewReport}
+                  disabled={loadingReport || loadingMerchants}
                   className="inline-flex min-w-[180px] items-center justify-center rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-red-400"
-                  disabled={loading}
                 >
-                  {loading ? "Loading…" : "View Transactions"}
+                  {loadingReport ? "Loading…" : "View Transactions"}
                 </button>
               </div>
             </div>
 
+            {/* Error */}
             {error && (
-              <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+              <div className="rounded-md bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-700">
                 {error}
               </div>
             )}
@@ -325,6 +391,7 @@ const filtered = useMemo(() => {
                     onClick={() => {
                       setSelectedMonth(null);
                       setSelectedDate(null);
+                      setTransactions([]);
                     }}
                   >
                     Clear month selection
@@ -359,10 +426,11 @@ const filtered = useMemo(() => {
                     {monthlySummary.map((m) => (
                       <tr
                         key={m.monthKey}
-                        className={`border-b border-slate-100 ${selectedMonth === m.monthKey
-                          ? "bg-red-50"
-                          : "hover:bg-slate-50"
-                          }`}
+                        className={`border-b border-slate-100 ${
+                          selectedMonth === m.monthKey
+                            ? "bg-red-50"
+                            : "hover:bg-slate-50"
+                        }`}
                       >
                         <td className="px-4 py-2">{m.monthLabel}</td>
                         <td className="px-4 py-2 text-right font-medium">
@@ -376,9 +444,9 @@ const filtered = useMemo(() => {
                             className="text-xs font-semibold text-red-700 hover:underline"
                             onClick={() => {
                               setSelectedMonth(
-                                selectedMonth === m.monthKey ? null : m.monthKey,
+                                selectedMonth === m.monthKey ? null : m.monthKey
                               );
-                              setSelectedDate(null);
+                              // setSelectedDate(null);
                             }}
                           >
                             {selectedMonth === m.monthKey
@@ -423,7 +491,7 @@ const filtered = useMemo(() => {
                       </tr>
                     </thead>
                     <tbody>
-                      {dailySummary.length === 0 && (
+                      {deposits.length === 0 && (
                         <tr>
                           <td
                             colSpan={4}
@@ -436,10 +504,11 @@ const filtered = useMemo(() => {
                       {dailySummary.map((d) => (
                         <tr
                           key={d.date}
-                          className={`border-b border-slate-100 ${selectedDate === d.date
-                            ? "bg-red-50"
-                            : "hover:bg-slate-50"
-                            }`}
+                          className={`border-b border-slate-100 ${
+                            selectedDate === d.date
+                              ? "bg-red-50"
+                              : "hover:bg-slate-50"
+                          }`}
                         >
                           <td className="px-4 py-2">{formatDate(d.date)}</td>
                           <td className="px-4 py-2 text-right font-medium">
@@ -453,7 +522,7 @@ const filtered = useMemo(() => {
                               className="text-xs font-semibold text-red-700 hover:underline"
                               onClick={() =>
                                 setSelectedDate(
-                                  selectedDate === d.date ? null : d.date,
+                                  selectedDate === d.date ? null : d.date
                                 )
                               }
                             >
@@ -492,8 +561,8 @@ const filtered = useMemo(() => {
                         </th>
                       </tr>
                     </thead>
-                    <tbody>
-                      {detailRows.length === 0 && (
+                     <tbody>
+                      {transactions.length === 0 && (
                         <tr>
                           <td
                             colSpan={5}
@@ -503,34 +572,34 @@ const filtered = useMemo(() => {
                           </td>
                         </tr>
                       )}
-                      {detailRows.map((r, idx) => (
+                      {tableData.map((r, idx) => (
                         <tr
                           key={`${r.batchNumber}-${idx}`}
                           className="border-b border-slate-100 hover:bg-slate-50"
                         >
                           <td className="px-4 py-2">
                             <div className="font-medium text-slate-900">
-                              {r.merchantName}
+                              {r.dba}
                             </div>
                             <div className="text-xs text-slate-500">
                               {r.batchDate}
                             </div>
                           </td>
                           <td className="px-4 py-2 text-sm text-slate-700">
-                            {r.merchantId}
+                            {r.mid}
                           </td>
                           <td className="px-4 py-2 text-sm text-slate-700">
-                            {r.batchNumber}
+                            {r.reference_number}
                           </td>
                           <td className="px-4 py-2 text-right font-medium text-slate-900">
-                            ${formatMoney(r.amountCents)}
+                            ${formatMoney(parseFloat(r.amount))}
                           </td>
                           <td className="px-4 py-2 text-right text-slate-700">
                             {r.transactionCount.toLocaleString()}
                           </td>
                         </tr>
                       ))}
-                    </tbody>
+                    </tbody> 
                   </table>
                 </div>
               </section>
@@ -541,5 +610,3 @@ const filtered = useMemo(() => {
     </ProtectedRoute>
   );
 }
-
-
