@@ -13,17 +13,15 @@ import { Label } from '@/components/ui/label'
 import { toast } from 'react-hot-toast'
 import { CheckCircle } from 'lucide-react'
 
-// Validation schema
+// Validation schema - simplified to match internal forms
 const publicLeadSchema = z.object({
+  corporationName: z.string().min(1, 'Corporation name is required'),
+  businessName: z.string().min(1, 'Business name is required'),
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   email: z.string().email('Please enter a valid email address'),
   phone: z.string().min(10, 'Phone number must be at least 10 digits'),
-  company: z.string().min(1, 'Company name is required'),
-  businessType: z.string().min(1, 'Business type is required'),
-  industry: z.string().optional(),
-  website: z.string().url().optional().or(z.literal('')),
-  notes: z.string().optional(),
+  message: z.string().optional(),
 })
 
 type PublicLeadFormData = z.infer<typeof publicLeadSchema>
@@ -73,15 +71,13 @@ function PublicLeadFormContent() {
         },
         body: JSON.stringify({
           partner_id: partnerId,
+          corporation_name: data.corporationName,
+          business_name: data.businessName,
           first_name: data.firstName,
           last_name: data.lastName,
           email: data.email,
           phone: data.phone,
-          company: data.company,
-          business_type: data.businessType,
-          industry: data.industry || '',
-          website: data.website || '',
-          notes: data.notes || '',
+          notes: data.message || '',
           source: 'Public Form'
         }),
       })
@@ -191,144 +187,105 @@ function PublicLeadFormContent() {
                   </div>
                 )}
 
-                {/* Personal Information */}
-                <div>
-                  <h3 className="text-lg font-medium mb-4">Personal Information</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="firstName">First Name *</Label>
-                      <Input
-                        id="firstName"
-                        {...register('firstName')}
-                        className={errors.firstName ? 'border-red-500' : ''}
-                        placeholder="John"
-                      />
-                      {errors.firstName && (
-                        <p className="text-red-500 text-sm mt-1">{errors.firstName.message}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label htmlFor="lastName">Last Name *</Label>
-                      <Input
-                        id="lastName"
-                        {...register('lastName')}
-                        className={errors.lastName ? 'border-red-500' : ''}
-                        placeholder="Doe"
-                      />
-                      {errors.lastName && (
-                        <p className="text-red-500 text-sm mt-1">{errors.lastName.message}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label htmlFor="email">Email *</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        {...register('email')}
-                        className={errors.email ? 'border-red-500' : ''}
-                        placeholder="john@company.com"
-                      />
-                      {errors.email && (
-                        <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label htmlFor="phone">Phone *</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        {...register('phone')}
-                        className={errors.phone ? 'border-red-500' : ''}
-                        placeholder="(555) 123-4567"
-                      />
-                      {errors.phone && (
-                        <p className="text-red-500 text-sm mt-1">{errors.phone.message}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Business Information */}
-                <div>
-                  <h3 className="text-lg font-medium mb-4">Business Information</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="company">Company Name *</Label>
-                      <Input
-                        id="company"
-                        {...register('company')}
-                        className={errors.company ? 'border-red-500' : ''}
-                        placeholder="ABC Corporation"
-                      />
-                      {errors.company && (
-                        <p className="text-red-500 text-sm mt-1">{errors.company.message}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label htmlFor="businessType">Business Type *</Label>
-                      <select
-                        id="businessType"
-                        {...register('businessType')}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#9a132d] ${
-                          errors.businessType ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                      >
-                        <option value="">Select business type</option>
-                        <option value="retail">Retail</option>
-                        <option value="restaurant">Restaurant</option>
-                        <option value="ecommerce">E-commerce</option>
-                        <option value="service">Service Business</option>
-                        <option value="professional">Professional Services</option>
-                        <option value="manufacturing">Manufacturing</option>
-                        <option value="other">Other</option>
-                      </select>
-                      {errors.businessType && (
-                        <p className="text-red-500 text-sm mt-1">{errors.businessType.message}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <Label htmlFor="industry">Industry</Label>
-                      <Input
-                        id="industry"
-                        {...register('industry')}
-                        placeholder="e.g., Healthcare, Technology"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="website">Website</Label>
-                      <Input
-                        id="website"
-                        type="url"
-                        placeholder="https://example.com"
-                        {...register('website')}
-                        className={errors.website ? 'border-red-500' : ''}
-                      />
-                      {errors.website && (
-                        <p className="text-red-500 text-sm mt-1">{errors.website.message}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Additional Information */}
-                <div>
-                  <h3 className="text-lg font-medium mb-4">Additional Information</h3>
+                {/* 2-Column Grid for Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Corporation Name */}
                   <div>
-                    <Label htmlFor="notes">Tell us about your payment processing needs</Label>
-                    <textarea
-                      id="notes"
-                      rows={4}
-                      {...register('notes')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#9a132d]"
-                      placeholder="What are you looking for in a payment processor?"
+                    <Label htmlFor="corporationName">Corporation Name *</Label>
+                    <Input
+                      id="corporationName"
+                      {...register('corporationName')}
+                      className={errors.corporationName ? 'border-red-500' : ''}
+                      placeholder="Enter corporation name"
                     />
+                    {errors.corporationName && (
+                      <p className="text-red-500 text-sm mt-1">{errors.corporationName.message}</p>
+                    )}
                   </div>
+
+                  {/* Business Name */}
+                  <div>
+                    <Label htmlFor="businessName">Business Name *</Label>
+                    <Input
+                      id="businessName"
+                      {...register('businessName')}
+                      className={errors.businessName ? 'border-red-500' : ''}
+                      placeholder="Enter business name"
+                    />
+                    {errors.businessName && (
+                      <p className="text-red-500 text-sm mt-1">{errors.businessName.message}</p>
+                    )}
+                  </div>
+
+                  {/* First Name */}
+                  <div>
+                    <Label htmlFor="firstName">First Name *</Label>
+                    <Input
+                      id="firstName"
+                      {...register('firstName')}
+                      className={errors.firstName ? 'border-red-500' : ''}
+                      placeholder="John"
+                    />
+                    {errors.firstName && (
+                      <p className="text-red-500 text-sm mt-1">{errors.firstName.message}</p>
+                    )}
+                  </div>
+
+                  {/* Last Name */}
+                  <div>
+                    <Label htmlFor="lastName">Last Name *</Label>
+                    <Input
+                      id="lastName"
+                      {...register('lastName')}
+                      className={errors.lastName ? 'border-red-500' : ''}
+                      placeholder="Doe"
+                    />
+                    {errors.lastName && (
+                      <p className="text-red-500 text-sm mt-1">{errors.lastName.message}</p>
+                    )}
+                  </div>
+
+                  {/* Email */}
+                  <div>
+                    <Label htmlFor="email">Email *</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      {...register('email')}
+                      className={errors.email ? 'border-red-500' : ''}
+                      placeholder="john@company.com"
+                    />
+                    {errors.email && (
+                      <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
+                    )}
+                  </div>
+
+                  {/* Phone */}
+                  <div>
+                    <Label htmlFor="phone">Phone *</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      {...register('phone')}
+                      className={errors.phone ? 'border-red-500' : ''}
+                      placeholder="(555) 123-4567"
+                    />
+                    {errors.phone && (
+                      <p className="text-red-500 text-sm mt-1">{errors.phone.message}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Message - Full Width */}
+                <div>
+                  <Label htmlFor="message">Message</Label>
+                  <textarea
+                    id="message"
+                    rows={4}
+                    {...register('message')}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#9a132d]"
+                    placeholder="Tell us about your payment processing needs (optional)"
+                  />
                 </div>
 
                 {/* Submit Button */}

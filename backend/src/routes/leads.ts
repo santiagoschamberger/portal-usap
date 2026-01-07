@@ -737,21 +737,27 @@ router.post('/sync', authenticateToken, async (req: AuthenticatedRequest, res) =
 router.post('/public', async (req, res) => {
   try {
     const { 
-      partner_id, 
+      partner_id,
+      corporation_name,
+      business_name,
       first_name, 
       last_name, 
       email, 
-      phone, 
-      company, 
+      phone,
+      notes,
+      source,
+      // Legacy fields for backwards compatibility
+      company,
       business_type,
       industry,
-      website,
-      notes,
-      source 
+      website
     } = req.body;
 
+    // Support both new and legacy field formats
+    const companyName = business_name || company;
+    
     // Validate required fields
-    if (!partner_id || !first_name || !last_name || !email || !phone || !company) {
+    if (!partner_id || !first_name || !last_name || !email || !phone || !companyName) {
       return res.status(400).json({ 
         error: 'Missing required fields',
         message: 'Please fill in all required fields' 
@@ -794,12 +800,13 @@ router.post('/public', async (req, res) => {
       Email: email,
       First_Name: first_name,
       Last_Name: last_name,
-      Company: company,
+      Company: companyName,
       Phone: phone,
       StrategicPartnerId: partner_id,
-      Entity_Type: Array.isArray(business_type) ? business_type : [business_type],
+      Entity_Type: Array.isArray(business_type) ? business_type : [business_type || 'Other'],
       Lead_Status: 'New',
       Lead_Source: source || 'Public Form',
+      Lander_Message: notes || '',
       Vendor: {
         name: partnerName,
         id: zohoPartnerId
@@ -816,7 +823,7 @@ router.post('/public', async (req, res) => {
         last_name,
         email,
         phone,
-        company,
+        company: companyName,
         status: 'Pre-Vet / New Lead',
         lead_source: source || 'Public Form',
         created_by: partner_id,
