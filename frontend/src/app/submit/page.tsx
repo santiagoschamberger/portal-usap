@@ -132,10 +132,7 @@ function SubmitReferralForm() {
   return (
     <div className="max-w-2xl mx-auto">
       <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">Contact Us</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* 2-Column Grid for Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
