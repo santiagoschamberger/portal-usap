@@ -20,6 +20,7 @@ import partnersRoutes from './routes/partners';
 import syncRoutes from './routes/sync';
 import payarcRoutes from './routes/payarc';
 import cliqRoutes from './routes/cliq';
+import referralsRoutes from './routes/referrals';
 
 // Load environment variables
 config();
@@ -82,7 +83,8 @@ app.get('/', (req, res) => {
             webhooks: '/api/webhooks',
             sync: '/api/sync',
             payarc: '/api/payarc',
-            cliq: '/api/cliq'
+            cliq: '/api/cliq',
+            referrals: '/api/referrals'
         },
         documentation: 'See README.md for API documentation'
     });
@@ -136,6 +138,7 @@ app.use('/api/webhooks', webhooksRoutes);
 app.use('/api/sync', syncRoutes);
 app.use('/api/payarc', payarcRoutes);
 app.use('/api/cliq', cliqRoutes);
+app.use('/api/referrals', referralsRoutes);
 
 // API routes catch-all (place after specific routes)
 app.use('/api', (req, res) => {
