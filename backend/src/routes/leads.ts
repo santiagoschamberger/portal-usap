@@ -136,27 +136,32 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    // Phase 2: Simplified lead form fields
-    // Maps to: businessName, contactName, email, phone, state, additionalInfo
+    // Simplified lead form fields
     const {
-      company,      // businessName from frontend
-      full_name,    // contactName from frontend (Zoho will split to First/Last)
-      email,
-      phone,
-      state,
-      lander_message, // additionalInfo from frontend
-      // Legacy fields (for backwards compatibility)
+      corporation_name,
+      business_name,
       first_name,
       last_name,
+      email,
+      phone,
+      notes,
+      // Legacy fields (for backwards compatibility)
+      company,
+      full_name,
+      state,
+      lander_message,
       business_type,
       description
     } = req.body;
 
     // Validate required fields (support both new and legacy formats)
-    if (!email || (!full_name && (!first_name || !last_name)) || !company) {
+    const hasNewFormat = corporation_name && business_name && first_name && last_name && email;
+    const hasLegacyFormat = company && (full_name || (first_name && last_name)) && email;
+    
+    if (!hasNewFormat && !hasLegacyFormat) {
       return res.status(400).json({
         error: 'Missing required fields',
-        required: ['company', 'full_name or (first_name + last_name)', 'email']
+        required: ['corporation_name', 'business_name', 'first_name', 'last_name', 'email']
       });
     }
 
@@ -175,10 +180,12 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
       });
     }
 
-    // Split full_name if provided, otherwise use first_name/last_name
+    // Handle both new and legacy formats
     let firstName = first_name;
     let lastName = last_name;
+    let companyName = business_name || company;
     
+    // Split full_name if provided (legacy format)
     if (full_name && !first_name && !last_name) {
       const nameParts = full_name.trim().split(' ');
       firstName = nameParts[0];
@@ -186,24 +193,17 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
     }
 
     // Prepare lead data for Zoho CRM
-    // Field mapping based on ZOHO_FIELD_FINDINGS.md:
-    // - Company → Company
-    // - Full_Name → First_Name + Last_Name (Zoho requires split)
-    // - Email → Email
-    // - Phone → Phone
-    // - State → State (text field)
-    // - Lander_Message → Lander_Message (custom textarea field)
     const leadData = {
       Last_Name: lastName,
       First_Name: firstName,
       Email: email,
-      Company: company,
+      Company: companyName,
       Phone: phone || '',
       State: state || '',
-      Lander_Message: lander_message || '',
-      Entity_Type: Array.isArray(business_type) ? business_type : [business_type || 'Business'],
+      Lander_Message: notes || lander_message || description || '',
+      Entity_Type: Array.isArray(business_type) ? business_type : [business_type || 'Other'],
       StrategicPartnerId: req.user.id,
-      Lead_Status: 'New', // Default status for new leads
+      Lead_Status: 'New',
       Lead_Source: 'Strategic Partner',
       Vendor: {
         name: partner.name,
@@ -221,11 +221,11 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
         last_name: lastName,
         email,
         phone: phone || null,
-        company: company || null,
+        company: companyName || null,
         state: state || null,
         status: 'Pre-Vet / New Lead', // Use correct initial Portal status
         lead_source: 'portal',
-        notes: lander_message || description || null, // Support both new and legacy field
+        notes: notes || lander_message || description || null,
         zoho_sync_status: 'pending' // Initially pending until Zoho sync succeeds
       })
       .select()

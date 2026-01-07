@@ -11,31 +11,31 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ProtectedRoute } from '@/components/protected-route'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
-import { StateDropdown } from '@/components/leads/StateDropdown'
-import { zohoService } from '@/services/zohoService'
 import { toast } from 'react-hot-toast'
 import { activityTracker } from '@/lib/activity-tracker'
 
 /**
- * Simplified Lead Form - Phase 2
+ * Simplified Lead Form
  * 
- * Only 6 fields as per requirements:
- * 1. Business Name (required)
- * 2. Contact Name (required)
- * 3. Email (required)
- * 4. Phone Number (required)
- * 5. State (required)
- * 6. Additional Information (optional)
+ * 7 fields as per requirements:
+ * 1. Corporation Name (required)
+ * 2. Business Name (required)
+ * 3. First Name (required)
+ * 4. Last Name (required)
+ * 5. Email (required)
+ * 6. Phone (required)
+ * 7. Message (optional)
  */
 
-// Simplified validation schema - only 6 fields
+// Validation schema
 const leadSchema = z.object({
+  corporationName: z.string().min(1, 'Corporation name is required'),
   businessName: z.string().min(1, 'Business name is required'),
-  contactName: z.string().min(1, 'Contact name is required'),
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
   email: z.string().email('Please enter a valid email address'),
   phone: z.string().min(10, 'Phone number must be at least 10 digits'),
-  state: z.string().min(1, 'State is required'),
-  additionalInfo: z.string().optional(),
+  message: z.string().optional(),
 })
 
 type LeadFormData = z.infer<typeof leadSchema>
@@ -49,49 +49,53 @@ export default function NewLeadPage() {
     register,
     handleSubmit,
     formState: { errors },
-    setValue,
-    watch,
   } = useForm<LeadFormData>({
     resolver: zodResolver(leadSchema),
     defaultValues: {
+      corporationName: '',
       businessName: '',
-      contactName: '',
+      firstName: '',
+      lastName: '',
       email: '',
       phone: '',
-      state: '',
-      additionalInfo: '',
+      message: '',
     }
   })
-
-  const stateValue = watch('state')
 
   const onSubmit = async (data: LeadFormData) => {
     setIsSubmitting(true)
     setError('')
 
     try {
-      // Map simplified form fields to Zoho CRM fields
-      // Based on ZOHO_FIELD_FINDINGS.md:
-      // - businessName → Company
-      // - contactName → Full_Name (Zoho will split to First/Last)
-      // - email → Email
-      // - phone → Phone
-      // - state → State (text field)
-      // - additionalInfo → Lander_Message (textarea)
+      const token = localStorage.getItem('token')
+      const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001').replace(/\/$/, '')
       
-      await zohoService.leads.create({
-        company: data.businessName,
-        full_name: data.contactName,
-        email: data.email,
-        phone: data.phone,
-        state: data.state,
-        lander_message: data.additionalInfo || '',
+      const response = await fetch(`${API_URL}/api/leads`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          corporation_name: data.corporationName,
+          business_name: data.businessName,
+          first_name: data.firstName,
+          last_name: data.lastName,
+          email: data.email,
+          phone: data.phone,
+          notes: data.message || '',
+        }),
       })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to create lead')
+      }
       
       toast.success('Lead created successfully!')
       
       // Track activity
-      activityTracker.addActivity('lead_created', `Created lead for ${data.contactName} at ${data.businessName}`)
+      activityTracker.addActivity('lead_created', `Created lead for ${data.firstName} ${data.lastName} at ${data.businessName}`)
       
       // Redirect to leads list on success
       router.push('/leads')
@@ -135,8 +139,22 @@ export default function NewLeadPage() {
                   </div>
                 )}
 
-                {/* Simplified Form - Only 6 Fields */}
-                <div className="space-y-4">
+                {/* 2-Column Layout for Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Corporation Name */}
+                  <div>
+                    <Label htmlFor="corporationName">Corporation Name *</Label>
+                    <Input
+                      id="corporationName"
+                      placeholder="Enter corporation name"
+                      {...register('corporationName')}
+                      className={errors.corporationName ? 'border-red-500' : ''}
+                    />
+                    {errors.corporationName && (
+                      <p className="text-red-500 text-sm mt-1">{errors.corporationName.message}</p>
+                    )}
+                  </div>
+
                   {/* Business Name */}
                   <div>
                     <Label htmlFor="businessName">Business Name *</Label>
@@ -151,17 +169,31 @@ export default function NewLeadPage() {
                     )}
                   </div>
 
-                  {/* Contact Name */}
+                  {/* First Name */}
                   <div>
-                    <Label htmlFor="contactName">Contact Name *</Label>
+                    <Label htmlFor="firstName">First Name *</Label>
                     <Input
-                      id="contactName"
-                      placeholder="Enter contact name"
-                      {...register('contactName')}
-                      className={errors.contactName ? 'border-red-500' : ''}
+                      id="firstName"
+                      placeholder="Enter first name"
+                      {...register('firstName')}
+                      className={errors.firstName ? 'border-red-500' : ''}
                     />
-                    {errors.contactName && (
-                      <p className="text-red-500 text-sm mt-1">{errors.contactName.message}</p>
+                    {errors.firstName && (
+                      <p className="text-red-500 text-sm mt-1">{errors.firstName.message}</p>
+                    )}
+                  </div>
+
+                  {/* Last Name */}
+                  <div>
+                    <Label htmlFor="lastName">Last Name *</Label>
+                    <Input
+                      id="lastName"
+                      placeholder="Enter last name"
+                      {...register('lastName')}
+                      className={errors.lastName ? 'border-red-500' : ''}
+                    />
+                    {errors.lastName && (
+                      <p className="text-red-500 text-sm mt-1">{errors.lastName.message}</p>
                     )}
                   </div>
 
@@ -180,9 +212,9 @@ export default function NewLeadPage() {
                     )}
                   </div>
 
-                  {/* Phone Number */}
+                  {/* Phone */}
                   <div>
-                    <Label htmlFor="phone">Phone Number *</Label>
+                    <Label htmlFor="phone">Phone *</Label>
                     <Input
                       id="phone"
                       type="tel"
@@ -194,32 +226,18 @@ export default function NewLeadPage() {
                       <p className="text-red-500 text-sm mt-1">{errors.phone.message}</p>
                     )}
                   </div>
+                </div>
 
-                  {/* State */}
-                  <div>
-                    <Label htmlFor="state">State *</Label>
-                    <StateDropdown
-                      value={stateValue}
-                      onChange={(value) => setValue('state', value)}
-                      error={errors.state?.message}
-                      required
-                    />
-                  </div>
-
-                  {/* Additional Information (Optional) */}
-                  <div>
-                    <Label htmlFor="additionalInfo">Additional Information</Label>
-                    <textarea
-                      id="additionalInfo"
-                      rows={4}
-                      {...register('additionalInfo')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Any additional notes about this lead (optional)..."
-                    />
-                    <p className="text-sm text-gray-500 mt-1">
-                      Optional: Add any relevant details about the lead
-                    </p>
-                  </div>
+                {/* Message - Full Width */}
+                <div>
+                  <Label htmlFor="message">Message</Label>
+                  <textarea
+                    id="message"
+                    rows={4}
+                    {...register('message')}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Any additional notes about this lead (optional)..."
+                  />
                 </div>
 
                 {/* Form Actions */}
