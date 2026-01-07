@@ -9,7 +9,7 @@ const router = express.Router();
  * POST /api/referrals/submit
  * Submit a referral (contact form)
  */
-router.post('/submit', authenticateToken, async (req: Request, res: Response) => {
+router.post('/submit', authenticateToken, async (req: Request, res: Response): Promise<any> => {
   try {
     const { 
       corporation_name, 
