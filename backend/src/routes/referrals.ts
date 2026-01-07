@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
-import { supabaseAdmin } from '../config/supabase.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { supabaseAdmin } from '../config/database';
+import { authenticateToken } from '../middleware/auth';
 import { zohoService } from '../services/zohoService';
 
 const router = express.Router();
@@ -74,9 +74,10 @@ router.post('/submit', authenticateToken, async (req: Request, res: Response) =>
       Company: business_name,
       Phone: phone,
       StrategicPartnerId: userId,
+      Entity_Type: 'Other',
       Lead_Status: 'New',
       Lead_Source: 'Partner Referral',
-      Description: message || '',
+      Lander_Message: message || '',
       Vendor: {
         name: partnerName,
         id: zohoPartnerId
@@ -118,7 +119,7 @@ router.post('/submit', authenticateToken, async (req: Request, res: Response) =>
 
   } catch (error: any) {
     console.error('Error submitting referral:', error);
-    res.status(500).json({ 
+    return res.status(500).json({ 
       error: 'Internal server error',
       message: error.message || 'Failed to submit referral' 
     });
