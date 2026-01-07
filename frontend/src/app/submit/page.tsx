@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { ProtectedRoute } from '@/components/protected-route'
+import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -135,88 +136,91 @@ function SubmitReferralForm() {
           <CardTitle className="text-2xl">Contact Us</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {/* Corporation Name */}
-            <div>
-              <Label htmlFor="corporationName">Corporation Name *</Label>
-              <Input
-                id="corporationName"
-                {...register('corporationName')}
-                className={errors.corporationName ? 'border-red-500' : ''}
-              />
-              {errors.corporationName && (
-                <p className="text-red-500 text-sm mt-1">{errors.corporationName.message}</p>
-              )}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {/* 2-Column Grid for Fields */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Corporation Name */}
+              <div>
+                <Label htmlFor="corporationName">Corporation Name *</Label>
+                <Input
+                  id="corporationName"
+                  {...register('corporationName')}
+                  className={errors.corporationName ? 'border-red-500' : ''}
+                />
+                {errors.corporationName && (
+                  <p className="text-red-500 text-sm mt-1">{errors.corporationName.message}</p>
+                )}
+              </div>
+
+              {/* Business Name */}
+              <div>
+                <Label htmlFor="businessName">Business Name *</Label>
+                <Input
+                  id="businessName"
+                  {...register('businessName')}
+                  className={errors.businessName ? 'border-red-500' : ''}
+                />
+                {errors.businessName && (
+                  <p className="text-red-500 text-sm mt-1">{errors.businessName.message}</p>
+                )}
+              </div>
+
+              {/* First Name */}
+              <div>
+                <Label htmlFor="firstName">First Name *</Label>
+                <Input
+                  id="firstName"
+                  {...register('firstName')}
+                  className={errors.firstName ? 'border-red-500' : ''}
+                />
+                {errors.firstName && (
+                  <p className="text-red-500 text-sm mt-1">{errors.firstName.message}</p>
+                )}
+              </div>
+
+              {/* Last Name */}
+              <div>
+                <Label htmlFor="lastName">Last Name *</Label>
+                <Input
+                  id="lastName"
+                  {...register('lastName')}
+                  className={errors.lastName ? 'border-red-500' : ''}
+                />
+                {errors.lastName && (
+                  <p className="text-red-500 text-sm mt-1">{errors.lastName.message}</p>
+                )}
+              </div>
+
+              {/* Email */}
+              <div>
+                <Label htmlFor="email">Email *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  {...register('email')}
+                  className={errors.email ? 'border-red-500' : ''}
+                />
+                {errors.email && (
+                  <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
+                )}
+              </div>
+
+              {/* Phone */}
+              <div>
+                <Label htmlFor="phone">Phone *</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  {...register('phone')}
+                  className={errors.phone ? 'border-red-500' : ''}
+                />
+                {errors.phone && (
+                  <p className="text-red-500 text-sm mt-1">{errors.phone.message}</p>
+                )}
+              </div>
             </div>
 
-            {/* Business Name */}
-            <div>
-              <Label htmlFor="businessName">Business Name *</Label>
-              <Input
-                id="businessName"
-                {...register('businessName')}
-                className={errors.businessName ? 'border-red-500' : ''}
-              />
-              {errors.businessName && (
-                <p className="text-red-500 text-sm mt-1">{errors.businessName.message}</p>
-              )}
-            </div>
-
-            {/* First Name */}
-            <div>
-              <Label htmlFor="firstName">First Name *</Label>
-              <Input
-                id="firstName"
-                {...register('firstName')}
-                className={errors.firstName ? 'border-red-500' : ''}
-              />
-              {errors.firstName && (
-                <p className="text-red-500 text-sm mt-1">{errors.firstName.message}</p>
-              )}
-            </div>
-
-            {/* Last Name */}
-            <div>
-              <Label htmlFor="lastName">Last Name *</Label>
-              <Input
-                id="lastName"
-                {...register('lastName')}
-                className={errors.lastName ? 'border-red-500' : ''}
-              />
-              {errors.lastName && (
-                <p className="text-red-500 text-sm mt-1">{errors.lastName.message}</p>
-              )}
-            </div>
-
-            {/* Email */}
-            <div>
-              <Label htmlFor="email">Email *</Label>
-              <Input
-                id="email"
-                type="email"
-                {...register('email')}
-                className={errors.email ? 'border-red-500' : ''}
-              />
-              {errors.email && (
-                <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
-              )}
-            </div>
-
-            {/* Phone */}
-            <div>
-              <Label htmlFor="phone">Phone *</Label>
-              <Input
-                id="phone"
-                type="tel"
-                {...register('phone')}
-                className={errors.phone ? 'border-red-500' : ''}
-              />
-              {errors.phone && (
-                <p className="text-red-500 text-sm mt-1">{errors.phone.message}</p>
-              )}
-            </div>
-
-            {/* Message */}
+            {/* Message - Full Width */}
             <div>
               <Label htmlFor="message">Message</Label>
               <Textarea
@@ -276,9 +280,17 @@ function SubmitReferralForm() {
 export default function SubmitPage() {
   return (
     <ProtectedRoute allowedRoles={['admin', 'user']}>
-      <div className="container mx-auto py-8 px-4">
-        <SubmitReferralForm />
-      </div>
+      <DashboardLayout>
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold">Submit a Referral</h1>
+            <p className="text-muted-foreground mt-2">
+              Fill out the form below to submit a new referral
+            </p>
+          </div>
+          <SubmitReferralForm />
+        </div>
+      </DashboardLayout>
     </ProtectedRoute>
   )
 }
