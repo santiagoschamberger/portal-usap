@@ -7,6 +7,48 @@ import crypto from 'crypto';
 const router = Router();
 
 /**
+ * GET /api/partners/me/type
+ * Get current partner's type (partner, agent, iso)
+ */
+router.get('/me/type', authenticateToken, async (req: AuthenticatedRequest, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { data: partner, error } = await supabaseAdmin
+      .from('partners')
+      .select('partner_type')
+      .eq('id', req.user.partner_id)
+      .single();
+
+    if (error || !partner) {
+      return res.status(404).json({
+        error: 'Partner not found',
+        message: 'Unable to find partner information'
+      });
+    }
+
+    const partnerType = partner.partner_type || 'partner';
+    const isAgent = partnerType === 'agent' || partnerType === 'iso';
+
+    return res.json({
+      success: true,
+      data: {
+        partner_type: partnerType,
+        is_agent: isAgent
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching partner type:', error);
+    return res.status(500).json({
+      error: 'Failed to fetch partner type',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
  * GET /api/partners/profile
  * Get current partner's profile information
  */

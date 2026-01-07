@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/lib/auth-store'
 import { ProtectedRoute } from '@/components/protected-route'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import { AgentDashboard } from '@/components/dashboard/AgentDashboard'
 import { Lead } from '@/types'
 import { zohoService } from '@/services/zohoService'
 import { toast } from 'react-hot-toast'
@@ -21,7 +22,7 @@ interface DashboardStats {
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { user, signOut } = useAuthStore()
+  const { user, signOut, isAgent } = useAuthStore()
   const [stats, setStats] = useState<DashboardStats>({
     totalLeads: 0,
     activeLeads: 0,
@@ -33,9 +34,12 @@ export default function DashboardPage() {
   const [recentActivities, setRecentActivities] = useState<Activity[]>([])
 
   useEffect(() => {
-    fetchDashboardData()
-    loadRecentActivities()
-  }, [])
+    // Only fetch regular dashboard data for non-agents
+    if (!isAgent) {
+      fetchDashboardData()
+      loadRecentActivities()
+    }
+  }, [isAgent])
 
   const loadRecentActivities = () => {
     const activities = activityTracker.getRecentActivities(3)
@@ -93,16 +97,20 @@ export default function DashboardPage() {
   return (
     <ProtectedRoute allowedRoles={['admin', 'user']}>
       <DashboardLayout>
-        <div>
-          {/* Page Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground">
-              Dashboard
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              Welcome back, {user?.email}! Here's an overview of your leads.
-            </p>
-          </div>
+        {/* Show Agent Dashboard for agents/ISOs */}
+        {isAgent ? (
+          <AgentDashboard />
+        ) : (
+          <div>
+            {/* Page Header */}
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold text-foreground">
+                Dashboard
+              </h1>
+              <p className="text-muted-foreground mt-2">
+                Welcome back, {user?.email}! Here's an overview of your leads.
+              </p>
+            </div>
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <Card>
@@ -221,6 +229,7 @@ export default function DashboardPage() {
             </Card>
           </div>
         </div>
+        )}
       </DashboardLayout>
     </ProtectedRoute>
   )

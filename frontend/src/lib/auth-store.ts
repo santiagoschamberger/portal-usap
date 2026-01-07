@@ -10,9 +10,12 @@ interface AuthStore {
   isAuthenticated: boolean
   isImpersonating: boolean
   originalUser: User | null
+  partnerType: 'partner' | 'agent' | 'iso' | null
+  isAgent: boolean
   signIn: (email: string, password: string) => Promise<{ error: unknown }>
   signOut: () => Promise<void>
   initialize: () => Promise<void>
+  fetchPartnerType: () => Promise<void>
   startImpersonation: (impersonatedUser: User, originalUser: User) => void
   stopImpersonation: () => void
 }
@@ -25,11 +28,16 @@ export const useAuthStore = create<AuthStore>()(
       isAuthenticated: false,
       isImpersonating: false,
       originalUser: null,
+      partnerType: null,
+      isAgent: false,
 
       signIn: async (email: string, password: string) => {
         try {
           const data = await AuthService.login({ email, password })
           set({ user: data.user, isAuthenticated: true })
+          
+          // Fetch partner type after login
+          await get().fetchPartnerType()
           
           // Track login activity
           activityTracker.addActivity('login', `Signed in to your account`)
@@ -46,7 +54,9 @@ export const useAuthStore = create<AuthStore>()(
           user: null, 
           isAuthenticated: false,
           isImpersonating: false,
-          originalUser: null
+          originalUser: null,
+          partnerType: null,
+          isAgent: false
         })
       },
 
@@ -59,8 +69,41 @@ export const useAuthStore = create<AuthStore>()(
             isAuthenticated,
             loading: false 
           })
+          
+          // Fetch partner type if authenticated
+          if (isAuthenticated) {
+            await get().fetchPartnerType()
+          }
         } catch {
           set({ loading: false, isAuthenticated: false })
+        }
+      },
+
+      fetchPartnerType: async () => {
+        try {
+          const token = AuthService.getToken()
+          if (!token) {
+            console.warn('No token available for fetching partner type')
+            return
+          }
+          
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/partners/me/type`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          })
+          
+          if (response.ok) {
+            const data = await response.json()
+            set({ 
+              partnerType: data.data.partner_type,
+              isAgent: data.data.is_agent
+            })
+          }
+        } catch (error) {
+          console.error('Failed to fetch partner type:', error)
+          // Set defaults on error
+          set({ partnerType: 'partner', isAgent: false })
         }
       },
 
@@ -88,7 +131,9 @@ export const useAuthStore = create<AuthStore>()(
       partialize: (state) => ({
         user: state.user,
         isImpersonating: state.isImpersonating,
-        originalUser: state.originalUser
+        originalUser: state.originalUser,
+        partnerType: state.partnerType,
+        isAgent: state.isAgent
       })
     }
   )

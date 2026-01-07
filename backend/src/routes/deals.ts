@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
+import { isAgentOrISO } from '../middleware/permissions';
 import { zohoService } from '../services/zohoService';
 import { StageMappingService } from '../services/stageMappingService';
 import { supabase, supabaseAdmin } from '../config/database';
@@ -7,9 +8,57 @@ import { supabase, supabaseAdmin } from '../config/database';
 const router = Router();
 
 /**
+ * GET /api/deals/assigned
+ * Get deals assigned to the current agent/ISO
+ * Only accessible by agents and ISOs
+ */
+router.get('/assigned', authenticateToken, async (req: AuthenticatedRequest, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Check if user is an agent/ISO
+    const isAgent = await isAgentOrISO(req.user.id);
+    if (!isAgent) {
+      return res.status(403).json({
+        error: 'Access denied',
+        message: 'This endpoint is only for agents and ISOs'
+      });
+    }
+
+    // Use the database helper function to get assigned deals
+    const { data: deals, error } = await supabaseAdmin
+      .rpc('get_agent_assigned_deals', { user_uuid: req.user.id });
+
+    if (error) {
+      console.error('Error fetching assigned deals:', error);
+      return res.status(500).json({
+        error: 'Failed to fetch assigned deals',
+        message: error.message
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: deals || [],
+      total: deals?.length || 0
+    });
+  } catch (error) {
+    console.error('Error fetching assigned deals:', error);
+    return res.status(500).json({
+      error: 'Failed to fetch assigned deals',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
  * GET /api/deals
  * Get deals for the authenticated partner
- * Sub-accounts only see their own deals, main accounts see all
+ * - Regular partners: see all partner deals
+ * - Sub-accounts: see only their own deals
+ * - Agents/ISOs: see only assigned deals (redirects to /assigned)
  */
 router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
   try {
@@ -17,6 +66,33 @@ router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
+    // Check if user is an agent/ISO - if so, use the assigned deals endpoint
+    const isAgent = await isAgentOrISO(req.user.id);
+    if (isAgent) {
+      // Use the database helper function to get assigned deals
+      const { data: deals, error } = await supabaseAdmin
+        .rpc('get_agent_assigned_deals', { user_uuid: req.user.id });
+
+      if (error) {
+        console.error('Error fetching assigned deals:', error);
+        return res.status(500).json({
+          error: 'Failed to fetch assigned deals',
+          message: error.message
+        });
+      }
+
+      return res.json({
+        success: true,
+        data: {
+          zoho_deals: [],
+          local_deals: deals || [],
+          total: deals?.length || 0,
+          is_agent: true
+        }
+      });
+    }
+
+    // Regular partner flow
     // Get partner information to find their Zoho vendor ID
     const { data: partner, error: partnerError } = await supabaseAdmin
       .from('partners')
@@ -77,7 +153,8 @@ router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
         zoho_deals: zohoDeals,
         local_deals: localDeals || [],
         total: zohoDeals.length + (localDeals?.length || 0),
-        is_sub_account: req.user.role === 'sub_account' || req.user.role === 'sub'
+        is_sub_account: req.user.role === 'sub_account' || req.user.role === 'sub',
+        is_agent: false
       }
     });
   } catch (error) {

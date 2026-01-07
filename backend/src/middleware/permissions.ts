@@ -173,3 +173,83 @@ export const addUserContext = (
   next();
 };
 
+/**
+ * Middleware to check if user is a regular partner (not agent/ISO)
+ * Agents and ISOs have read-only access and cannot submit leads
+ */
+export const requireRegularPartner = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ 
+      error: 'Authentication required',
+      message: 'Please authenticate first' 
+    });
+    return;
+  }
+
+  try {
+    // Import supabaseAdmin here to avoid circular dependency
+    const { supabaseAdmin } = await import('../config/database');
+    
+    // Check partner type from database
+    const { data: partner, error } = await supabaseAdmin
+      .from('partners')
+      .select('partner_type')
+      .eq('id', req.user.partner_id)
+      .single();
+
+    if (error) {
+      console.error('Error checking partner type:', error);
+      res.status(500).json({ 
+        error: 'Failed to verify permissions',
+        message: 'Unable to check partner type' 
+      });
+      return;
+    }
+
+    // Block agents and ISOs from this action
+    if (partner?.partner_type === 'agent' || partner?.partner_type === 'iso') {
+      res.status(403).json({ 
+        error: 'Action not allowed',
+        message: 'Agents and ISOs cannot submit leads. Please contact your administrator.' 
+      });
+      return;
+    }
+
+    next();
+  } catch (error) {
+    console.error('Error in requireRegularPartner middleware:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : 'Unknown error' 
+    });
+  }
+};
+
+/**
+ * Helper function to check if a user is an agent or ISO
+ * Returns true if user belongs to an agent/ISO partner
+ */
+export const isAgentOrISO = async (userId: string): Promise<boolean> => {
+  try {
+    const { supabaseAdmin } = await import('../config/database');
+    
+    // Use the database helper function
+    const { data, error } = await supabaseAdmin
+      .rpc('is_agent_or_iso', { user_uuid: userId });
+
+    if (error) {
+      console.error('Error checking if user is agent/ISO:', error);
+      return false;
+    }
+
+    return data === true;
+  } catch (error) {
+    console.error('Error in isAgentOrISO helper:', error);
+    return false;
+  }
+};
+

@@ -14,9 +14,20 @@ const router = Router();
  */
 router.post('/zoho/partner', async (req, res) => {
   try {
-    const { id, VendorName, Email } = req.body;
+    const { id, VendorName, Email, Vendor_Type } = req.body;
 
-    console.log('Partner webhook received:', { id, VendorName, Email });
+    console.log('Partner webhook received:', { id, VendorName, Email, Vendor_Type });
+
+    // Map Zoho Vendor_Type to partner_type
+    let partnerType = 'partner'; // default
+    if (Vendor_Type) {
+      const vendorTypeLower = Vendor_Type.toLowerCase();
+      if (vendorTypeLower === 'agent') {
+        partnerType = 'agent';
+      } else if (vendorTypeLower === 'iso') {
+        partnerType = 'iso';
+      }
+    }
 
     // Use the security definer function to create the partner and user
     const { data, error } = await supabase.rpc('create_partner_with_user', {
@@ -32,14 +43,27 @@ router.post('/zoho/partner', async (req, res) => {
         details: error.message,
       });
     }
+
+    // Update partner_type if not default
+    if (partnerType !== 'partner') {
+      await supabaseAdmin
+        .from('partners')
+        .update({ partner_type: partnerType })
+        .eq('id', data[0].partner_id);
+      
+      console.log(`✅ Partner type set to: ${partnerType}`);
+    }
     
     // Log activity
     await supabase.from('activity_log').insert({
       partner_id: data[0].partner_id,
       user_id: data[0].user_id,
       activity_type: 'partner_created',
-      description: `Partner ${VendorName} created via Zoho webhook`,
-      metadata: { zoho_partner_id: id }
+      description: `Partner ${VendorName} created via Zoho webhook (type: ${partnerType})`,
+      metadata: { 
+        zoho_partner_id: id,
+        partner_type: partnerType
+      }
     });
 
     // TODO: Send welcome email with login instructions
@@ -50,7 +74,8 @@ router.post('/zoho/partner', async (req, res) => {
       data: {
         partner_id: data[0].partner_id,
         user_id: data[0].user_id,
-        email: Email
+        email: Email,
+        partner_type: partnerType
       }
     });
   } catch (error) {
@@ -68,9 +93,9 @@ router.post('/zoho/partner', async (req, res) => {
  */
 router.post('/zoho/lead-status', async (req, res) => {
   try {
-    const { id: zohoLeadId, Lead_Status, StrategicPartnerId } = req.body;
+    const { id: zohoLeadId, Lead_Status, StrategicPartnerId, Assigned_Agent } = req.body;
 
-    console.log('Lead status webhook received:', { zohoLeadId, Lead_Status, StrategicPartnerId });
+    console.log('Lead status webhook received:', { zohoLeadId, Lead_Status, StrategicPartnerId, Assigned_Agent });
 
     // Find the lead in our database using admin client to bypass RLS
     // Also fetch created_by to use as StrategicPartnerId (webhook may not include it)
@@ -154,6 +179,22 @@ router.post('/zoho/lead-status', async (req, res) => {
 
     console.log(`📊 Lead Status Webhook - Mapping: Zoho "${Lead_Status}" → Portal "${newStatus}"`);
 
+    // Find assigned agent if provided
+    let assignedAgentId = null;
+    if (Assigned_Agent) {
+      const { data: agentPartner } = await supabaseAdmin
+        .from('partners')
+        .select('id')
+        .eq('zoho_partner_id', Assigned_Agent)
+        .single();
+      
+      assignedAgentId = agentPartner?.id || null;
+      
+      if (assignedAgentId) {
+        console.log(`✅ Lead assigned to agent: ${assignedAgentId}`);
+      }
+    }
+
     // Update lead status if it has changed
     if (oldStatus !== newStatus) {
       const { error: updateError } = await supabaseAdmin
@@ -161,6 +202,7 @@ router.post('/zoho/lead-status', async (req, res) => {
         .update({
           status: newStatus,
           zoho_status: Lead_Status, // Store original Zoho status for reference
+          assigned_agent_id: assignedAgentId, // Update assigned agent
           updated_at: new Date().toISOString()
         })
         .eq('id', lead.id);
@@ -335,6 +377,7 @@ router.post('/zoho/deal', async (req, res) => {
       Partners_Id, // From ${Lookup:Partner.Partners Id}
       StrategicPartnerId, // This is the PARTNER ID in this webhook (not user ID!)
       Approval_Time_Stamp, // Approval date field from Zoho
+      Assigned_Agent, // Assigned agent/ISO from Zoho
       Vendor, // Vendor object (contains partner info)
       Account_Name // Account Name (string, not object)
     } = req.body;
@@ -481,6 +524,22 @@ router.post('/zoho/deal', async (req, res) => {
     // Map Zoho deal stage to our local stage using StageMappingService
     const localStage = StageMappingService.mapFromZoho(Stage);
 
+    // Find assigned agent if provided
+    let assignedAgentId = null;
+    if (Assigned_Agent) {
+      const { data: agentPartner } = await supabaseAdmin
+        .from('partners')
+        .select('id')
+        .eq('zoho_partner_id', Assigned_Agent)
+        .single();
+      
+      assignedAgentId = agentPartner?.id || null;
+      
+      if (assignedAgentId) {
+        console.log(`✅ Deal assigned to agent: ${assignedAgentId}`);
+      }
+    }
+
     // Check if deal already exists
     const { data: existingDeal } = await supabaseAdmin
       .from('deals')
@@ -498,6 +557,7 @@ router.post('/zoho/deal', async (req, res) => {
       amount: 0, // Default to 0 since we're not tracking amount
       stage: localStage,
       approval_date: Approval_Time_Stamp || null, // Map from Zoho Approval Time Stamp field
+      assigned_agent_id: assignedAgentId, // Assigned agent/ISO
       lead_source: Lead_Source || 'zoho_sync',
       zoho_sync_status: 'synced',
       last_sync_at: new Date().toISOString(),

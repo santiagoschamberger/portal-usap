@@ -4,11 +4,14 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Info } from 'lucide-react'
 import { ProtectedRoute } from '@/components/protected-route'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { LeadStatusBadge } from '@/components/leads/LeadStatusBadge'
 import { LeadFilters } from '@/components/leads/LeadFilters'
 import { Pagination } from '@/components/ui/Pagination'
+import { useAuthStore } from '@/lib/auth-store'
 import { zohoService } from '@/services/zohoService'
 import { toast } from 'react-hot-toast'
 import { useDebounce } from '@/hooks/useDebounce'
@@ -16,6 +19,7 @@ import { Lead } from '@/services/leadService' // Import from service to match sn
 
 export default function LeadsPage() {
   const router = useRouter()
+  const { isAgent } = useAuthStore()
   const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
@@ -138,11 +142,23 @@ export default function LeadsPage() {
                   </>
                 )}
               </Button>
-              <Button onClick={handleCreateLead} className="bg-[#9a132d] hover:bg-[#7d0f24] flex-1 sm:flex-none">
-                Create New Lead
-              </Button>
+              {!isAgent && (
+                <Button onClick={handleCreateLead} className="bg-[#9a132d] hover:bg-[#7d0f24] flex-1 sm:flex-none">
+                  Create New Lead
+                </Button>
+              )}
             </div>
           </div>
+
+          {/* Agent Notice */}
+          {isAgent && (
+            <Alert className="mt-4">
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                You are viewing leads assigned to you. To submit new leads, please contact your administrator.
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Filters */}
           <LeadFilters 
@@ -241,17 +257,23 @@ export default function LeadsPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                     </svg>
                   </div>
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">No leads found</h3>
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">
+                    {isAgent ? 'No assigned leads' : 'No leads found'}
+                  </h3>
                   <p className="mt-1 text-sm text-gray-500">
-                    {filters.search || filters.status || filters.dateRange 
-                      ? 'Try adjusting your filters' 
-                      : 'Get started by creating a new lead'}
+                    {isAgent 
+                      ? 'You have no leads assigned to you at this time'
+                      : filters.search || filters.status || filters.dateRange 
+                        ? 'Try adjusting your filters' 
+                        : 'Get started by creating a new lead'}
                   </p>
-                  <div className="mt-6">
-                    <Button onClick={handleCreateLead} className="bg-[#9a132d] hover:bg-[#7d0f24]">
-                      Create New Lead
-                    </Button>
-                  </div>
+                  {!isAgent && (
+                    <div className="mt-6">
+                      <Button onClick={handleCreateLead} className="bg-[#9a132d] hover:bg-[#7d0f24]">
+                        Create New Lead
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>

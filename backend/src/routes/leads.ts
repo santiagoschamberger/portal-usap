@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import axios from 'axios';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
+import { requireRegularPartner, isAgentOrISO } from '../middleware/permissions';
 import { zohoService } from '../services/zohoService';
 import { supabaseAdmin } from '../config/database';
 import { LeadStatusMappingService } from '../services/leadStatusMappingService';
@@ -127,10 +128,57 @@ router.get('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
 });
 
 /**
+ * GET /api/leads/assigned
+ * Get leads assigned to the current agent/ISO
+ * Only accessible by agents and ISOs
+ */
+router.get('/assigned', authenticateToken, async (req: AuthenticatedRequest, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Check if user is an agent/ISO
+    const isAgent = await isAgentOrISO(req.user.id);
+    if (!isAgent) {
+      return res.status(403).json({
+        error: 'Access denied',
+        message: 'This endpoint is only for agents and ISOs'
+      });
+    }
+
+    // Use the database helper function to get assigned leads
+    const { data: leads, error } = await supabaseAdmin
+      .rpc('get_agent_assigned_leads', { user_uuid: req.user.id });
+
+    if (error) {
+      console.error('Error fetching assigned leads:', error);
+      return res.status(500).json({
+        error: 'Failed to fetch assigned leads',
+        message: error.message
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: leads || [],
+      total: leads?.length || 0
+    });
+  } catch (error) {
+    console.error('Error fetching assigned leads:', error);
+    return res.status(500).json({
+      error: 'Failed to fetch assigned leads',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
  * POST /api/leads
  * Create a new lead and sync to Zoho CRM
+ * Only regular partners can create leads (not agents/ISOs)
  */
-router.post('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
+router.post('/', authenticateToken, requireRegularPartner, async (req: AuthenticatedRequest, res) => {
   try {
     if (!req.user) {
       return res.status(401).json({ error: 'Authentication required' });

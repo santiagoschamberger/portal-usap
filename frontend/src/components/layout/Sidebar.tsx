@@ -117,15 +117,34 @@ const adminNavigationItems: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname()
-  const { user } = useAuthStore()
+  const { user, isAgent } = useAuthStore()
 
   // Get user role from either user_metadata or direct role property
   const userRole = user?.user_metadata?.role || (user as any)?.role || ''
   const isAdmin = userRole === 'admin'
 
   const shouldShowItem = (item: NavItem) => {
+    // Hide certain items for agents/ISOs
+    if (isAgent) {
+      // Agents can only see Dashboard, Leads, Deals, Tutorials, Settings
+      // They CANNOT see: Submit Referral, Public URL, Compensation, Sub-Accounts
+      const allowedForAgents = ['/dashboard', '/leads', '/deals', '/tutorials', '/settings']
+      if (!allowedForAgents.includes(item.href)) {
+        return false
+      }
+    }
+    
     if (!item.roles) return true
     return item.roles.includes(userRole)
+  }
+
+  // Get dynamic label for leads based on agent status
+  const getLeadsLabel = () => {
+    return isAgent ? 'Assigned Leads' : 'Leads'
+  }
+
+  const getDealsLabel = () => {
+    return isAgent ? 'Assigned Deals' : 'Deals'
   }
 
   return (
@@ -155,6 +174,11 @@ export function Sidebar() {
                 )
               }
 
+              // Get dynamic label for leads/deals if agent
+              const displayTitle = item.href === '/leads' ? getLeadsLabel() :
+                                  item.href === '/deals' ? getDealsLabel() :
+                                  item.title
+
               return (
                 <Link
                   key={item.href}
@@ -167,7 +191,7 @@ export function Sidebar() {
                   )}
                 >
                   <Icon className="h-4 w-4" />
-                  {item.title}
+                  {displayTitle}
                 </Link>
               )
             })}
