@@ -8,10 +8,39 @@ import { api } from "@/lib/api";
 import MerchantSelect from "./MerchantSelect";
 import useNormalizedTableData from "./useNormalizedTableData";
 
-type Merchant = {
-  mid: string;
-  name: string;   
+type CliqTransaction = {
+  id: number;
+  batchDate: string; // "09/16/2022"
+  batchNumber: string;
+  amountCents: number;
+  transactionCount: number;
+  merchantName?: string;
+  merchantId?: string;
 };
+
+type SettlementItem = {
+  amount: string;
+  count: string;
+  date: string; // format: DD/MM/YYYY
+  reference_number: string;
+  terminal_number: string;
+  transactions: TransactionItem[];
+}
+type TransactionItem = {
+  id: number;
+  amount: string;
+  auth_code: string;
+  card_type: string;
+  cardholder: string;
+  date: string; // format: MM/DD/YYYY
+  invoice_number: string;
+  pos_entry_mode: string;
+  purchase_id: string;
+  reject_description: string;
+  type: 'Sale' | 'Void' | 'Refund'; // extend if needed
+  void_reject_chargeback: boolean;
+}
+
 
 type MonthlySummary = {
   monthKey: string; // "2025-12"
@@ -27,30 +56,35 @@ type cliqDeposits = {
   batch: string;
 };
 
+type MerchantAccount = {
+  name: string;
+  mid: string; // MID
+};
+
 export default function CliqReportPage() {
-  const [merchants, setMerchants] = useState<Merchant[]>([]);
-  const [selectedMerchant, setSelectedMerchant] = useState<Merchant | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState<string | null>("");
-  const [selectedDate, setSelectedDate] = useState<string | null>("");
+  const [merchants, setMerchants] = useState([]);
+  const [selectedMerchant, setSelectedMerchant] =
+    useState<MerchantAccount | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const todayStr = format(new Date(), "yyyy-MM-dd");
   const firstOfMonth = format(startOfMonth(new Date()), "yyyy-MM-dd");
   const [fromDate, setFromDate] = useState(firstOfMonth);
   const [toDate, setToDate] = useState(todayStr);
   const [loadingMerchants, setLoadingMerchants] = useState(false);
   const [loadingReport, setLoadingReport] = useState(false);
-  const [transactions, setTransactions] = useState([]);
+  const [transactions, setTransactions] = useState<SettlementItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [deposits, setDeposits] = useState<cliqDeposits[]>([]);
-  const [totals, setTotals] = useState(null);
 
   const fetchMerchants = async () => {
     try {
       setLoadingMerchants(true);
       setError(null);
 
-      const res = await api.get<Merchant[]>("/api/cliq/cliq-merchants");
+      const res = await api.get("/api/cliq/cliq-merchants");
 
-      const data = res.data as Merchant[];
+      const data: any = res.data;
 
       setMerchants(data);
 
@@ -74,92 +108,20 @@ export default function CliqReportPage() {
     handleViewReport();
   }, [selectedMerchant, fromDate, toDate]);
 
-  const parseMMDDYYYY = (dateStr: string): Date => {
-    const [mm, dd, yyyy] = dateStr.split("/");
-    return new Date(Number(yyyy), Number(mm) - 1, Number(dd));
-  };
-
-  const yyyyMMddToMMDDYYYY = (dateStr: string): string => {
-    const [yyyy, mm, dd] = dateStr.split("-");
-    return `${mm}/${dd}/${yyyy}`;
-  };
-
   const handleViewReport = async () => {
     if (!selectedMerchant) {
       setError("Please select a merchant.");
       return;
     }
 
-    if (!fromDate) {
-      setError("Please select From Date.");
-      return;
-    }
-
     setError(null);
     setLoadingReport(true);
 
     try {
-      // ---- Transactions params ----
       const params = {
         merchantNumber: selectedMerchant.mid,
-        ...(fromDate && { fromDate }),
-        ...(toDate && { toDate }),
-      };
-
-      // ---- Extract Y/M/D safely ----
-      const date = new Date(fromDate + "T00:00:00");
-
-      const day = date.getDate();
-      const month = date.getMonth() + 1; // 0-based
-      const year = date.getFullYear();
-
-      // ---- Deposits params (MANDATORY) ----
-      const params1 = {
-        merchantNumber: selectedMerchant.mid,
-        year,
-        month,
-        day,
-        ...(toDate && { toDate }),
-      };
-
-      const [dqResult] = await Promise.allSettled([
-        api.get("/api/cliq/cliq-deposits", { params: params1 }),
-      ]);
-      // ---- Deposits ----
-      if (dqResult.status === "fulfilled") {
-        setDeposits(dqResult.value?.deposits as cliqDeposits[]);
-        setTotals(dqResult.value.totals);
-      } else {
-        setError((prev) => prev ?? "Failed to load deposits");
-      }
-    } catch (err: any) {
-      setError(err.message || "Failed to load report");
-    } finally {
-      setLoadingReport(false);
-    }
-  };
-
-  useEffect(() => {
-    if (selectedDate) fetchDetails(selectedDate);
-  }, [selectedDate]);
-
-  const fetchDetails = async (selectedDate: string) => {
-    if (!selectedMerchant) {
-      setError("Please select a merchant.");
-      return;
-    }
-
-    setError(null);
-    setLoadingReport(true);
-
-    try {
-      const [mm, dd, yyyy] = selectedDate.split("/");
-      const formattedDate = `${yyyy}-${mm}-${dd}`;
-
-      const params = {
-        merchantNumber: selectedMerchant.mid,
-        fromDate: formattedDate,
-        toDate: formattedDate,
+        fromDate: fromDate,
+        toDate: toDate,
       };
       console.log(params);
       const [txResult] = await Promise.allSettled([
@@ -169,35 +131,10 @@ export default function CliqReportPage() {
       // console.log(txResult);
 
       if (txResult.status === "fulfilled") {
-        const rawBatches = txResult.value; // adjust if API nests under .data
+        const rawBatches: any = txResult.value; // adjust if API nests under .data
 
-        const tt = rawBatches
-          .flatMap((batch: any) =>
-            batch.transactions.map((txn: any) => ({
-              id: txn.id,
-              count: batch.count,
-              totalAmount: batch.amount,
-              reference_number: batch.reference_number,
-              amount: txn.amount,
-              auth_code: txn.auth_code,
-              card_type: txn.card_type,
-              cardholder: txn.cardholder,
-              transDate: txn.date,
-              batchDate: batch.date,
-              merchantId: selectedMerchant.mid,
-              // batchDate: batch.date, // YYYY-MM-DD from API
-              // batchNumber: batch.reference_number,
-              // amountCents: Math.round(Number(txn.amount) * 100),
-              // transactionCount: 1,
-              // merchantName: txn.card_type,
-              // merchantId: txn.cardholder,
-            }))
-          )
-          .filter((t: any) => {
-            return t.batchDate === selectedDate;
-          })
-          .sort((a: { reference_number: string; }, b: { reference_number: any; }) => a.reference_number.localeCompare(b.reference_number));
-        setTransactions(tt);
+        console.log("transactions===>", rawBatches);
+        setTransactions(rawBatches);
       } else {
         setTransactions([]);
         setError("Failed to load transactions");
@@ -221,16 +158,16 @@ export default function CliqReportPage() {
   const getMonthKey = (dateStr: string): string => {
     if (!dateStr) return "invalid";
 
-    const [mm, dd, yyyy] = dateStr.split("/");
+    const parts = dateStr.split("/");
+    if (parts.length !== 3) return "invalid";
 
-    if (!mm || !yyyy) return "invalid";
+    const [mm, dd, yyyy] = parts;
 
-    return `${yyyy}-${mm.padStart(2, "0")}`; // 2022-09
+    return `${yyyy}-${mm.padStart(2, "0")}`; // 2025-12
   };
 
   const getMonthLabel = (monthKey: string): string => {
     const [year, month] = monthKey.split("-");
-
     if (!year || !month) return "Invalid Date";
 
     return new Date(Number(year), Number(month) - 1).toLocaleString("default", {
@@ -239,29 +176,25 @@ export default function CliqReportPage() {
     });
   };
 
-  const filteredDeposites = useMemo(() => {
-    if (!fromDate || !toDate) return deposits;
-
-    const from = parseMMDDYYYY(yyyyMMddToMMDDYYYY(fromDate));
-    const to = parseMMDDYYYY(yyyyMMddToMMDDYYYY(toDate));
-
-    return deposits.filter((t) => {
-      const d = parseMMDDYYYY(t.date);
-      return d >= from && d <= to;
-    });
-  }, [deposits, fromDate, toDate]); // ✅ FIX
-
   const monthlySummary = useMemo(() => {
     const map = new Map<string, { amount: number; txns: number }>();
 
-    filteredDeposites.forEach((d) => {
+    transactions.forEach((d: any) => {
       const key = getMonthKey(d.date);
+      if (key === "invalid") return;
 
       const current = map.get(key) || { amount: 0, txns: 0 };
 
-      // amount is in rupees/dollars → convert to cents if needed
-      current.amount += Math.round(d.amount * 100);
-      current.txns += d.transactions;
+      // ✅ convert string amount → cents
+      const amountCents = Math.round(Number(d.amount) * 100);
+      current.amount += isNaN(amountCents) ? 0 : amountCents;
+
+      // ✅ transactions is an array
+      const txnCount = Array.isArray(d.transactions)
+        ? d.transactions.length
+        : Number(d.count || 0);
+
+      current.txns += txnCount;
 
       map.set(key, current);
     });
@@ -271,24 +204,34 @@ export default function CliqReportPage() {
         monthKey,
         monthLabel: getMonthLabel(monthKey),
         totalAmountCents: v.amount,
+        totalAmount: (v.amount / 100).toFixed(2), // optional display
         totalTransactions: v.txns,
       }))
       .sort((a, b) => (a.monthKey < b.monthKey ? 1 : -1));
-  }, [filteredDeposites]);
+  }, [transactions]);
 
   const dailySummary = useMemo(() => {
     if (!selectedMonth) return [];
 
     const map = new Map<string, { amount: number; txns: number }>();
 
-    filteredDeposites
-      .filter((d) => getMonthKey(d.date) === selectedMonth)
-      .forEach((d) => {
-        const key = d.date;
+    transactions
+      .filter((d: any) => getMonthKey(d.date) === selectedMonth)
+      .forEach((d: any) => {
+        const key = d.date; // keep original date string
+
         const current = map.get(key) || { amount: 0, txns: 0 };
 
-        current.amount += Math.round(d.amount * 100);
-        current.txns += d.transactions;
+        // ✅ convert string → number → cents
+        const amountCents = Math.round(Number(d.amount) * 100);
+        current.amount += isNaN(amountCents) ? 0 : amountCents;
+
+        // ✅ transactions is array
+        const txnCount = Array.isArray(d.transactions)
+          ? d.transactions.length
+          : Number(d.count || 0);
+
+        current.txns += txnCount;
 
         map.set(key, current);
       });
@@ -297,15 +240,56 @@ export default function CliqReportPage() {
       .map(([date, v]) => ({
         date,
         totalAmountCents: v.amount,
+        totalAmount: (v.amount / 100).toFixed(2), // optional
         totalTransactions: v.txns,
       }))
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [filteredDeposites, selectedMonth]);
+      .sort((a, b) => {
+        // ✅ safe date sort for MM/DD/YYYY
+        const [am, ad, ay] = a.date.split("/").map(Number);
+        const [bm, bd, by] = b.date.split("/").map(Number);
 
+        return (
+          new Date(by, bm - 1, bd).getTime() -
+          new Date(ay, am - 1, ad).getTime()
+        );
+      });
+  }, [transactions, selectedMonth]);
 
- const tableData = useNormalizedTableData(transactions);
+  const formatAmount = (val: string | number) =>
+    `$${Number(val || 0).toFixed(2)}`;
 
-  //console.log('tableData', tableData);
+  const formatDateISO = (mmddyyyy: string) => {
+    const [mm, dd, yyyy] = mmddyyyy.split("/");
+    return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+  };
+
+  const getTxnCount = (row: any) =>
+    Array.isArray(row.transactions)
+      ? row.transactions.length
+      : Number(row.count || 0);
+
+  const formatLayer3Rows = (rows: any[]) => {
+    return rows.map((row) => ({
+      dba: selectedMerchant?.name ?? "—",
+      mid: selectedMerchant?.mid ?? "—",
+      batchNumber: row.batchNumber || row.reference_number || "—",
+      batchDate: formatDateISO(row.date),
+      amountDisplay: formatAmount(row.amount),
+      txnCount: getTxnCount(row),
+    }));
+  };
+
+  const detailRows = useMemo(() => {
+    if (!selectedDate) return [];
+
+    const filteredRows = transactions.filter(
+      (t: any) => t.batchDate === selectedDate || t.date === selectedDate
+    );
+
+    return formatLayer3Rows(filteredRows);
+  }, [transactions, selectedDate]);
+
+  //  console.log('detailsData===>', detailRows);
 
   return (
     <ProtectedRoute allowedRoles={["admin"]}>
@@ -336,6 +320,7 @@ export default function CliqReportPage() {
                         setSelectedMonth(null);
                         setSelectedDate(null);
                         setDeposits([]);
+                        setTransactions([]);
                       }}
                     />
                   </div>
@@ -491,7 +476,7 @@ export default function CliqReportPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {deposits.length === 0 && (
+                      {transactions.length === 0 && (
                         <tr>
                           <td
                             colSpan={4}
@@ -561,7 +546,7 @@ export default function CliqReportPage() {
                         </th>
                       </tr>
                     </thead>
-                     <tbody>
+                    <tbody>
                       {transactions.length === 0 && (
                         <tr>
                           <td
@@ -572,7 +557,7 @@ export default function CliqReportPage() {
                           </td>
                         </tr>
                       )}
-                      {tableData.map((r, idx) => (
+                      {detailRows.map((r, idx) => (
                         <tr
                           key={`${r.batchNumber}-${idx}`}
                           className="border-b border-slate-100 hover:bg-slate-50"
@@ -589,17 +574,17 @@ export default function CliqReportPage() {
                             {r.mid}
                           </td>
                           <td className="px-4 py-2 text-sm text-slate-700">
-                            {r.reference_number}
+                            {r.batchNumber}
                           </td>
                           <td className="px-4 py-2 text-right font-medium text-slate-900">
-                            ${formatMoney(parseFloat(r.amount))}
+                            {r.amountDisplay}
                           </td>
                           <td className="px-4 py-2 text-right text-slate-700">
-                            {r.transactionCount.toLocaleString()}
+                            {r.txnCount.toLocaleString()}
                           </td>
                         </tr>
                       ))}
-                    </tbody> 
+                    </tbody>
                   </table>
                 </div>
               </section>
