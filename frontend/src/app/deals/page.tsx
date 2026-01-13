@@ -13,6 +13,7 @@ import { DealStageBadge } from '@/components/deals/DealStageBadge'
 import { toast } from 'react-hot-toast'
 import { Pagination } from '@/components/ui/Pagination'
 import { useDebounce } from '@/hooks/useDebounce'
+import { normalizeDealStage } from '@/lib/statusStageMapping'
 
 interface DealsFilters {
   search: string
@@ -51,52 +52,12 @@ export default function DealsPage() {
       setLoading(true)
       const response = await dealsService.getAll()
       
-      // Helper function to normalize Zoho stage to our internal format
-      // Matches StageMappingService on backend
-      const normalizeStage = (zohoStage: string | undefined): string => {
-        if (!zohoStage) return 'New Lead / Prevet'
-        const stage = zohoStage.trim()
-        
-        const stageMap: { [key: string]: string } = {
-          // New Lead / Prevet group
-          'New Deal': 'New Lead / Prevet',
-          'Pre-Vet': 'New Lead / Prevet',
-          'New Lead / Prevet': 'New Lead / Prevet',
-          
-          // Submitted group
-          'Sent for Signature': 'Submitted',
-          'Signed Application': 'Submitted',
-          'Submitted': 'Submitted',
-          
-          // Underwriting group
-          'Sent to Underwriting': 'Underwriting',
-          'App Pended': 'Underwriting',
-          'Underwriting': 'Underwriting',
-          
-          // Approved group
-          'Approved': 'Approved',
-          'Conditionally Approved': 'Approved',
-          
-          // Declined group
-          'Declined': 'Declined',
-          
-          // Closed group
-          'Approved - Closed': 'Closed',
-          'Dead / Do Not Contact': 'Closed',
-          'Merchant Unresponsive': 'Closed',
-          'App Withdrawn': 'Closed',
-          'Closed': 'Closed'
-        }
-        
-        return stageMap[stage] || stage
-      }
-
       // Use only local deals (synced from Zoho via webhooks and sync)
       // No need to fetch from Zoho API as deals are already synced to database
       const allDeals = response.local_deals.map(deal => ({
         ...deal,
         deal_name: deal.deal_name || 'Unnamed Deal',
-        stage: normalizeStage(deal.stage),
+        stage: normalizeDealStage(deal.stage),
         company: deal.company || deal.deal_name
       }))
       
@@ -267,10 +228,10 @@ export default function DealsPage() {
                     onChange={(e) => handleFilterChange('stage', e.target.value)}
                   >
                     <option value="">All Stages</option>
-                    <option value="New Lead / Prevet">New Lead / Prevet</option>
-                    <option value="Submitted">Submitted</option>
-                    <option value="Underwriting">Underwriting</option>
+                    <option value="In Underwriting">In Underwriting</option>
+                    <option value="Conditionally Approved">Conditionally Approved</option>
                     <option value="Approved">Approved</option>
+                    <option value="Lost">Lost</option>
                     <option value="Declined">Declined</option>
                     <option value="Closed">Closed</option>
                   </select>

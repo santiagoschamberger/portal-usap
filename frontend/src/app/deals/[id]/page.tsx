@@ -12,6 +12,7 @@ import { DealStageTimeline } from '@/components/deals/DealStageTimeline'
 import { RelatedLeadInfo } from '@/components/deals/RelatedLeadInfo'
 import { toast } from 'react-hot-toast'
 import Link from 'next/link'
+import { normalizeDealStage } from '@/lib/statusStageMapping'
 
 export default function DealDetailPage() {
   const router = useRouter()
@@ -29,38 +30,10 @@ export default function DealDetailPage() {
     try {
       setLoading(true)
       const data = await dealsService.getById(id)
-      
-      // Normalize stage for display
-      const normalizeStage = (zohoStage: string | undefined): string => {
-        if (!zohoStage) return 'New Lead / Prevet'
-        const stage = zohoStage.trim()
-        
-        const stageMap: { [key: string]: string } = {
-          'New Deal': 'New Lead / Prevet',
-          'Pre-Vet': 'New Lead / Prevet',
-          'New Lead / Prevet': 'New Lead / Prevet',
-          'Sent for Signature': 'Submitted',
-          'Signed Application': 'Submitted',
-          'Submitted': 'Submitted',
-          'Sent to Underwriting': 'Underwriting',
-          'App Pended': 'Underwriting',
-          'Underwriting': 'Underwriting',
-          'Approved': 'Approved',
-          'Conditionally Approved': 'Approved',
-          'Declined': 'Declined',
-          'Approved - Closed': 'Closed',
-          'Dead / Do Not Contact': 'Closed',
-          'Merchant Unresponsive': 'Closed',
-          'App Withdrawn': 'Closed',
-          'Closed': 'Closed'
-        }
-        
-        return stageMap[stage] || stage
-      }
 
       setDeal({
         ...data,
-        stage: normalizeStage(data.stage || data.metadata?.zoho_stage)
+        stage: normalizeDealStage(data.stage || data.metadata?.zoho_stage)
       })
     } catch (error) {
       console.error('Error fetching deal:', error)

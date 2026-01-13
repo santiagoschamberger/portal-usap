@@ -1,4 +1,5 @@
 import { api } from '@/lib/api'
+import { normalizeLeadStatus } from '@/lib/statusStageMapping'
 
 // Lead interfaces - matches database schema
 export interface Lead {
@@ -159,13 +160,20 @@ export const leadService = {
     try {
       const { data } = await this.getLeads({ limit: 1000 })
       
-      // Updated to match new Phase 3 status values
+      // Dashboard expects these buckets; compute them from the *current* portal statuses.
+      // - new: "New"
+      // - contacted: "Contact Attempt" + "Contacted - In Progress"
+      // - qualified: "Sent for Signature"
+      // - converted: "Application Signed"
       const stats: LeadStats = {
         total: data.length,
-        new: data.filter(l => l.status === 'Pre-Vet / New Lead').length,
-        contacted: data.filter(l => l.status === 'Contacted').length,
-        qualified: data.filter(l => l.status === 'Sent for Signature / Submitted').length,
-        converted: data.filter(l => l.status === 'Approved').length,
+        new: data.filter(l => normalizeLeadStatus(l.status) === 'New').length,
+        contacted: data.filter(l => {
+          const s = normalizeLeadStatus(l.status)
+          return s === 'Contact Attempt' || s === 'Contacted - In Progress'
+        }).length,
+        qualified: data.filter(l => normalizeLeadStatus(l.status) === 'Sent for Signature').length,
+        converted: data.filter(l => normalizeLeadStatus(l.status) === 'Application Signed').length,
       }
 
       return stats

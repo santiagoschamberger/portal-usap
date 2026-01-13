@@ -47,12 +47,12 @@ export function LeadFilters({ filters, onFilterChange }: LeadFiltersProps) {
               onChange={(e) => onFilterChange('status', e.target.value)}
             >
               <option value="">All Statuses</option>
-              <option value="Pre-Vet / New Lead">Pre-Vet / New Lead</option>
-              <option value="Contacted">Contacted</option>
-              <option value="Sent for Signature / Submitted">Sent for Signature / Submitted</option>
-              <option value="Approved">Approved</option>
-              <option value="Declined">Declined</option>
-              <option value="Dead / Withdrawn">Dead / Withdrawn</option>
+              <option value="New">New</option>
+              <option value="Contact Attempt">Contact Attempt</option>
+              <option value="Contacted - In Progress">Contacted - In Progress</option>
+              <option value="Sent for Signature">Sent for Signature</option>
+              <option value="Application Signed">Application Signed</option>
+              <option value="Lost">Lost</option>
             </select>
           </div>
           
