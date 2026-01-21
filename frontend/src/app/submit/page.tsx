@@ -73,8 +73,11 @@ function SubmitReferralForm() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
         },
+        cache: 'no-store',
         body: JSON.stringify({
           corporation_name: data.corporationName,
           business_name: data.businessName,
@@ -86,15 +89,24 @@ function SubmitReferralForm() {
         }),
       })
 
+      console.log('Response status:', response.status)
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()))
+
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to submit referral')
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        }
+        throw new Error(errorData.message || errorData.error || 'Failed to submit referral')
       }
 
       setIsSuccess(true)
       reset()
       toast.success('Thank you! Your referral has been submitted successfully.')
     } catch (err: any) {
+      console.error('Submit error:', err)
       const errorMessage = err.message || 'Failed to submit. Please try again.'
       toast.error(errorMessage)
     } finally {

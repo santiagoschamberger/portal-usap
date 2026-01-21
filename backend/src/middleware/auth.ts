@@ -32,13 +32,15 @@ export const authenticateToken = async (
       return;
     }
 
-    // Verify token with Supabase
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    // Verify token with Supabase using admin client
+    // This allows us to verify any valid Supabase JWT token
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
     if (authError || !user) {
+      console.error('Token verification failed:', authError);
       res.status(401).json({ 
-        error: 'Invalid token',
-        message: 'The provided token is invalid or expired' 
+        error: 'Unauthorized',
+        message: authError?.message || 'The provided token is invalid or expired' 
       });
       return;
     }

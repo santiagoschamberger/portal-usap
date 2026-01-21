@@ -10,6 +10,11 @@ const router = express.Router();
  * Submit a referral (contact form)
  */
 router.post('/submit', authenticateToken, async (req: Request, res: Response): Promise<any> => {
+  // Prevent caching of POST requests
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  
   try {
     const { 
       corporation_name, 
