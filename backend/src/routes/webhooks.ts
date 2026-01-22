@@ -415,13 +415,40 @@ router.post('/zoho/deal', async (req, res) => {
 
     // Extract contact info from webhook
     let accountName = Business_Name || Deal_Name || Account_Name || 'Unknown';
-    let contactName = Contact_Name || '';
-    let firstName = First_Name || Contact_First_Name || contactName.split(' ')[0] || null;
-    let lastName = Last_Name || contactName.split(' ').slice(1).join(' ') || null;
-    let email = Email || null;
-    let phone = Phone || null;
+    let contactName = '';
+    let contactId: string | null = null;
+    let firstName: string | null = null;
+    let lastName: string | null = null;
+    let email: string | null = null;
+    let phone: string | null = null;
     
-    console.log('📧 Contact details from webhook:', { firstName, lastName, email, phone, accountName });
+    // Parse Contact_Name object if it's present
+    if (Contact_Name) {
+      if (typeof Contact_Name === 'object') {
+        contactName = Contact_Name.name || '';
+        contactId = Contact_Name.id || null;
+        email = email || Contact_Name.email || null;
+        phone = phone || Contact_Name.phone || null;
+        
+        // Extract first/last name from contact name
+        const nameParts = contactName.split(' ');
+        firstName = firstName || Contact_Name.First_Name || nameParts[0] || null;
+        lastName = lastName || Contact_Name.Last_Name || nameParts.slice(1).join(' ') || null;
+      } else if (typeof Contact_Name === 'string') {
+        contactName = Contact_Name;
+        const nameParts = contactName.split(' ');
+        firstName = firstName || nameParts[0] || null;
+        lastName = lastName || nameParts.slice(1).join(' ') || null;
+      }
+    }
+    
+    // Fallback to separate fields if Contact_Name didn't provide data
+    firstName = firstName || First_Name || Contact_First_Name || null;
+    lastName = lastName || Last_Name || null;
+    email = email || Email || null;
+    phone = phone || Phone || null;
+    
+    console.log('📧 Contact details from webhook:', { firstName, lastName, email, phone, accountName, contactId });
 
     // If critical contact info is missing, fetch full deal record from Zoho
     if (zohoDealId && (!email || !firstName || !lastName)) {
@@ -439,17 +466,43 @@ router.post('/zoho/deal', async (req, res) => {
           });
           
           // Update with data from Zoho API
-          email = email || fullDeal.Email || fullDeal.Contact_Name?.email || null;
-          phone = phone || fullDeal.Phone || fullDeal.Contact_Name?.phone || null;
-          firstName = firstName || fullDeal.First_Name || fullDeal.Contact_Name?.First_Name || null;
-          lastName = lastName || fullDeal.Last_Name || fullDeal.Contact_Name?.Last_Name || null;
+          email = email || fullDeal.Email || null;
+          phone = phone || fullDeal.Phone || null;
+          firstName = firstName || fullDeal.First_Name || null;
+          lastName = lastName || fullDeal.Last_Name || null;
           accountName = accountName || fullDeal.Account_Name?.name || fullDeal.Deal_Name || 'Unknown';
           
-          console.log('📧 Contact details after Zoho fetch:', { firstName, lastName, email, phone, accountName });
+          // Extract contactId from deal if available
+          if (!contactId && fullDeal.Contact_Name) {
+            contactId = typeof fullDeal.Contact_Name === 'object' ? fullDeal.Contact_Name.id : null;
+          }
+          
+          console.log('📧 Contact details after deal fetch:', { firstName, lastName, email, phone, accountName, contactId });
         }
       } catch (fetchError) {
         console.error('Failed to fetch deal from Zoho:', fetchError);
         // Continue with webhook data even if fetch fails
+      }
+    }
+
+    // If email is still missing but we have contactId, fetch contact directly
+    if (!email && contactId) {
+      console.log(`⚠️  Email still missing, fetching contact ${contactId} from Zoho...`);
+      try {
+        const contactResponse = await zohoService.getContactById(contactId);
+        const contact = contactResponse?.data?.[0];
+        
+        if (contact) {
+          email = email || contact.Email || null;
+          phone = phone || contact.Phone || null;
+          firstName = firstName || contact.First_Name || null;
+          lastName = lastName || contact.Last_Name || null;
+          
+          console.log('✅ Contact fetched successfully:', { firstName, lastName, email, phone });
+        }
+      } catch (contactError) {
+        console.error('Failed to fetch contact from Zoho:', contactError);
+        // Continue anyway - we'll create the deal with whatever info we have
       }
     }
 

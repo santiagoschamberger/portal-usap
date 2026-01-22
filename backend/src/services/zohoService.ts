@@ -218,6 +218,22 @@ class ZohoService {
   }
 
   /**
+   * Get a single contact by ID from Zoho CRM
+   */
+  async getContactById(contactId: string): Promise<any> {
+    try {
+      const headers = await this.getAuthHeaders();
+      const response = await axios.get(`${this.baseUrl}/Contacts/${contactId}`, {
+        headers
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error getting contact from Zoho:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get deals by vendor ID
    */
   async getDealsByVendor(vendorId: string): Promise<any> {

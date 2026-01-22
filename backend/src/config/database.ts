@@ -100,18 +100,55 @@ export interface Lead {
     website?: string;
     industry?: string;
     lead_source?: string;
-    status: 'new' | 'contacted' | 'qualified' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost' | 'nurture' | 'unqualified';
+    status: 'New' | 'Contact Attempt' | 'Contacted - In Progress' | 'Sent for Signature' | 'Application Signed' | 'Lost' | 'Converted';
     priority: 'low' | 'medium' | 'high' | 'urgent';
     score: number;
     notes?: string;
     custom_fields?: any;
     address?: any;
     zoho_sync_status: 'pending' | 'synced' | 'error';
+    zoho_status?: string;
     last_sync_at?: string;
     created_by?: string;
     assigned_to?: string;
+    assigned_agent_id?: string;
+    state?: string;
     created_at: string;
     updated_at: string;
+}
+
+export interface Deal {
+    id: string;
+    partner_id: string;
+    created_by?: string;
+    zoho_deal_id?: string;
+    deal_name: string;
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    phone?: string;
+    company?: string;
+    amount: number;
+    stage: 'In Underwriting' | 'Conditionally Approved' | 'Approved' | 'Lost' | 'Declined' | 'Closed';
+    zoho_stage?: string;
+    approval_date?: string;
+    assigned_agent_id?: string;
+    lead_source?: string;
+    notes?: string;
+    zoho_sync_status: 'pending' | 'synced' | 'error';
+    last_sync_at?: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface DealStageHistory {
+    id: string;
+    deal_id: string;
+    old_stage?: string;
+    new_stage: string;
+    notes?: string;
+    changed_by?: string;
+    changed_at: string;
 }
 
 export interface LeadStatusHistory {
