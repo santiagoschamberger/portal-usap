@@ -271,7 +271,7 @@ router.post('/', authenticateToken, requireRegularPartner, async (req: Authentic
         phone: phone || null,
         company: companyName || null,
         state: state || null,
-        status: 'Pre-Vet / New Lead', // Use correct initial Portal status
+        status: 'New', // New leads start with "New" status
         lead_source: 'portal',
         notes: notes || lander_message || description || null,
         zoho_sync_status: 'pending' // Initially pending until Zoho sync succeeds
@@ -872,7 +872,7 @@ router.post('/public', async (req, res) => {
         email,
         phone,
         company: companyName,
-        status: 'Pre-Vet / New Lead',
+        status: 'New',
         lead_source: source || 'Public Form',
         created_by: partner_id,
         notes: notes || null

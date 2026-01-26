@@ -100,7 +100,7 @@ router.post('/submit', authenticateToken, async (req: Request, res: Response): P
         email,
         phone,
         company: business_name,
-        status: 'Pre-Vet / New Lead',
+        status: 'New',
         lead_source: 'Partner Referral',
         created_by: userId,
         notes: message || null
