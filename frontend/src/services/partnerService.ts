@@ -174,7 +174,12 @@ export const partnerService = {
           token: string
         }
       }>(`/api/partners/impersonate/${subAccountId}`, {})
-      return response.data!
+      // Return the raw API payload (it already contains success/message/data)
+      return response as unknown as {
+        success: boolean
+        message: string
+        data: { user: any; token: string }
+      }
     } catch (error) {
       console.error('Error impersonating sub-account:', error)
       throw error
@@ -212,7 +217,9 @@ export const partnerService = {
       if (limit) params.append('limit', limit.toString())
       if (typeof offset === 'number') params.append('offset', offset.toString())
       
-      const response = await api.get<{
+      const response = await api.get<any>(`/api/partners/users/search?${params.toString()}`)
+      // Return the raw API payload (it already contains success/data/meta)
+      return response as unknown as {
         success: boolean
         data: any[]
         meta?: {
@@ -220,8 +227,7 @@ export const partnerService = {
           limit: number
           offset: number
         }
-      }>(`/api/partners/users/search?${params.toString()}`)
-      return response.data!
+      }
     } catch (error) {
       console.error('Error searching users:', error)
       throw error
@@ -250,7 +256,12 @@ export const partnerService = {
           partner: any
         }
       }>(`/api/partners/impersonate-any/${userId}`, {})
-      return response.data!
+      // Return the raw API payload (it already contains success/message/data)
+      return response as unknown as {
+        success: boolean
+        message: string
+        data: { user: any; token: string; partner: any }
+      }
     } catch (error) {
       console.error('Error impersonating user:', error)
       throw error
