@@ -966,7 +966,12 @@ router.get('/users/search', authenticateToken, requireAdmin, async (req: Authent
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const { query, limit = '20' } = req.query;
+    const { query, limit = '50', offset = '0' } = req.query;
+
+    const limitNumRaw = parseInt(limit as string);
+    const offsetNumRaw = parseInt(offset as string);
+    const limitNum = Number.isFinite(limitNumRaw) ? Math.min(Math.max(limitNumRaw, 1), 200) : 50;
+    const offsetNum = Number.isFinite(offsetNumRaw) ? Math.max(offsetNumRaw, 0) : 0;
 
     let queryBuilder = supabaseAdmin
       .from('users')
@@ -983,16 +988,16 @@ router.get('/users/search', authenticateToken, requireAdmin, async (req: Authent
           name,
           partner_type
         )
-      `)
+      `, { count: 'exact' })
       .order('email', { ascending: true })
-      .limit(parseInt(limit as string));
+      .range(offsetNum, offsetNum + limitNum - 1);
 
     // Apply search filter if query provided
     if (query && typeof query === 'string') {
       queryBuilder = queryBuilder.or(`email.ilike.%${query}%,first_name.ilike.%${query}%,last_name.ilike.%${query}%`);
     }
 
-    const { data: users, error } = await queryBuilder;
+    const { data: users, error, count } = await queryBuilder;
 
     if (error) {
       console.error('Error searching users:', error);
@@ -1004,7 +1009,12 @@ router.get('/users/search', authenticateToken, requireAdmin, async (req: Authent
 
     return res.json({
       success: true,
-      data: users || []
+      data: users || [],
+      meta: {
+        total: count ?? null,
+        limit: limitNum,
+        offset: offsetNum
+      }
     });
   } catch (error) {
     console.error('Error in user search:', error);

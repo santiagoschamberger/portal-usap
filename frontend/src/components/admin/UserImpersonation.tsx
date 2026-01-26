@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { Search, UserCircle, LogIn, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -31,29 +31,50 @@ export default function UserImpersonation() {
   const { user: currentUser, startImpersonation } = useAuthStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [users, setUsers] = useState<User[]>([])
+  const [totalUsers, setTotalUsers] = useState<number | null>(null)
+  const [offset, setOffset] = useState(0)
+  const pageSize = 50
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [impersonating, setImpersonating] = useState<string | null>(null)
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) {
-      setUsers([])
-      return
-    }
-
+  const handleSearch = React.useCallback(async (options?: { reset?: boolean }) => {
     setLoading(true)
     setError(null)
 
     try {
-      const response = await partnerService.searchUsers(searchQuery, 20)
-      setUsers(response.data)
+      const shouldReset = Boolean(options?.reset)
+      const query = searchQuery.trim() ? searchQuery.trim() : undefined
+      const nextOffset = shouldReset ? 0 : offset
+
+      const response = await partnerService.searchUsers(query, pageSize, nextOffset)
+      // Ensure response.data is an array
+      if (response && response.data && Array.isArray(response.data)) {
+        setUsers((prev) => (shouldReset ? response.data : [...prev, ...response.data]))
+        setOffset(nextOffset + response.data.length)
+        setTotalUsers(response.meta?.total ?? null)
+      } else {
+        console.error('Invalid response format:', response)
+        setUsers([])
+        setOffset(0)
+        setTotalUsers(null)
+        setError('Received invalid data format from server')
+      }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to search users')
+      console.error('Error searching users:', err)
+      setError(err.response?.data?.message || err.message || 'Failed to search users')
       setUsers([])
+      setOffset(0)
+      setTotalUsers(null)
     } finally {
       setLoading(false)
     }
-  }
+  }, [searchQuery, offset])
+
+  // Load all users on mount
+  React.useEffect(() => {
+    void handleSearch({ reset: true })
+  }, [])
 
   const handleImpersonate = async (targetUser: User) => {
     if (!currentUser) return
@@ -120,18 +141,18 @@ export default function UserImpersonation() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               type="text"
-              placeholder="Search by email, first name, or last name..."
+              placeholder="Search by email, first name, or last name (leave blank to show all)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch({ reset: true })}
               className="pl-10"
             />
           </div>
           <Button 
-            onClick={handleSearch} 
-            disabled={loading || !searchQuery.trim()}
+            onClick={() => handleSearch({ reset: true })}
+            disabled={loading}
           >
-            {loading ? 'Searching...' : 'Search'}
+            {loading ? 'Loading...' : 'Search'}
           </Button>
         </div>
 
@@ -144,10 +165,10 @@ export default function UserImpersonation() {
         )}
 
         {/* Search Results */}
-        {users.length > 0 && (
+        {users && users.length > 0 && (
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-gray-700">
-              Search Results ({users.length})
+              Search Results ({users.length}{totalUsers !== null ? ` of ${totalUsers}` : ''})
             </h3>
             <div className="border rounded-lg divide-y max-h-96 overflow-y-auto">
               {users.map((user) => (
@@ -216,14 +237,35 @@ export default function UserImpersonation() {
                 </div>
               ))}
             </div>
+
+            {/* Load more */}
+            {(totalUsers === null ? users.length % pageSize === 0 : users.length < totalUsers) && (
+              <div className="flex justify-center pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => handleSearch({ reset: false })}
+                  disabled={loading}
+                >
+                  {loading ? 'Loading...' : 'Load more'}
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
         {/* Empty State */}
-        {!loading && users.length === 0 && searchQuery && (
+        {!loading && (!users || users.length === 0) && (
           <div className="text-center py-8 text-gray-500">
             <UserCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />
-            <p>No users found matching "{searchQuery}"</p>
+            <p>{searchQuery ? `No users found matching "${searchQuery}"` : 'No users found in the system'}</p>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-8 text-gray-500">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-2"></div>
+            <p>Loading users...</p>
           </div>
         )}
 

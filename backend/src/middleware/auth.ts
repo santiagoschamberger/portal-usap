@@ -10,6 +10,21 @@ export interface AuthenticatedRequest extends Request {
     first_name?: string;
     last_name?: string;
   };
+  /**
+   * The authenticated "actor" derived from the JWT.
+   * When impersonating, `user` becomes the effective user and `actorUser` remains the admin.
+   */
+  actorUser?: {
+    id: string;
+    email: string;
+    partner_id: string;
+    role: 'admin' | 'sub_account' | 'sub';
+    first_name?: string;
+    last_name?: string;
+  };
+  impersonation?: {
+    target_user_id: string;
+  };
 }
 
 /**
@@ -74,8 +89,7 @@ export const authenticateToken = async (
       return;
     }
 
-    // Attach user info to request object
-    req.user = {
+    const actorUser = {
       id: user.id,
       email: user.email || '',
       partner_id: userData.partner_id,
@@ -83,6 +97,72 @@ export const authenticateToken = async (
       first_name: userData.first_name,
       last_name: userData.last_name,
     };
+
+    // Default effective user is the actor.
+    req.actorUser = actorUser;
+    req.user = actorUser;
+
+    // Optional admin impersonation (securely server-enforced).
+    // If present, only allow admins to impersonate, and swap req.user to target user context.
+    const impersonateUserIdHeader = req.headers['x-impersonate-user-id'];
+    const impersonateUserId =
+      typeof impersonateUserIdHeader === 'string'
+        ? impersonateUserIdHeader
+        : Array.isArray(impersonateUserIdHeader)
+          ? impersonateUserIdHeader[0]
+          : undefined;
+
+    if (impersonateUserId && impersonateUserId !== actorUser.id) {
+      if (actorUser.role !== 'admin') {
+        res.status(403).json({
+          error: 'Impersonation not allowed',
+          message: 'Only admins can impersonate another user',
+        });
+        return;
+      }
+
+      const { data: targetUserData, error: targetUserError } = await supabaseAdmin
+        .from('users')
+        .select(
+          `
+          id,
+          email,
+          partner_id,
+          role,
+          first_name,
+          last_name,
+          is_active
+        `
+        )
+        .eq('id', impersonateUserId)
+        .single();
+
+      if (targetUserError || !targetUserData) {
+        res.status(404).json({
+          error: 'Impersonated user not found',
+          message: 'Unable to find the specified impersonated user',
+        });
+        return;
+      }
+
+      if (!targetUserData.is_active) {
+        res.status(403).json({
+          error: 'Impersonated user inactive',
+          message: 'Cannot impersonate an inactive user',
+        });
+        return;
+      }
+
+      req.user = {
+        id: targetUserData.id,
+        email: targetUserData.email || '',
+        partner_id: targetUserData.partner_id,
+        role: targetUserData.role,
+        first_name: targetUserData.first_name,
+        last_name: targetUserData.last_name,
+      };
+      req.impersonation = { target_user_id: targetUserData.id };
+    }
 
     next();
   } catch (error) {

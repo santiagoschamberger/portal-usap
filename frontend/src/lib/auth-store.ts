@@ -86,10 +86,13 @@ export const useAuthStore = create<AuthStore>()(
             console.warn('No token available for fetching partner type')
             return
           }
+
+          const { isImpersonating, user } = get()
           
           const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/partners/me/type`, {
             headers: {
-              'Authorization': `Bearer ${token}`
+              'Authorization': `Bearer ${token}`,
+              ...(isImpersonating && user?.id ? { 'X-Impersonate-User-Id': user.id } : {})
             }
           })
           
@@ -113,6 +116,8 @@ export const useAuthStore = create<AuthStore>()(
           originalUser: originalUser,
           isImpersonating: true
         })
+        // Refresh partner type / agent flags for the impersonated context
+        void get().fetchPartnerType()
       },
 
       stopImpersonation: () => {
@@ -123,6 +128,8 @@ export const useAuthStore = create<AuthStore>()(
             originalUser: null,
             isImpersonating: false
           })
+          // Refresh partner type / agent flags for the restored admin context
+          void get().fetchPartnerType()
         }
       }
     }),

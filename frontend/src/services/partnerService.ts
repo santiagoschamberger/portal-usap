@@ -184,7 +184,7 @@ export const partnerService = {
   /**
    * Search all users in the system (admin only)
    */
-  async searchUsers(query?: string, limit?: number): Promise<{
+  async searchUsers(query?: string, limit?: number, offset?: number): Promise<{
     success: boolean
     data: Array<{
       id: string
@@ -200,15 +200,26 @@ export const partnerService = {
         partner_type: string
       } | null
     }>
+    meta?: {
+      total: number | null
+      limit: number
+      offset: number
+    }
   }> {
     try {
       const params = new URLSearchParams()
       if (query) params.append('query', query)
       if (limit) params.append('limit', limit.toString())
+      if (typeof offset === 'number') params.append('offset', offset.toString())
       
       const response = await api.get<{
         success: boolean
         data: any[]
+        meta?: {
+          total: number | null
+          limit: number
+          offset: number
+        }
       }>(`/api/partners/users/search?${params.toString()}`)
       return response.data!
     } catch (error) {

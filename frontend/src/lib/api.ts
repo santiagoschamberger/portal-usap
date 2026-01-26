@@ -20,6 +20,24 @@ apiClient.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
+
+    // If admin impersonation is active, include the effective user id.
+    // Backend will only honor this header for admin actors.
+    try {
+      const persisted = localStorage.getItem('auth-store')
+      if (persisted) {
+        const parsed = JSON.parse(persisted) as { state?: any }
+        const state = parsed?.state
+        const isImpersonating = Boolean(state?.isImpersonating)
+        const impersonatedUserId = state?.user?.id as string | undefined
+        if (isImpersonating && impersonatedUserId) {
+          config.headers['X-Impersonate-User-Id'] = impersonatedUserId
+        }
+      }
+    } catch {
+      // Ignore malformed persisted state
+    }
+
     return config
   },
   (error: any) => {

@@ -10,10 +10,8 @@ import {
   FileText,
   Briefcase,
   DollarSign,
-  BookOpen,
   Settings,
   UserPlus,
-  Shield,
   MessageCircle,
   Link2,
 } from 'lucide-react'
@@ -53,22 +51,14 @@ const navigationItems: NavItem[] = [
     icon: Link2,
     roles: ['admin', 'user'], // Only main partners, not sub-accounts
   },
-  {
-    title: 'Compensation',
-    href: '/compensation',
-    icon: DollarSign,
-  },
+  // Removed: Compensation (coming soon)
   {
     title: 'Sub-Accounts',
     href: '/sub-accounts',
     icon: Users,
     roles: ['admin'], // Only main accounts can manage sub-accounts
   },
-  {
-    title: 'Tutorials',
-    href: '/tutorials',
-    icon: BookOpen,
-  },
+  // Removed: Tutorials (coming soon)
   {
     title: 'Settings',
     href: '/settings',
@@ -83,24 +73,14 @@ const navigationItems: NavItem[] = [
 ]
 
 const adminNavigationItems: NavItem[] = [
-  {
-    title: 'Admin Dashboard',
-    href: '/admin',
-    icon: Shield,
-    roles: ['admin'],
-  },
+  // Removed: Admin Dashboard (coming soon)
   {
     title: 'User Management',
     href: '/admin/users',
     icon: Users,
     roles: ['admin'],
   },
-  {
-    title: 'Tutorial Management',
-    href: '/admin/tutorials',
-    icon: BookOpen,
-    roles: ['admin'],
-  },
+  // Removed: Tutorial Management (coming soon)
   {
     title: 'Payarc Report',
     href: '/admin/payarc',
@@ -126,9 +106,9 @@ export function Sidebar() {
   const shouldShowItem = (item: NavItem) => {
     // Hide certain items for agents/ISOs
     if (isAgent) {
-      // Agents can only see Dashboard, Leads, Deals, Tutorials, Settings
-      // They CANNOT see: Submit Referral, Public URL, Compensation, Sub-Accounts
-      const allowedForAgents = ['/dashboard', '/leads', '/deals', '/tutorials', '/settings']
+      // Agents can only see Dashboard, Leads, Deals, Settings
+      // They CANNOT see: Submit Referral, Public URL, Sub-Accounts
+      const allowedForAgents = ['/dashboard', '/leads', '/deals', '/settings']
       if (!allowedForAgents.includes(item.href)) {
         return false
       }
