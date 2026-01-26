@@ -936,6 +936,9 @@ router.post('/impersonate/:subAccountId', authenticateToken, requireAdmin, async
       original_user_email: req.user.email
     };
 
+    // Log impersonation for audit trail
+    console.log(`[IMPERSONATION] Admin ${req.user.email} (${req.user.id}) impersonating sub-account ${subAccount.email} (${subAccount.id})`);
+
     return res.json({
       success: true,
       message: 'Impersonation started',
@@ -948,6 +951,171 @@ router.post('/impersonate/:subAccountId', authenticateToken, requireAdmin, async
     console.error('Error impersonating sub-account:', error);
     return res.status(500).json({
       error: 'Failed to impersonate sub-account',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * GET /api/partners/users/search
+ * Search all users in the system (admin only)
+ */
+router.get('/users/search', authenticateToken, requireAdmin, async (req: AuthenticatedRequest, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { query, limit = '20' } = req.query;
+
+    let queryBuilder = supabaseAdmin
+      .from('users')
+      .select(`
+        id,
+        email,
+        first_name,
+        last_name,
+        role,
+        partner_id,
+        is_active,
+        partners:partner_id (
+          id,
+          name,
+          partner_type
+        )
+      `)
+      .order('email', { ascending: true })
+      .limit(parseInt(limit as string));
+
+    // Apply search filter if query provided
+    if (query && typeof query === 'string') {
+      queryBuilder = queryBuilder.or(`email.ilike.%${query}%,first_name.ilike.%${query}%,last_name.ilike.%${query}%`);
+    }
+
+    const { data: users, error } = await queryBuilder;
+
+    if (error) {
+      console.error('Error searching users:', error);
+      return res.status(500).json({
+        error: 'Failed to search users',
+        message: error.message
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: users || []
+    });
+  } catch (error) {
+    console.error('Error in user search:', error);
+    return res.status(500).json({
+      error: 'Failed to search users',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * POST /api/partners/impersonate-any/:userId
+ * Impersonate any user in the system (admin only)
+ * This is a system-level admin feature for support and debugging
+ */
+router.post('/impersonate-any/:userId', authenticateToken, requireAdmin, async (req: AuthenticatedRequest, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { userId } = req.params;
+
+    // Prevent self-impersonation
+    if (userId === req.user.id) {
+      return res.status(400).json({
+        error: 'Invalid operation',
+        message: 'Cannot impersonate yourself'
+      });
+    }
+
+    // Fetch the target user with partner information
+    const { data: targetUser, error: userError } = await supabaseAdmin
+      .from('users')
+      .select(`
+        *,
+        partners:partner_id (
+          id,
+          name,
+          partner_type
+        )
+      `)
+      .eq('id', userId)
+      .single();
+
+    if (userError || !targetUser) {
+      return res.status(404).json({
+        error: 'User not found',
+        message: 'Unable to find the specified user'
+      });
+    }
+
+    if (!targetUser.is_active) {
+      return res.status(403).json({
+        error: 'User inactive',
+        message: 'Cannot impersonate an inactive user'
+      });
+    }
+
+    // Create impersonation data
+    const impersonationData = {
+      id: targetUser.id,
+      email: targetUser.email,
+      partner_id: targetUser.partner_id,
+      role: targetUser.role,
+      first_name: targetUser.first_name,
+      last_name: targetUser.last_name,
+      is_impersonating: true,
+      original_user_id: req.user.id,
+      original_user_email: req.user.email,
+      original_user_role: req.user.role
+    };
+
+    // Log impersonation for audit trail (important for security)
+    console.log(`[SYSTEM IMPERSONATION] Admin ${req.user.email} (${req.user.id}) impersonating user ${targetUser.email} (${targetUser.id}) from partner ${targetUser.partners?.name || 'Unknown'}`);
+
+    // Log to database for audit purposes
+    try {
+      await supabaseAdmin.rpc('log_impersonation', {
+        p_action: 'impersonate_user',
+        p_admin_user_id: req.user.id,
+        p_target_user_id: targetUser.id,
+        p_admin_email: req.user.email,
+        p_target_email: targetUser.email,
+        p_target_partner_name: targetUser.partners?.name || null,
+        p_metadata: {
+          target_role: targetUser.role,
+          target_partner_type: targetUser.partners?.partner_type || null,
+          timestamp: new Date().toISOString()
+        },
+        p_ip_address: req.ip || req.headers['x-forwarded-for'] || null,
+        p_user_agent: req.headers['user-agent'] || null
+      });
+    } catch (logError) {
+      // Don't fail the impersonation if logging fails, but log the error
+      console.error('Failed to log impersonation to database:', logError);
+    }
+
+    return res.json({
+      success: true,
+      message: 'Impersonation started',
+      data: {
+        user: impersonationData,
+        token: req.headers.authorization?.split(' ')[1], // Return same token
+        partner: targetUser.partners
+      }
+    });
+  } catch (error) {
+    console.error('Error impersonating user:', error);
+    return res.status(500).json({
+      error: 'Failed to impersonate user',
       message: error instanceof Error ? error.message : 'Unknown error'
     });
   }

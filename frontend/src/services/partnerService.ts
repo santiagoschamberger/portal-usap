@@ -182,6 +182,71 @@ export const partnerService = {
   },
 
   /**
+   * Search all users in the system (admin only)
+   */
+  async searchUsers(query?: string, limit?: number): Promise<{
+    success: boolean
+    data: Array<{
+      id: string
+      email: string
+      first_name: string | null
+      last_name: string | null
+      role: string
+      partner_id: string
+      is_active: boolean
+      partners: {
+        id: string
+        name: string
+        partner_type: string
+      } | null
+    }>
+  }> {
+    try {
+      const params = new URLSearchParams()
+      if (query) params.append('query', query)
+      if (limit) params.append('limit', limit.toString())
+      
+      const response = await api.get<{
+        success: boolean
+        data: any[]
+      }>(`/api/partners/users/search?${params.toString()}`)
+      return response.data!
+    } catch (error) {
+      console.error('Error searching users:', error)
+      throw error
+    }
+  },
+
+  /**
+   * Impersonate any user in the system (admin only)
+   */
+  async impersonateUser(userId: string): Promise<{
+    success: boolean
+    message: string
+    data: {
+      user: any
+      token: string
+      partner: any
+    }
+  }> {
+    try {
+      const response = await api.post<{
+        success: boolean
+        message: string
+        data: {
+          user: any
+          token: string
+          partner: any
+        }
+      }>(`/api/partners/impersonate-any/${userId}`, {})
+      return response.data!
+    } catch (error) {
+      console.error('Error impersonating user:', error)
+      throw error
+    }
+  },
+
+  /**
    * Sync contacts from Zoho CRM
    */
   async syncContactsFromZoho(): Promise<{

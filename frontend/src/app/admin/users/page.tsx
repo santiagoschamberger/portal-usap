@@ -3,6 +3,7 @@
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { ProtectedRoute } from '@/components/protected-route'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import UserImpersonation from '@/components/admin/UserImpersonation'
 
 export default function AdminUsersPage() {
   return (
@@ -16,17 +17,20 @@ export default function AdminUsersPage() {
             </p>
           </div>
 
+          {/* User Impersonation Feature */}
+          <UserImpersonation />
+
           <Card>
             <CardHeader>
-              <CardTitle>Coming Soon</CardTitle>
+              <CardTitle>Additional User Management</CardTitle>
               <CardDescription>
-                This feature is under development
+                More features coming soon
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">
-                User management features will be available soon. You&apos;ll be able to 
-                view, edit, and manage partner accounts here.
+                Additional user management features will be available soon. You&apos;ll be able to 
+                view detailed user information, manage permissions, and more.
               </p>
             </CardContent>
           </Card>
