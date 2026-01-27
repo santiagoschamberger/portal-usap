@@ -6,8 +6,7 @@ import { useAuthStore } from '@/lib/auth-store';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Loader2, UserPlus, Mail, CheckCircle, XCircle, RefreshCw, Edit2, Power, PowerOff } from 'lucide-react';
+import { Loader2, UserPlus, Mail, RefreshCw, PowerOff } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '@/lib/api';
 
@@ -25,17 +24,10 @@ interface SubAccount {
   activated_at: string | null;
 }
 
-interface SubAccountStats {
-  total_contacts: number;
-  activated: number;
-  not_activated: number;
-}
-
 export default function SubAccountsPage() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
   const [subAccounts, setSubAccounts] = useState<SubAccount[]>([]);
-  const [stats, setStats] = useState<SubAccountStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [activating, setActivating] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -74,7 +66,6 @@ export default function SubAccountsPage() {
       
       if (response.data.success) {
         setSubAccounts(response.data.data || []);
-        setStats(response.data.stats);
         if (showToast) {
           toast.success('Sub-accounts loaded successfully', { 
             id: 'fetch-subaccounts',
@@ -146,9 +137,8 @@ export default function SubAccountsPage() {
     try {
       setTogglingActive(userId);
       const newStatus = !currentStatus;
-      const action = newStatus ? 'Activating' : 'Deactivating';
       
-      toast.loading(`${action} sub-account...`, { id: `toggle-${userId}` });
+      toast.loading(`Deactivating sub-account...`, { id: `toggle-${userId}` });
       
       await api.put(`/api/partners/sub-accounts/${userId}`, {
         is_active: newStatus
@@ -179,7 +169,7 @@ export default function SubAccountsPage() {
       await fetchSubAccounts();
       toast.success('Sub-accounts refreshed successfully!', {
         id: 'refresh-subaccounts',
-        description: `Updated list with ${subAccounts.length} sub-account(s)`
+        description: 'Your list is up to date'
       });
     } catch (error: any) {
       toast.error('Failed to refresh sub-accounts', {
@@ -203,12 +193,12 @@ export default function SubAccountsPage() {
 
   return (
       <DashboardLayout>
-        <div className="space-y-6">
+        <div className="space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between">
             <div>
-            <h1 className="text-3xl font-bold tracking-tight">Sub-Accounts</h1>
-              <p className="text-muted-foreground mt-2">
+            <h1 className="text-2xl font-semibold tracking-tight">Sub-Accounts</h1>
+              <p className="text-sm text-muted-foreground mt-1">
               Manage sub-accounts for your organization
               </p>
             </div>
@@ -218,50 +208,6 @@ export default function SubAccountsPage() {
               </Button>
             </div>
 
-        {/* Stats Cards */}
-        {stats && (
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Contacts</CardTitle>
-                <UserPlus className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.total_contacts}</div>
-                <p className="text-xs text-muted-foreground">
-                  From Zoho CRM
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Activated</CardTitle>
-                <CheckCircle className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.activated}</div>
-                <p className="text-xs text-muted-foreground">
-                  With portal access
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Not Activated</CardTitle>
-                <XCircle className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.not_activated}</div>
-                <p className="text-xs text-muted-foreground">
-                  Awaiting activation
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
         {/* Info Banner */}
         <Card className="border">
           <CardContent className="pt-6">
@@ -270,10 +216,10 @@ export default function SubAccountsPage() {
                 <UserPlus className="h-5 w-5 text-muted-foreground" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold">
+                <h3 className="text-sm font-semibold">
                   Sub-accounts are managed in Zoho CRM
                 </h3>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
                   To add new sub-accounts, create Contacts in Zoho CRM and link them to your partner account.
                   They will appear here automatically and you can activate their portal access.
                 </p>
@@ -285,7 +231,7 @@ export default function SubAccountsPage() {
         {/* Sub-Accounts List */}
           <Card>
             <CardHeader>
-            <CardTitle>Sub-Account List</CardTitle>
+            <CardTitle className="text-base">Sub-Account List</CardTitle>
               <CardDescription>
               {subAccounts.length === 0 
                 ? 'No sub-accounts found. Create contacts in Zoho CRM to get started.'
@@ -297,57 +243,34 @@ export default function SubAccountsPage() {
             {subAccounts.length === 0 ? (
               <div className="text-center py-12">
                 <UserPlus className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No sub-accounts yet</h3>
-                  <p className="text-muted-foreground mb-4">
+                <h3 className="text-base font-semibold mb-2">No sub-accounts yet</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
                   Create contacts in Zoho CRM to add sub-accounts
                   </p>
                 </div>
               ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                       {subAccounts.map((subAccount) => (
                   <div
                     key={subAccount.zoho_contact_id}
-                    className="flex items-center justify-between p-4 border rounded-lg"
+                    className="flex flex-col gap-3 border rounded-lg px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                   >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3">
-                        <div>
-                          <h4 className="font-medium">
-                            {subAccount.first_name} {subAccount.last_name}
-                          </h4>
-                          <p className="text-sm text-muted-foreground">{subAccount.email}</p>
-                          {subAccount.phone && (
-                            <p className="text-sm text-muted-foreground">{subAccount.phone}</p>
-                          )}
-                          {subAccount.title && (
-                            <p className="text-xs text-muted-foreground mt-1">{subAccount.title}</p>
-                          )}
-                        </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium truncate">
+                        {subAccount.first_name} {subAccount.last_name}
                       </div>
+                      <div className="text-xs text-muted-foreground truncate">{subAccount.email}</div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                       {subAccount.is_activated ? (
                         <>
-                          <Badge variant="outline" className="font-normal">
-                            {subAccount.is_active ? (
-                              <>
-                                <CheckCircle className="h-3 w-3 mr-1" />
-                                Active
-                              </>
-                            ) : (
-                              <>
-                                <XCircle className="h-3 w-3 mr-1" />
-                                Inactive
-                              </>
-                            )}
-                            </Badge>
                               <Button
                                 size="sm"
                             variant="outline"
                             onClick={() => handleResendEmail(subAccount.email, `${subAccount.first_name} ${subAccount.last_name}`)}
                             disabled={resendingEmail === subAccount.email}
-                            className="transition-colors hover:bg-accent"
+                            className="h-8 text-xs transition-colors hover:bg-accent"
                               >
                             {resendingEmail === subAccount.email ? (
                               <>
@@ -357,45 +280,38 @@ export default function SubAccountsPage() {
                             ) : (
                               <>
                                 <Mail className="h-4 w-4 mr-2" />
-                                Resend Email
+                                Send password reset
                               </>
                             )}
                               </Button>
-                              <Button
-                                size="sm"
-                            variant="outline"
-                            onClick={() => handleToggleActive(
-                              subAccount.portal_user_id!,
-                              subAccount.is_active,
-                              `${subAccount.first_name} ${subAccount.last_name}`
-                            )}
-                            disabled={togglingActive === subAccount.portal_user_id}
-                            className="transition-colors hover:bg-accent"
-                          >
-                            {togglingActive === subAccount.portal_user_id ? (
-                              <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                {subAccount.is_active ? 'Deactivating...' : 'Activating...'}
-                              </>
-                            ) : subAccount.is_active ? (
-                              <>
-                                <PowerOff className="h-4 w-4 mr-2" />
-                                Deactivate
-                              </>
-                            ) : (
-                              <>
-                                <Power className="h-4 w-4 mr-2" />
-                                Activate
-                              </>
-                            )}
-                              </Button>
+                              {subAccount.is_active && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleToggleActive(
+                                    subAccount.portal_user_id!,
+                                    subAccount.is_active,
+                                    `${subAccount.first_name} ${subAccount.last_name}`
+                                  )}
+                                  disabled={togglingActive === subAccount.portal_user_id}
+                                  className="h-8 text-xs transition-colors hover:bg-accent"
+                                >
+                                  {togglingActive === subAccount.portal_user_id ? (
+                                    <>
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                      Deactivating...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <PowerOff className="h-4 w-4 mr-2" />
+                                      Deactivate
+                                    </>
+                                  )}
+                                </Button>
+                              )}
                         </>
                       ) : (
                         <>
-                          <Badge variant="outline" className="font-normal">
-                            <XCircle className="h-3 w-3 mr-1" />
-                            Not Activated
-                          </Badge>
                               <Button
                                 size="sm"
                             variant="outline"
@@ -405,7 +321,7 @@ export default function SubAccountsPage() {
                               `${subAccount.first_name} ${subAccount.last_name}`
                             )}
                             disabled={activating === subAccount.zoho_contact_id}
-                            className="transition-colors hover:bg-accent"
+                            className="h-8 text-xs transition-colors hover:bg-accent"
                           >
                             {activating === subAccount.zoho_contact_id ? (
                               <>

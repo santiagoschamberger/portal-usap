@@ -2,7 +2,8 @@
 
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { ProtectedRoute } from '@/components/protected-route'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import Link from 'next/link'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function AdminPage() {
   return (
@@ -10,24 +11,26 @@ export default function AdminPage() {
       <DashboardLayout>
         <div className="space-y-6">
           <div>
-            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-            <p className="text-muted-foreground mt-2">
-              System administration and management
-            </p>
+            <h1 className="text-2xl font-semibold">Admin</h1>
+            <p className="text-muted-foreground mt-1 text-sm">Admin tools</p>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>Coming Soon</CardTitle>
-              <CardDescription>
-                This feature is under development
-              </CardDescription>
+              <CardTitle className="text-base">Available tools</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">
-                Admin features including user management, system settings, and analytics 
-                will be available soon.
-              </p>
+              <div className="grid gap-2 text-sm">
+                <Link className="underline underline-offset-4 hover:text-primary" href="/admin/users">
+                  User management (impersonation)
+                </Link>
+                <Link className="underline underline-offset-4 hover:text-primary" href="/admin/payarc">
+                  Payarc report
+                </Link>
+                <Link className="underline underline-offset-4 hover:text-primary" href="/admin/cliq">
+                  Cliq report
+                </Link>
+              </div>
             </CardContent>
           </Card>
         </div>

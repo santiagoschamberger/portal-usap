@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { partnerService } from '@/services/partnerService'
 import { useAuthStore } from '@/lib/auth-store'
+import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 
 interface User {
@@ -36,7 +37,7 @@ export default function UserImpersonation() {
   const pageSize = 50
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [impersonating, setImpersonating] = useState<string | null>(null)
+  const [impersonatingUserId, setImpersonatingUserId] = useState<string | null>(null)
 
   const handleSearch = React.useCallback(async (options?: { reset?: boolean }) => {
     setLoading(true)
@@ -78,8 +79,9 @@ export default function UserImpersonation() {
 
   const handleImpersonate = async (targetUser: User) => {
     if (!currentUser) return
+    if (impersonatingUserId) return
 
-    setImpersonating(targetUser.id)
+    setImpersonatingUserId(targetUser.id)
     setError(null)
 
     try {
@@ -93,19 +95,7 @@ export default function UserImpersonation() {
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to impersonate user')
     } finally {
-      setImpersonating(null)
-    }
-  }
-
-  const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return 'bg-purple-100 text-purple-800 border-purple-200'
-      case 'sub_account':
-      case 'sub':
-        return 'bg-blue-100 text-blue-800 border-blue-200'
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200'
+      setImpersonatingUserId(null)
     }
   }
 
@@ -122,26 +112,31 @@ export default function UserImpersonation() {
     }
   }
 
+  const getAccountTypeLabel = (u: User) => {
+    if (u.role === 'sub_account' || u.role === 'sub') return 'sub_account'
+    if (u.partners?.partner_type) return u.partners.partner_type
+    return u.role || 'user'
+  }
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <UserCircle className="h-5 w-5" />
-          User Impersonation
+        <CardTitle className="flex items-center gap-2 text-base">
+          <UserCircle className="h-4 w-4" />
+          Impersonate user
         </CardTitle>
-        <CardDescription>
-          Search and impersonate any user in the system for support and debugging purposes.
-          All impersonation actions are logged for security.
+        <CardDescription className="text-xs">
+          Search by email. Actions are logged for security.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3">
         {/* Search Bar */}
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               type="text"
-              placeholder="Search by email, first name, or last name (leave blank to show all)..."
+              placeholder="Search by email (leave blank to show all)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch({ reset: true })}
@@ -167,73 +162,68 @@ export default function UserImpersonation() {
         {/* Search Results */}
         {users && users.length > 0 && (
           <div className="space-y-2">
-            <h3 className="text-sm font-medium text-gray-700">
+            <h3 className="text-xs font-medium text-gray-700">
               Search Results ({users.length}{totalUsers !== null ? ` of ${totalUsers}` : ''})
             </h3>
             <div className="border rounded-lg divide-y max-h-96 overflow-y-auto">
               {users.map((user) => (
                 <div
                   key={user.id}
-                  className="p-4 hover:bg-gray-50 transition-colors"
+                  className="px-3 py-2 hover:bg-gray-50 transition-colors"
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="font-medium text-gray-900 truncate">
-                          {user.first_name && user.last_name
-                            ? `${user.first_name} ${user.last_name}`
-                            : user.email}
-                        </p>
-                        <Badge 
-                          variant="outline" 
-                          className={getRoleBadgeColor(user.role)}
-                        >
-                          {user.role}
-                        </Badge>
-                        {!user.is_active && (
-                          <Badge variant="outline" className="bg-red-100 text-red-800 border-red-200">
-                            Inactive
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-600 truncate mb-2">
+                  {(() => {
+                    const isRowLoading = impersonatingUserId === user.id
+                    const accountType = getAccountTypeLabel(user)
+                    const showMainPartner = accountType !== 'partner' && Boolean(user.partners?.name)
+                    const mainPartnerName = user.partners?.name ?? ''
+
+                    return (
+                <div
+                  className="flex items-start justify-between gap-4"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-gray-900 truncate">
                         {user.email}
                       </p>
-                      {user.partners && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="text-gray-500">Partner:</span>
-                          <span className="font-medium text-gray-700">
-                            {user.partners.name}
-                          </span>
-                          <Badge 
-                            variant="outline" 
-                            className={getPartnerTypeBadgeColor(user.partners.partner_type)}
-                          >
-                            {user.partners.partner_type}
-                          </Badge>
-                        </div>
+                    <Badge
+                      variant="outline"
+                      className={cn(getPartnerTypeBadgeColor(accountType), "text-[10px] px-2 py-0.5")}
+                    >
+                      {accountType}
+                    </Badge>
+                      {!user.is_active && (
+                        <Badge variant="outline" className="bg-red-100 text-red-800 border-red-200 text-[10px] px-2 py-0.5">
+                          Inactive
+                        </Badge>
                       )}
                     </div>
-                    <Button
-                      size="sm"
-                      onClick={() => handleImpersonate(user)}
-                      disabled={
-                        !user.is_active || 
-                        impersonating !== null ||
-                        user.id === currentUser?.id
-                      }
-                      className="shrink-0"
-                    >
-                      {impersonating === user.id ? (
-                        'Impersonating...'
-                      ) : (
-                        <>
-                          <LogIn className="h-4 w-4 mr-1" />
-                          Impersonate
-                        </>
-                      )}
-                    </Button>
+                    {showMainPartner ? (
+                      <div className="mt-1 text-xs text-gray-600 truncate">
+                        Main partner: <span className="font-medium text-gray-800">{mainPartnerName}</span>
+                      </div>
+                    ) : null}
                   </div>
+                  <Button
+                    size="sm"
+                    onClick={() => handleImpersonate(user)}
+                    disabled={
+                      !user.is_active || 
+                      isRowLoading ||
+                      user.id === currentUser?.id
+                    }
+                    className="shrink-0 h-8 px-3 text-xs"
+                  >
+                    {isRowLoading ? 'Impersonating…' : (
+                      <>
+                        <LogIn className="h-4 w-4 mr-1" />
+                        Impersonate
+                      </>
+                    )}
+                  </Button>
+                </div>
+                    )
+                  })()}
                 </div>
               ))}
             </div>

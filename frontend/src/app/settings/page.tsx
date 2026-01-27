@@ -3,7 +3,6 @@
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { ProtectedRoute } from '@/components/protected-route'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuthStore } from '@/lib/auth-store'
@@ -86,45 +85,6 @@ export default function SettingsPage() {
                   To update your profile information, please contact support.
                 </p>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Account Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Account Settings</CardTitle>
-              <CardDescription>
-                Manage your account preferences
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <h4 className="font-medium">Password</h4>
-                  <p className="text-sm text-gray-600">
-                    Reset your account password
-                  </p>
-                </div>
-                <Button variant="outline" disabled>
-                  Change Password
-                </Button>
-              </div>
-
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <h4 className="font-medium">Email Notifications</h4>
-                  <p className="text-sm text-gray-600">
-                    Manage notification preferences
-                  </p>
-                </div>
-                <Button variant="outline" disabled>
-                  Configure
-                </Button>
-              </div>
-
-              <p className="text-sm text-gray-500 pt-4">
-                Additional settings coming soon. Contact support for assistance.
-              </p>
             </CardContent>
           </Card>
         </div>

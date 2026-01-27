@@ -2,7 +2,7 @@
 
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { ProtectedRoute } from '@/components/protected-route'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function CompensationPage() {
   return (
@@ -10,22 +10,17 @@ export default function CompensationPage() {
       <DashboardLayout>
         <div className="space-y-6">
           <div>
-            <h1 className="text-3xl font-bold">Compensation</h1>
-            <p className="text-muted-foreground mt-2">
-              View your earnings and commission structure
-            </p>
+            <h1 className="text-2xl font-semibold">Compensation</h1>
+            <p className="text-muted-foreground mt-1 text-sm">This section is not enabled.</p>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>Coming Soon</CardTitle>
-              <CardDescription>
-                This feature is under development
-              </CardDescription>
+              <CardTitle className="text-base">No compensation data</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">
-                Compensation tracking and reporting features will be available soon.
+              <p className="text-sm text-muted-foreground">
+                If you need compensation details, please contact support.
               </p>
             </CardContent>
           </Card>

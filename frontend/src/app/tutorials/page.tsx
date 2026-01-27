@@ -2,7 +2,7 @@
 
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { ProtectedRoute } from '@/components/protected-route'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function TutorialsPage() {
   return (
@@ -10,23 +10,17 @@ export default function TutorialsPage() {
       <DashboardLayout>
         <div className="space-y-6">
           <div>
-            <h1 className="text-3xl font-bold">Tutorials</h1>
-            <p className="text-muted-foreground mt-2">
-              Learn how to use the partner portal effectively
-            </p>
+            <h1 className="text-2xl font-semibold">Tutorials</h1>
+            <p className="text-muted-foreground mt-1 text-sm">This section is not enabled.</p>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>Coming Soon</CardTitle>
-              <CardDescription>
-                This feature is under development
-              </CardDescription>
+              <CardTitle className="text-base">No tutorials available</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">
-                Tutorial videos and guides will be available soon to help you get the most 
-                out of the partner portal.
+              <p className="text-sm text-muted-foreground">
+                If you need help, please contact support.
               </p>
             </CardContent>
           </Card>

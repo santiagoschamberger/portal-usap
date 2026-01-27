@@ -2,7 +2,8 @@
 
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { ProtectedRoute } from '@/components/protected-route'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import Link from 'next/link'
 
 export default function AdminTutorialsPage() {
   return (
@@ -10,24 +11,18 @@ export default function AdminTutorialsPage() {
       <DashboardLayout>
         <div className="space-y-6">
           <div>
-            <h1 className="text-3xl font-bold">Manage Tutorials</h1>
-            <p className="text-muted-foreground mt-2">
-              Create and manage tutorial content for partners
-            </p>
+            <h1 className="text-2xl font-semibold">Manage Tutorials</h1>
+            <p className="text-muted-foreground mt-1 text-sm">This section is not enabled.</p>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>Coming Soon</CardTitle>
-              <CardDescription>
-                This feature is under development
-              </CardDescription>
+              <CardTitle className="text-base">Nothing to manage here</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">
-                Tutorial management features will be available soon. You&apos;ll be able to 
-                create, edit, and organize tutorial content here.
-              </p>
+              <Link className="text-sm underline underline-offset-4 hover:text-primary" href="/admin/users">
+                Go to User Management
+              </Link>
             </CardContent>
           </Card>
         </div>

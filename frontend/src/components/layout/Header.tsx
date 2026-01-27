@@ -26,7 +26,7 @@ export function Header() {
 
   const handleStopImpersonation = () => {
     stopImpersonation()
-    router.push('/sub-accounts')
+    router.push('/admin/users')
   }
 
   const getUserInitials = () => {
@@ -48,27 +48,6 @@ export function Header() {
 
   return (
     <>
-      {/* Impersonation Banner */}
-      {isImpersonating && (
-        <div className="bg-yellow-500 text-yellow-900 px-6 py-2 text-sm font-medium flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span>⚠️</span>
-            <span>
-              You are viewing as <strong>{user?.email}</strong>
-              {originalUser && ` (logged in as ${originalUser.email})`}
-            </span>
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleStopImpersonation}
-            className="bg-white hover:bg-gray-100 text-yellow-900 border-yellow-700"
-          >
-            Exit Impersonation
-          </Button>
-        </div>
-      )}
-
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex h-16 items-center">
         {/* Logo - Fixed width matching sidebar */}
@@ -90,6 +69,27 @@ export function Header() {
 
         {/* Right side - Notifications and User Menu */}
         <div className="flex-1 flex items-center justify-end gap-4 px-6">
+          {/* Impersonation indicator */}
+          {isImpersonating && (
+            <div className="hidden md:flex items-center gap-2">
+              <div className="max-w-[420px] truncate rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs text-amber-950">
+                <span className="font-semibold">Impersonating</span>{' '}
+                <span className="font-medium">{user?.email}</span>
+                {originalUser?.email ? (
+                  <span className="text-amber-900/70"> (original: {originalUser.email})</span>
+                ) : null}
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleStopImpersonation}
+                className="h-8 px-3 text-xs border-amber-200"
+              >
+                Exit
+              </Button>
+            </div>
+          )}
+
           {/* Notifications */}
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="h-5 w-5" />

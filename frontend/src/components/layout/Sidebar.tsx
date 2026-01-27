@@ -51,14 +51,12 @@ const navigationItems: NavItem[] = [
     icon: Link2,
     roles: ['admin', 'user'], // Only main partners, not sub-accounts
   },
-  // Removed: Compensation (coming soon)
   {
     title: 'Sub-Accounts',
     href: '/sub-accounts',
     icon: Users,
     roles: ['admin'], // Only main accounts can manage sub-accounts
   },
-  // Removed: Tutorials (coming soon)
   {
     title: 'Settings',
     href: '/settings',
@@ -73,14 +71,12 @@ const navigationItems: NavItem[] = [
 ]
 
 const adminNavigationItems: NavItem[] = [
-  // Removed: Admin Dashboard (coming soon)
   {
     title: 'User Management',
     href: '/admin/users',
     icon: Users,
     roles: ['admin'],
   },
-  // Removed: Tutorial Management (coming soon)
   {
     title: 'Payarc Report',
     href: '/admin/payarc',
