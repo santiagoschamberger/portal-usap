@@ -4,10 +4,11 @@ import { useEffect, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/lib/auth-store'
 import { User } from '@/types'
+import { getUserRole, UserRole } from '@/lib/user-role'
 
 interface ProtectedRouteProps {
   children: ReactNode
-  allowedRoles?: ('admin' | 'user' | 'contact')[]
+  allowedRoles?: UserRole[]
   redirectTo?: string
 }
 
@@ -34,8 +35,7 @@ export function ProtectedRoute({
 
       // Check role-based access
       if (allowedRoles && allowedRoles.length > 0) {
-        // Support both Supabase Auth format (user_metadata.role) and direct role property
-        const userRole = (user.user_metadata?.role || (user as any).role) as 'admin' | 'user' | 'contact' || 'user'
+        const userRole = getUserRole(user)
         if (!allowedRoles.includes(userRole)) {
           // User doesn't have required role
           console.log('Access denied - User role:', userRole, 'Required roles:', allowedRoles)
@@ -64,8 +64,7 @@ export function ProtectedRoute({
   }
 
   if (allowedRoles && allowedRoles.length > 0) {
-    // Support both Supabase Auth format (user_metadata.role) and direct role property
-    const userRole = (user.user_metadata?.role || (user as any).role) as 'admin' | 'user' | 'contact' || 'user'
+    const userRole = getUserRole(user)
     if (!allowedRoles.includes(userRole)) {
       return null
     }
@@ -92,24 +91,23 @@ export function withAuth<P extends object>(
 export function usePermissions() {
   const { user } = useAuthStore()
 
-  const hasRole = (role: 'admin' | 'user' | 'contact') => {
-    // Support both Supabase Auth format and direct role property
-    const userRole = user?.user_metadata?.role || (user as any)?.role
+  const hasRole = (role: UserRole) => {
+    const userRole = getUserRole(user)
     return userRole === role
   }
 
-  const hasAnyRole = (roles: ('admin' | 'user' | 'contact')[]) => {
-    // Support both Supabase Auth format and direct role property
-    const userRole = (user?.user_metadata?.role || (user as any)?.role) as 'admin' | 'user' | 'contact'
+  const hasAnyRole = (roles: UserRole[]) => {
+    const userRole = getUserRole(user)
     return userRole ? roles.includes(userRole) : false
   }
 
   const isAdmin = () => hasRole('admin')
   const isUser = () => hasRole('user')
   const isContact = () => hasRole('contact')
+  const isSubAccount = () => hasRole('sub_account')
 
   const canManageUsers = () => isAdmin()
-  const canSubmitReferrals = () => hasAnyRole(['admin', 'user'])
+  const canSubmitReferrals = () => hasAnyRole(['admin', 'user', 'sub_account'])
   const canManageSubAccounts = () => hasAnyRole(['admin', 'user'])
   const canViewCompensation = () => hasAnyRole(['admin', 'user'])
   const canAccessAdminPanel = () => isAdmin()
@@ -121,6 +119,7 @@ export function usePermissions() {
     isAdmin,
     isUser,
     isContact,
+    isSubAccount,
     canManageUsers,
     canSubmitReferrals,
     canManageSubAccounts,

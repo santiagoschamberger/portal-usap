@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/lib/auth-store'
+import { getUserRole } from '@/lib/user-role'
 import {
   LayoutDashboard,
   Users,
@@ -95,8 +96,7 @@ export function Sidebar() {
   const pathname = usePathname()
   const { user, isAgent } = useAuthStore()
 
-  // Get user role from either user_metadata or direct role property
-  const userRole = user?.user_metadata?.role || (user as any)?.role || ''
+  const userRole = getUserRole(user)
   const isAdmin = userRole === 'admin'
 
   const shouldShowItem = (item: NavItem) => {
@@ -111,7 +111,7 @@ export function Sidebar() {
     }
     
     if (!item.roles) return true
-    return item.roles.includes(userRole)
+    return userRole ? item.roles.includes(userRole) : false
   }
 
   // Get dynamic label for leads based on agent status
