@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 import { supabase, supabaseAdmin } from '../config/database';
+import { sendPasswordResetEmail } from '../services/passwordResetService';
 
 const router = Router();
 
@@ -130,21 +131,28 @@ router.post('/forgot-password', async (req, res) => {
     console.log('Password reset requested for:', email);
     console.log('Frontend URL:', process.env.FRONTEND_URL);
 
-    // Use Supabase's built-in password reset
-    // Note: Supabase returns success even for non-existent emails to prevent email enumeration
-    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/reset-password`
-    });
+    const redirectTo = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/reset-password`;
 
-    if (error) {
-      console.error('Password reset error:', error);
-      return res.status(400).json({
-        success: false,
-        error: error.message
-      });
+    // Prefer our branded email (if SendGrid is configured). Fallback to Supabase template otherwise.
+    // Note: treat non-existent emails as success to prevent email enumeration.
+    try {
+      await sendPasswordResetEmail({ email, redirectTo });
+      console.log('Password reset email sent successfully');
+    } catch (sendError: any) {
+      const msg = sendError?.message || String(sendError);
+      const looksLikeUnknownEmail =
+        typeof msg === 'string' &&
+        (msg.toLowerCase().includes('user not found') ||
+          msg.toLowerCase().includes('not found') ||
+          msg.toLowerCase().includes('invalid') ||
+          msg.toLowerCase().includes('email'));
+
+      if (looksLikeUnknownEmail) {
+        console.log('Password reset requested for non-existent email (suppressed)');
+      } else {
+        console.error('Password reset email failed:', sendError);
+      }
     }
-
-    console.log('Password reset email sent successfully');
 
     return res.json({
       success: true,
