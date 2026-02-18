@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/auth';
 import { supabase, supabaseAdmin } from '../config/database';
+import { sendPasswordResetEmail } from '../services/passwordResetService';
 
 const router = Router();
 
@@ -130,21 +131,20 @@ router.post('/forgot-password', async (req, res) => {
     console.log('Password reset requested for:', email);
     console.log('Frontend URL:', process.env.FRONTEND_URL);
 
-    // Use Supabase's built-in password reset
-    // Note: Supabase returns success even for non-existent emails to prevent email enumeration
-    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/reset-password`
-    });
-
-    if (error) {
-      console.error('Password reset error:', error);
+    // Use custom branded email service
+    try {
+      await sendPasswordResetEmail({
+        email,
+        redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/reset-password`
+      });
+      console.log('Password reset email sent successfully');
+    } catch (emailError) {
+      console.error('Password reset error:', emailError);
       return res.status(400).json({
         success: false,
-        error: error.message
+        error: emailError instanceof Error ? emailError.message : 'Failed to send reset email'
       });
     }
-
-    console.log('Password reset email sent successfully');
 
     return res.json({
       success: true,
