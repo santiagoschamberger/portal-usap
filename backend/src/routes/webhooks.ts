@@ -3,6 +3,7 @@ import { supabase, supabaseAdmin } from '../config/database';
 import { zohoService } from '../services/zohoService';
 import { LeadStatusMappingService } from '../services/leadStatusMappingService';
 import { StageMappingService } from '../services/stageMappingService';
+import { sendAccountActivationEmail } from '../services/accountActivationService';
 import crypto from 'crypto';
 
 const router = Router();
@@ -66,11 +67,28 @@ router.post('/zoho/partner', async (req, res) => {
       }
     });
 
-    // TODO: Send welcome email with login instructions
+    // Send welcome email with account activation link
+    try {
+      // Extract first and last name from VendorName
+      const nameParts = VendorName?.split(' ') || ['', ''];
+      const firstName = nameParts[0] || 'Partner';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      await sendAccountActivationEmail({
+        email: Email,
+        firstName,
+        lastName,
+        redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/reset-password`
+      });
+      console.log(`✅ Welcome email sent to ${Email}`);
+    } catch (emailError) {
+      console.error('Failed to send welcome email:', emailError);
+      // Don't fail the webhook - partner was created successfully
+    }
     
     return res.status(201).json({
       success: true,
-      message: 'Partner and user created successfully',
+      message: 'Partner created successfully. Welcome email sent.',
       data: {
         partner_id: data[0].partner_id,
         user_id: data[0].user_id,
