@@ -3,6 +3,7 @@ import { User } from '@/types'
 
 export class AuthService {
   static async forgotPassword(email: string): Promise<void> {
+    // Trigger password reset with redirect to reset-password page
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/reset-password`,
     })
