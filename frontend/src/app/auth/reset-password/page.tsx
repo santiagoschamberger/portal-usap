@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -10,84 +10,56 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { AuthService } from '@/services/authService'
-import { ResetPasswordFormData } from '@/types'
+import { supabase } from '@/lib/supabase'
 
-// Validation schema
-const resetPasswordSchema = z.object({
-  password: z.string()
+const schema = z.object({
+  password: z
+    .string()
     .min(8, 'Password must be at least 8 characters')
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Password must contain at least one uppercase letter, one lowercase letter, and one number'),
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Must include uppercase, lowercase and a number'),
   confirmPassword: z.string(),
-  token: z.string().min(1, 'Reset token is required')
-}).refine((data) => data.password === data.confirmPassword, {
+}).refine((d) => d.password === d.confirmPassword, {
   message: "Passwords don't match",
-  path: ["confirmPassword"]
+  path: ['confirmPassword'],
 })
+type FormData = z.infer<typeof schema>
 
-type ResetPasswordForm = z.infer<typeof resetPasswordSchema>
+type PageState = 'loading' | 'ready' | 'invalid' | 'success'
 
 function ResetPasswordForm() {
   const router = useRouter()
-  const searchParams = useSearchParams()
+  const [pageState, setPageState] = useState<PageState>('loading')
+  const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string>('')
-  const [success, setSuccess] = useState(false)
-  const [tokenValid, setTokenValid] = useState<boolean | null>(null)
-  const [accessToken, setAccessToken] = useState<string>('')
 
-  const token = searchParams.get('token') || ''
-
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    formState: { errors }
-  } = useForm<ResetPasswordForm>({
-    resolver: zodResolver(resetPasswordSchema),
-    defaultValues: {
-      token
-    }
+  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+    resolver: zodResolver(schema),
   })
 
-  // Extract access_token from URL hash (Supabase format)
   useEffect(() => {
-    const hashParams = new URLSearchParams(window.location.hash.substring(1))
-    const accessTokenFromHash = hashParams.get('access_token')
-    const errorCode = hashParams.get('error_code')
-    const errorDescription = hashParams.get('error_description')
+    // Supabase automatically picks up the #access_token hash and creates a session.
+    // We just need to confirm there IS a session before showing the form.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setPageState(session ? 'ready' : 'invalid')
+    })
 
-    if (errorCode) {
-      setError(errorDescription || 'Invalid or expired reset link')
-      setTokenValid(false)
-      return
-    }
+    // Also listen in case the session arrives slightly after mount
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setPageState(session ? 'ready' : 'invalid')
+      }
+    })
 
-    if (accessTokenFromHash) {
-      setAccessToken(accessTokenFromHash)
-      setValue('token', accessTokenFromHash)
-      setTokenValid(true)
-    } else if (token) {
-      // Fallback to query parameter if no hash token
-      setValue('token', token)
-      setTokenValid(true)
-    } else {
-      setTokenValid(false)
-    }
-  }, [token, setValue])
+    return () => subscription.unsubscribe()
+  }, [])
 
-  const onSubmit = async (data: ResetPasswordForm) => {
+  const onSubmit = async (data: FormData) => {
     try {
       setIsLoading(true)
       setError('')
-      
-      await AuthService.resetPassword({
-        password: data.password,
-        confirmPassword: data.confirmPassword,
-        token: data.token
-      })
-      
-      setSuccess(true)
+      const { error } = await supabase.auth.updateUser({ password: data.password })
+      if (error) throw error
+      setPageState('success')
     } catch (err: any) {
       setError(err.message || 'Failed to reset password. Please try again.')
     } finally {
@@ -95,64 +67,38 @@ function ResetPasswordForm() {
     }
   }
 
-  // Loading state while verifying token
-  if (tokenValid === null) {
+  if (pageState === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="mt-2 text-sm text-gray-600">Verifying reset token...</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#9a132d]" />
       </div>
     )
   }
 
-  // Invalid token
-  if (tokenValid === false) {
+  if (pageState === 'invalid') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
             <h1 className="text-3xl font-bold text-gray-900">USA Payments</h1>
             <p className="mt-2 text-sm text-gray-600">Partner Portal</p>
           </div>
-
           <Card>
             <CardHeader>
               <CardTitle>Invalid Reset Link</CardTitle>
-              <CardDescription>
-                This password reset link is invalid or has expired.
-              </CardDescription>
+              <CardDescription>This link is invalid or has expired.</CardDescription>
             </CardHeader>
-
             <CardContent>
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
-                <p>Please request a new password reset link.</p>
+                Please request a new password reset link.
               </div>
             </CardContent>
-
             <CardFooter className="flex flex-col space-y-2">
-              <Link 
-                href="/auth/forgot-password"
-                className="w-full"
-              >
-                <Button className="w-full">
-                  Request new reset link
-                </Button>
+              <Link href="/auth/forgot-password" className="w-full">
+                <Button className="w-full bg-[#9a132d] hover:bg-[#7d0f24]">Request new link</Button>
               </Link>
-              <Link 
-                href="/auth/login"
-                className="w-full"
-              >
-                <Button variant="outline" className="w-full">
-                  Back to sign in
-                </Button>
+              <Link href="/auth/login" className="w-full">
+                <Button variant="outline" className="w-full">Back to sign in</Button>
               </Link>
             </CardFooter>
           </Card>
@@ -161,39 +107,28 @@ function ResetPasswordForm() {
     )
   }
 
-  // Success state
-  if (success) {
+  if (pageState === 'success') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
             <h1 className="text-3xl font-bold text-gray-900">USA Payments</h1>
             <p className="mt-2 text-sm text-gray-600">Partner Portal</p>
           </div>
-
           <Card>
             <CardHeader>
-              <CardTitle>Password reset successful</CardTitle>
-              <CardDescription>
-                Your password has been successfully reset.
-              </CardDescription>
+              <CardTitle>Password updated</CardTitle>
+              <CardDescription>Your password has been successfully reset.</CardDescription>
             </CardHeader>
-
             <CardContent>
               <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md text-sm">
-                <p>You can now sign in with your new password.</p>
+                You can now sign in with your new password.
               </div>
             </CardContent>
-
             <CardFooter>
-              <Link 
-                href="/auth/login"
-                className="w-full"
-              >
-                <Button className="w-full">
-                  Sign in
-                </Button>
-              </Link>
+              <Button className="w-full bg-[#9a132d] hover:bg-[#7d0f24]" onClick={() => router.push('/auth/login')}>
+                Sign in
+              </Button>
             </CardFooter>
           </Card>
         </div>
@@ -201,23 +136,18 @@ function ResetPasswordForm() {
     )
   }
 
-  // Reset password form
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900">USA Payments</h1>
           <p className="mt-2 text-sm text-gray-600">Partner Portal</p>
         </div>
-
         <Card>
           <CardHeader>
-            <CardTitle>Reset your password</CardTitle>
-            <CardDescription>
-              Enter your new password below.
-            </CardDescription>
+            <CardTitle>Set new password</CardTitle>
+            <CardDescription>Enter your new password below.</CardDescription>
           </CardHeader>
-
           <form onSubmit={handleSubmit(onSubmit)}>
             <CardContent className="space-y-4">
               {error && (
@@ -225,9 +155,6 @@ function ResetPasswordForm() {
                   {error}
                 </div>
               )}
-
-              <input type="hidden" {...register('token')} />
-
               <div className="space-y-2">
                 <Label htmlFor="password">New password</Label>
                 <Input
@@ -237,16 +164,11 @@ function ResetPasswordForm() {
                   {...register('password')}
                   className={errors.password ? 'border-red-500' : ''}
                 />
-                {errors.password && (
-                  <p className="text-sm text-red-600">{errors.password.message}</p>
-                )}
-                <p className="text-xs text-gray-500">
-                  Password must be at least 8 characters with uppercase, lowercase, and number.
-                </p>
+                {errors.password && <p className="text-sm text-red-600">{errors.password.message}</p>}
+                <p className="text-xs text-gray-500">At least 8 characters with uppercase, lowercase, and number.</p>
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm new password</Label>
+                <Label htmlFor="confirmPassword">Confirm password</Label>
                 <Input
                   id="confirmPassword"
                   type="password"
@@ -254,46 +176,34 @@ function ResetPasswordForm() {
                   {...register('confirmPassword')}
                   className={errors.confirmPassword ? 'border-red-500' : ''}
                 />
-                {errors.confirmPassword && (
-                  <p className="text-sm text-red-600">{errors.confirmPassword.message}</p>
-                )}
+                {errors.confirmPassword && <p className="text-sm text-red-600">{errors.confirmPassword.message}</p>}
               </div>
             </CardContent>
-
             <CardFooter className="flex flex-col space-y-4">
-              <Button 
-                type="submit" 
-                className="w-full" 
-                disabled={isLoading}
-              >
-                {isLoading ? 'Resetting...' : 'Reset password'}
+              <Button type="submit" className="w-full bg-[#9a132d] hover:bg-[#7d0f24]" disabled={isLoading}>
+                {isLoading ? 'Updating...' : 'Update password'}
               </Button>
-
               <div className="text-center">
-                <Link 
-                  href="/auth/login"
-                  className="text-sm text-blue-600 hover:text-blue-500"
-                >
+                <Link href="/auth/login" className="text-sm text-[#9a132d] hover:text-[#7d0f24]">
                   Back to sign in
                 </Link>
               </div>
             </CardFooter>
           </form>
         </Card>
-
         <div className="text-center text-xs text-gray-500">
           <p>© 2024 USA Payments. All rights reserved.</p>
         </div>
       </div>
     </div>
   )
-} 
+}
 
 export default function ResetPasswordPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#9a132d]" />
       </div>
     }>
       <ResetPasswordForm />

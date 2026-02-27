@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 import { ApiResponse } from '@/types'
+import { supabase } from './supabase'
 
 // API Configuration
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001').replace(/\/$/, '')
@@ -54,29 +55,25 @@ apiClient.interceptors.response.use(
     const axiosError = error as { config?: { _retry?: boolean }; response?: { status?: number } }
     const originalRequest = axiosError.config
 
-    // Handle 401 errors (token expired)
+    // Handle 401 errors (token expired) — refresh via Supabase, no backend roundtrip
     if (axiosError.response?.status === 401 && originalRequest && !originalRequest._retry) {
       originalRequest._retry = true
-      
+
       try {
-        const refreshToken = localStorage.getItem('refreshToken')
-        if (refreshToken) {
-          const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-            refreshToken
-          })
-          
-          const { token } = response.data
-          localStorage.setItem('token', token)
-          
-          // Retry original request with new token
-          const reqConfig = originalRequest as { headers: { Authorization: string } }
-          reqConfig.headers.Authorization = `Bearer ${token}`
-          return apiClient(originalRequest)
-        }
+        const { data, error } = await supabase.auth.refreshSession()
+        if (error || !data.session) throw error || new Error('Session expired')
+
+        const newToken = data.session.access_token
+        localStorage.setItem('token', newToken)
+        localStorage.setItem('refreshToken', data.session.refresh_token ?? '')
+
+        const reqConfig = originalRequest as unknown as { headers: { Authorization: string } & AxiosRequestConfig }
+        reqConfig.headers.Authorization = `Bearer ${newToken}`
+        return apiClient(reqConfig as unknown as AxiosRequestConfig)
       } catch (refreshError) {
-        // Refresh failed, redirect to login
         localStorage.removeItem('token')
         localStorage.removeItem('refreshToken')
+        localStorage.removeItem('user')
         window.location.href = '/auth/login'
         return Promise.reject(refreshError)
       }
