@@ -248,4 +248,33 @@ router.post('/verify-reset-token', async (req, res) => {
   }
 });
 
+/**
+ * POST /auth/logout
+ * Logout user (sign out from Supabase)
+ */
+router.post('/logout', authenticateToken, async (req: AuthenticatedRequest, res) => {
+  try {
+    // Get the access token from the Authorization header
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.split(' ')[1];
+
+    if (token) {
+      // Sign out from Supabase (invalidates the session)
+      await supabase.auth.signOut();
+    }
+
+    return res.json({
+      success: true,
+      message: 'Logged out successfully'
+    });
+  } catch (error) {
+    console.error('Logout error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Logout failed',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 export default router;
