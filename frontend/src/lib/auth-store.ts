@@ -4,6 +4,26 @@ import { User } from '@/types'
 import { supabase } from './supabase'
 import { activityTracker } from './activity-tracker'
 
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '')
+
+/**
+ * Fetch the portal user profile from the backend.
+ * The backend uses the Supabase admin client which bypasses RLS entirely,
+ * avoiding the recursive RLS policy issue on public.users.
+ */
+async function fetchUserProfile(accessToken: string): Promise<User | null> {
+  try {
+    const res = await fetch(`${API_URL}/api/auth/profile`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!res.ok) return null
+    const json = await res.json()
+    return (json.data ?? json) as User
+  } catch {
+    return null
+  }
+}
+
 interface AuthStore {
   user: User | null
   loading: boolean
@@ -18,17 +38,6 @@ interface AuthStore {
   fetchPartnerType: () => Promise<void>
   startImpersonation: (impersonatedUser: User, originalUser: User) => void
   stopImpersonation: () => void
-}
-
-async function fetchUserProfile(userId: string): Promise<User | null> {
-  const { data, error } = await supabase
-    .from('users')
-    .select('id, email, partner_id, role, first_name, last_name, created_at, updated_at')
-    .eq('id', userId)
-    .single()
-  if (error || !data) return null
-  // DB uses snake_case; cast via unknown since User type uses camelCase but runtime code accesses snake_case fields
-  return data as unknown as User
 }
 
 export const useAuthStore = create<AuthStore>()(
@@ -50,15 +59,14 @@ export const useAuthStore = create<AuthStore>()(
             return { error: error ?? new Error('Login failed') }
           }
 
-          // Store Supabase token so api.ts interceptor sends it to the backend
-          localStorage.setItem('token', data.session.access_token)
-          localStorage.setItem('refreshToken', data.session.refresh_token ?? '')
+          const { access_token, refresh_token } = data.session
+          localStorage.setItem('token', access_token)
+          localStorage.setItem('refreshToken', refresh_token ?? '')
 
-          const userProfile = await fetchUserProfile(data.user.id)
+          const userProfile = await fetchUserProfile(access_token)
           if (!userProfile) {
+            // Sign out cleanly — auth-provider will clear localStorage via SIGNED_OUT event
             await supabase.auth.signOut()
-            localStorage.removeItem('token')
-            localStorage.removeItem('refreshToken')
             return { error: new Error('Your account is not set up in the portal yet. Please contact support.') }
           }
 
@@ -98,11 +106,10 @@ export const useAuthStore = create<AuthStore>()(
             return
           }
 
-          // Keep localStorage in sync so api.ts interceptor always has a fresh token
           localStorage.setItem('token', session.access_token)
           localStorage.setItem('refreshToken', session.refresh_token ?? '')
 
-          const userProfile = await fetchUserProfile(session.user.id)
+          const userProfile = await fetchUserProfile(session.access_token)
           if (!userProfile) {
             set({ user: null, isAuthenticated: false, loading: false })
             return
@@ -123,7 +130,7 @@ export const useAuthStore = create<AuthStore>()(
 
           const { isImpersonating, user } = get()
 
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/partners/me/type`, {
+          const response = await fetch(`${API_URL}/api/partners/me/type`, {
             headers: {
               Authorization: `Bearer ${token}`,
               ...(isImpersonating && user?.id ? { 'X-Impersonate-User-Id': user.id } : {}),

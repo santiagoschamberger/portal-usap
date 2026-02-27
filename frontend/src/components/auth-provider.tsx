@@ -6,15 +6,17 @@ import { supabase } from '@/lib/supabase'
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const initialize = useAuthStore((state) => state.initialize)
-  const signOut = useAuthStore((state) => state.signOut)
 
   useEffect(() => {
     initialize()
 
-    // Keep localStorage token fresh whenever Supabase refreshes the session
+    // Keep localStorage token fresh when Supabase silently refreshes the session.
+    // Do NOT call signOut() here — that would create an infinite loop with the store.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
-        signOut()
+        localStorage.removeItem('token')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('user')
         return
       }
       if (session) {
@@ -24,7 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
 
     return () => subscription.unsubscribe()
-  }, [initialize, signOut])
+  }, [initialize])
 
   return <>{children}</>
 }
