@@ -91,14 +91,27 @@ export default function UserImpersonation() {
     setError(null)
 
     try {
+      console.log('[IMPERSONATION] Starting impersonation for:', {
+        targetUserId: targetUser.id,
+        targetUserEmail: targetUser.email,
+        currentUserId: currentUser.id,
+        currentUserEmail: currentUser.email
+      })
+      
       const response = await partnerService.impersonateUser(targetUser.id)
+      
+      console.log('[IMPERSONATION] Backend response:', response)
+      console.log('[IMPERSONATION] User data from response:', response.data?.user)
       
       // Update auth store with impersonation data
       startImpersonation(response.data.user, currentUser)
       
+      console.log('[IMPERSONATION] Redirecting to dashboard...')
+      
       // Redirect to dashboard
       router.push('/dashboard')
     } catch (err: any) {
+      console.error('[IMPERSONATION] Error:', err)
       setError(err.response?.data?.message || 'Failed to impersonate user')
     } finally {
       setImpersonating(null)

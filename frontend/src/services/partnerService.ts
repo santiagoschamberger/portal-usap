@@ -247,6 +247,8 @@ export const partnerService = {
     }
   }> {
     try {
+      console.log('[PARTNER SERVICE] Calling impersonate API for user:', userId)
+      
       const response = await api.post<{
         success: boolean
         message: string
@@ -256,6 +258,15 @@ export const partnerService = {
           partner: any
         }
       }>(`/api/partners/impersonate-any/${userId}`, {})
+      
+      console.log('[PARTNER SERVICE] Raw API response:', response)
+      console.log('[PARTNER SERVICE] Response structure:', {
+        hasData: !!response.data,
+        dataKeys: response.data ? Object.keys(response.data) : [],
+        userData: response.data?.user,
+        responseKeys: Object.keys(response)
+      })
+      
       // Return the raw API payload (it already contains success/message/data)
       return response as unknown as {
         success: boolean
@@ -263,7 +274,7 @@ export const partnerService = {
         data: { user: any; token: string; partner: any }
       }
     } catch (error) {
-      console.error('Error impersonating user:', error)
+      console.error('[PARTNER SERVICE] Error impersonating user:', error)
       throw error
     }
   },
