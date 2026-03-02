@@ -147,14 +147,56 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       startImpersonation: (impersonatedUser: User, originalUser: User) => {
+        console.log('[AUTH STORE] Starting impersonation:', {
+          impersonatedUser: {
+            id: impersonatedUser.id,
+            email: impersonatedUser.email,
+            partner_id: impersonatedUser.partner_id,
+            role: impersonatedUser.role
+          },
+          originalUser: {
+            id: originalUser.id,
+            email: originalUser.email,
+            role: originalUser.role
+          }
+        })
+        
         set({ user: impersonatedUser, originalUser, isImpersonating: true })
+        
+        // Verify state was set correctly
+        const newState = get()
+        console.log('[AUTH STORE] Impersonation state after set:', {
+          isImpersonating: newState.isImpersonating,
+          userId: newState.user?.id,
+          userEmail: newState.user?.email,
+          userPartnerId: newState.user?.partner_id,
+          originalUserId: newState.originalUser?.id
+        })
+        
         void get().fetchPartnerType()
       },
 
       stopImpersonation: () => {
         const { originalUser } = get()
+        console.log('[AUTH STORE] Stopping impersonation:', {
+          originalUser: originalUser ? {
+            id: originalUser.id,
+            email: originalUser.email,
+            role: originalUser.role
+          } : null
+        })
+        
         if (originalUser) {
           set({ user: originalUser, originalUser: null, isImpersonating: false })
+          
+          // Verify state was reset correctly
+          const newState = get()
+          console.log('[AUTH STORE] State after stopping impersonation:', {
+            isImpersonating: newState.isImpersonating,
+            userId: newState.user?.id,
+            userEmail: newState.user?.email
+          })
+          
           void get().fetchPartnerType()
         }
       },

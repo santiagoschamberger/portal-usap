@@ -69,13 +69,29 @@ function SubmitReferralForm() {
     try {
       const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001').replace(/\/$/, '')
       
+      // Get impersonation headers if active
+      const impersonationHeaders: Record<string, string> = {}
+      try {
+        const authStore = localStorage.getItem('auth-store')
+        if (authStore) {
+          const parsed = JSON.parse(authStore) as { state?: any }
+          const state = parsed?.state
+          if (state?.isImpersonating && state?.user?.id) {
+            impersonationHeaders['X-Impersonate-User-Id'] = state.user.id
+          }
+        }
+      } catch {
+        // Ignore malformed state
+      }
+      
       const response = await fetch(`${API_URL}/api/referrals/submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache'
+          'Pragma': 'no-cache',
+          ...impersonationHeaders
         },
         cache: 'no-store',
         body: JSON.stringify({

@@ -31,12 +31,24 @@ apiClient.interceptors.request.use(
         const state = parsed?.state
         const isImpersonating = Boolean(state?.isImpersonating)
         const impersonatedUserId = state?.user?.id as string | undefined
+        
         if (isImpersonating && impersonatedUserId) {
           config.headers['X-Impersonate-User-Id'] = impersonatedUserId
+          
+          // Debug logging for impersonation
+          console.log('[API INTERCEPTOR] Adding impersonation header:', {
+            url: config.url,
+            method: config.method,
+            impersonatedUserId,
+            impersonatedUserEmail: state?.user?.email,
+            impersonatedPartnerId: state?.user?.partner_id,
+            originalUserId: state?.originalUser?.id,
+            originalUserEmail: state?.originalUser?.email
+          })
         }
       }
-    } catch {
-      // Ignore malformed persisted state
+    } catch (error) {
+      console.error('[API INTERCEPTOR] Error reading auth-store:', error)
     }
 
     return config

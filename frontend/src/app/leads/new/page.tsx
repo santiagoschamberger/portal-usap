@@ -70,11 +70,27 @@ export default function NewLeadPage() {
       const token = localStorage.getItem('token')
       const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001').replace(/\/$/, '')
       
+      // Get impersonation headers if active
+      const impersonationHeaders: Record<string, string> = {}
+      try {
+        const authStore = localStorage.getItem('auth-store')
+        if (authStore) {
+          const parsed = JSON.parse(authStore) as { state?: any }
+          const state = parsed?.state
+          if (state?.isImpersonating && state?.user?.id) {
+            impersonationHeaders['X-Impersonate-User-Id'] = state.user.id
+          }
+        }
+      } catch {
+        // Ignore malformed state
+      }
+      
       const response = await fetch(`${API_URL}/api/leads`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          ...impersonationHeaders
         },
         body: JSON.stringify({
           corporation_name: data.corporationName,
