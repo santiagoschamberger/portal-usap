@@ -384,10 +384,16 @@ class SyncService {
             .eq('role', 'admin')
             .single();
 
+          // Handle Contact_Name which might be a string or object
+          const contactName = typeof zohoDeal.Contact_Name === 'string' 
+            ? zohoDeal.Contact_Name 
+            : zohoDeal.Contact_Name?.name || '';
+          const nameParts = contactName.split(' ');
+          
           const dealData = {
             deal_name: zohoDeal.Deal_Name,
-            first_name: zohoDeal.Contact_First_Name || null,
-            last_name: zohoDeal.Contact_Name?.split(' ').slice(1).join(' ') || null,
+            first_name: nameParts[0] || zohoDeal.Contact_First_Name || null,
+            last_name: nameParts.slice(1).join(' ') || null,
             email: null, // Would need to add if available in Zoho
             phone: null, // Would need to add if available in Zoho
             company: zohoDeal.Business_Name || zohoDeal.Deal_Name,

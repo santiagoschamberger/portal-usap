@@ -288,7 +288,11 @@ router.post('/sync', authenticateToken, async (req: AuthenticatedRequest, res) =
 
         // Extract contact info from Account_Name if available
         const accountName = zohoDeal.Account_Name?.name || zohoDeal.Deal_Name || 'Unknown';
-        const contactName = zohoDeal.Contact_Name?.name || '';
+        
+        // Handle Contact_Name which might be a string or object
+        const contactName = typeof zohoDeal.Contact_Name === 'string' 
+          ? zohoDeal.Contact_Name 
+          : zohoDeal.Contact_Name?.name || '';
         const nameParts = contactName.split(' ');
         
         // Check if deal already exists in our database
