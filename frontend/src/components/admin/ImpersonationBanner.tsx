@@ -1,14 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { AlertCircle, LogOut } from 'lucide-react'
+import { LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/lib/auth-store'
 import { useRouter } from 'next/navigation'
+import { cn } from '@/lib/utils'
 
 export default function ImpersonationBanner() {
   const router = useRouter()
-  const { isImpersonating, originalUser, user, stopImpersonation } = useAuthStore()
+  const { isImpersonating, user, stopImpersonation } = useAuthStore()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -21,34 +22,38 @@ export default function ImpersonationBanner() {
   }
 
   // Don't render on server or if not impersonating
-  if (!mounted || !isImpersonating || !originalUser || !user) {
+  if (!mounted || !isImpersonating || !user) {
     return null
   }
 
   return (
-    <div className="bg-yellow-500 text-white px-4 py-3 shadow-lg">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+    <div className="fixed bottom-6 left-6 z-50 print:hidden">
+      <div className="flex items-center gap-3 pl-4 pr-1.5 py-2 bg-zinc-900/95 backdrop-blur-sm text-zinc-100 rounded-full shadow-xl border border-zinc-800/50 ring-1 ring-black/5">
         <div className="flex items-center gap-3">
-          <AlertCircle className="h-5 w-5 shrink-0" />
-          <div className="text-sm">
-            <span className="font-semibold">Impersonation Mode:</span>
-            {' '}You are viewing the portal as{' '}
-            <span className="font-semibold">
-              {user.first_name && user.last_name 
-                ? `${user.first_name} ${user.last_name}` 
+          <div className="relative flex h-2 w-2 shrink-0">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+          </div>
+          <div className="flex flex-col text-xs">
+            <span className="font-medium text-zinc-400 leading-none mb-0.5">Viewing as</span>
+            <span className="font-semibold text-zinc-100 leading-none max-w-[200px] truncate">
+              {((user as any).first_name || user.firstName) && ((user as any).last_name || user.lastName)
+                ? `${(user as any).first_name || user.firstName} ${(user as any).last_name || user.lastName}` 
                 : user.email}
             </span>
-            {' '}(Original admin: {originalUser.email})
           </div>
         </div>
+        
+        <div className="h-6 w-px bg-zinc-800 mx-1" />
+
         <Button
           size="sm"
-          variant="outline"
+          variant="ghost"
           onClick={handleStopImpersonation}
-          className="bg-white text-yellow-700 hover:bg-yellow-50 border-yellow-300 shrink-0"
+          className="h-7 px-3 text-xs font-medium text-amber-500 hover:text-amber-400 hover:bg-zinc-800 rounded-full transition-colors"
         >
-          <LogOut className="h-4 w-4 mr-2" />
-          Exit Impersonation
+          <LogOut className="h-3.5 w-3.5 mr-1.5" />
+          Exit
         </Button>
       </div>
     </div>

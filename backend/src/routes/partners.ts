@@ -473,12 +473,30 @@ router.post('/sync-contacts', authenticateToken, requireAdmin, async (req: Authe
       return res.status(401).json({ error: 'Authentication required' });
     }
 
+    // Debug logging for impersonation
+    console.log('[CONTACTS SYNC] Request details:', {
+      userId: req.user.id,
+      userEmail: req.user.email,
+      partnerId: req.user.partner_id,
+      isImpersonating: !!req.impersonation,
+      impersonationTarget: req.impersonation?.target_user_id,
+      actorUserId: req.actorUser?.id,
+      actorEmail: req.actorUser?.email
+    });
+
     // Get partner information to find their Zoho vendor ID
     const { data: partner, error: partnerError } = await supabaseAdmin
       .from('partners')
       .select('id, name, zoho_partner_id')
       .eq('id', req.user.partner_id)
       .single();
+    
+    console.log('[CONTACTS SYNC] Partner lookup result:', {
+      partnerId: partner?.id,
+      partnerName: partner?.name,
+      zohoPartnerId: partner?.zoho_partner_id,
+      error: partnerError
+    });
 
     if (partnerError || !partner) {
       return res.status(404).json({
