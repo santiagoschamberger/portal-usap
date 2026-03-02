@@ -104,6 +104,20 @@ export const dealsService = {
    * Sync deals from Zoho CRM
    */
   async syncFromZoho(): Promise<SyncDealsResponse['data']> {
+    // Debug logging for impersonation
+    const authStore = localStorage.getItem('auth-store');
+    if (authStore) {
+      const parsed = JSON.parse(authStore);
+      console.log('[DEALS SYNC] Frontend impersonation state:', {
+        isImpersonating: parsed?.state?.isImpersonating,
+        impersonatedUserId: parsed?.state?.user?.id,
+        impersonatedUserEmail: parsed?.state?.user?.email,
+        impersonatedParterId: parsed?.state?.user?.partner_id,
+        originalUserId: parsed?.state?.originalUser?.id,
+        originalUserEmail: parsed?.state?.originalUser?.email
+      });
+    }
+    
     const response = await api.post<SyncDealsResponse['data']>('/api/deals/sync')
     return response.data!
   },

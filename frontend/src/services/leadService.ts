@@ -213,6 +213,20 @@ export const leadService = {
     }>
   }> {
     try {
+      // Debug logging for impersonation
+      const authStore = localStorage.getItem('auth-store');
+      if (authStore) {
+        const parsed = JSON.parse(authStore);
+        console.log('[LEADS SYNC] Frontend impersonation state:', {
+          isImpersonating: parsed?.state?.isImpersonating,
+          impersonatedUserId: parsed?.state?.user?.id,
+          impersonatedUserEmail: parsed?.state?.user?.email,
+          impersonatedParterId: parsed?.state?.user?.partner_id,
+          originalUserId: parsed?.state?.originalUser?.id,
+          originalUserEmail: parsed?.state?.originalUser?.email
+        });
+      }
+      
       const response = await api.post<{
         total: number
         created: number
