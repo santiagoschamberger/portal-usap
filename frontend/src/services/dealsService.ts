@@ -118,7 +118,7 @@ export const dealsService = {
       });
     }
     
-    const response = await api.post<SyncDealsResponse['data']>('/api/deals/sync')
+    const response = await api.post<SyncDealsResponse['data']>('/api/deals/sync', undefined, { timeout: 120000 }) // 2 min — Zoho sync can be slow
     return response.data!
   },
 

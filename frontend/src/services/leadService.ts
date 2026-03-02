@@ -239,7 +239,7 @@ export const leadService = {
           reason?: string
           lead_id?: string
         }>
-      }>('/api/leads/sync')
+      }>('/api/leads/sync', undefined, { timeout: 120000 }) // 2 min — Zoho sync can be slow
       return response.data!
     } catch (error) {
       console.error('Error syncing leads from Zoho:', error)

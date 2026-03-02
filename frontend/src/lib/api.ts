@@ -6,6 +6,7 @@ import { supabase } from './supabase'
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001').replace(/\/$/, '')
 
 // Create axios instance
+// Default 10s timeout; sync endpoints override this to 60s (Zoho API can be slow)
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
