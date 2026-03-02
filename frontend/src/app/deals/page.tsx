@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ProtectedRoute } from '@/components/protected-route'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import { useAuthStore } from '@/lib/auth-store'
 import { dealsService } from '@/services/dealsService'
 import { DealStageBadge } from '@/components/deals/DealStageBadge'
 import { toast } from 'react-hot-toast'
@@ -23,6 +24,7 @@ interface DealsFilters {
 
 export default function DealsPage() {
   const router = useRouter()
+  const { user, isImpersonating } = useAuthStore()
   const [deals, setDeals] = useState<any[]>([])
   const [filteredDeals, setFilteredDeals] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -39,9 +41,10 @@ export default function DealsPage() {
   // Debounce search term
   const debouncedSearch = useDebounce(filters.search, 300)
 
+  // Refetch when impersonation changes (different user = different partner's deals)
   useEffect(() => {
     fetchDeals()
-  }, [])
+  }, [user?.id, isImpersonating])
 
   useEffect(() => {
     applyFilters()

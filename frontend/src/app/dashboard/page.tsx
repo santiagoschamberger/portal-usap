@@ -22,7 +22,7 @@ interface DashboardStats {
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { user, signOut, isAgent } = useAuthStore()
+  const { user, signOut, isAgent, isImpersonating } = useAuthStore()
   const [stats, setStats] = useState<DashboardStats>({
     totalLeads: 0,
     activeLeads: 0,
@@ -34,12 +34,12 @@ export default function DashboardPage() {
   const [recentActivities, setRecentActivities] = useState<Activity[]>([])
 
   useEffect(() => {
-    // Only fetch regular dashboard data for non-agents
+    // Re-fetch whenever the active user changes (including impersonation start/stop)
     if (!isAgent) {
       fetchDashboardData()
       loadRecentActivities()
     }
-  }, [isAgent])
+  }, [isAgent, isImpersonating, user?.id])
 
   const loadRecentActivities = () => {
     const activities = activityTracker.getRecentActivities(3)

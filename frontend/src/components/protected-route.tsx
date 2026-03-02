@@ -20,9 +20,11 @@ export function ProtectedRoute({
   const { user, isAuthenticated, loading, initialize } = useAuthStore()
 
   useEffect(() => {
-    // Initialize auth store on mount
-    initialize()
-  }, [initialize])
+    // Only initialize if not already authenticated (avoids overwriting impersonation state)
+    if (!isAuthenticated) {
+      initialize()
+    }
+  }, [initialize, isAuthenticated])
 
   useEffect(() => {
     if (!loading) {

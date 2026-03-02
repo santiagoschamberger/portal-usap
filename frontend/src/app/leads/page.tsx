@@ -19,7 +19,7 @@ import { Lead } from '@/services/leadService' // Import from service to match sn
 
 export default function LeadsPage() {
   const router = useRouter()
-  const { isAgent } = useAuthStore()
+  const { isAgent, user, isImpersonating } = useAuthStore()
   const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
@@ -68,7 +68,13 @@ export default function LeadsPage() {
     }
   }, [pagination.page, pagination.limit, debouncedSearch, filters.status, filters.dateRange])
 
-  // Initial fetch and refetch on dependencies
+  // Refetch when impersonation changes (different user = different partner's leads)
+  useEffect(() => {
+    setPagination(prev => ({ ...prev, page: 1 }))
+    fetchLeads()
+  }, [user?.id, isImpersonating])
+
+  // Refetch on filter/pagination changes
   useEffect(() => {
     fetchLeads()
   }, [fetchLeads])

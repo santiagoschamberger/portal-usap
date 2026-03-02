@@ -106,8 +106,17 @@ export const useAuthStore = create<AuthStore>()(
             return
           }
 
+          // Always keep the token fresh
           localStorage.setItem('token', session.access_token)
           localStorage.setItem('refreshToken', session.refresh_token ?? '')
+
+          // If impersonation is active, do NOT overwrite the impersonated user.
+          // Just mark as authenticated and update the token.
+          const { isImpersonating } = get()
+          if (isImpersonating) {
+            set({ isAuthenticated: true, loading: false })
+            return
+          }
 
           const userProfile = await fetchUserProfile(session.access_token)
           if (!userProfile) {
