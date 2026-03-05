@@ -31,24 +31,31 @@ router.post('/zoho/partner', async (req, res) => {
 
     console.log('Partner webhook received (full payload):', JSON.stringify(req.body, null, 2));
 
-    // Check if portal access is granted — supports multiple possible Zoho field names
+    // Check if portal access is EXPLICITLY denied.
+    // If Portal_Access is not in the payload at all (undefined), we proceed —
+    // the Zoho workflow "2.0 Partner Portal Auto-Account Creation" is already
+    // configured to fire ONLY when Portal Access = Yes, so absence of the field
+    // means the workflow itself already approved it.
+    // We only block when the field is present and explicitly set to false/No.
     const portalAccess = Portal_Access ?? Allow_Portal_Access ?? Partner_Portal_Access;
-    const isPortalAccessEnabled =
-      portalAccess === true ||
-      portalAccess === 'true' ||
-      portalAccess === 'Yes' ||
-      portalAccess === 'yes' ||
-      portalAccess === '1' ||
-      portalAccess === 1;
+    const isExplicitlyDenied =
+      portalAccess === false ||
+      portalAccess === 'false' ||
+      portalAccess === 'No' ||
+      portalAccess === 'no' ||
+      portalAccess === '0' ||
+      portalAccess === 0;
 
-    if (!isPortalAccessEnabled) {
-      console.log(`⚠️  Webhook received for ${Email} but Portal Access is not enabled (Portal_Access=${portalAccess}). Skipping account creation.`);
+    if (isExplicitlyDenied) {
+      console.log(`⚠️  Webhook received for ${Email} but Portal Access is explicitly disabled (Portal_Access=${portalAccess}). Skipping account creation.`);
       return res.status(200).json({
         success: false,
-        message: 'Portal access not enabled for this vendor. Account creation skipped.',
+        message: 'Portal access is disabled for this vendor. Account creation skipped.',
         portalAccess,
       });
     }
+
+    console.log(`✅ Portal Access check passed (Portal_Access=${portalAccess ?? 'not in payload — Zoho workflow gate trusted'}). Proceeding with account creation.`);
 
     // Map Zoho Vendor_Type to partner_type
     let partnerType = 'partner'; // default
@@ -86,11 +93,12 @@ router.post('/zoho/partner', async (req, res) => {
       console.log(`✅ Partner type set to: ${partnerType}`);
     }
     
-    // Log activity
-    await supabase.from('activity_log').insert({
-      partner_id: data[0].partner_id,
+    // Log activity (using correct activity_log column names)
+    await supabaseAdmin.from('activity_log').insert({
+      entity_type: 'partner',
+      entity_id: data[0].partner_id,
       user_id: data[0].user_id,
-      activity_type: 'partner_created',
+      action: 'partner_created',
       description: `Partner ${VendorName} created via Zoho webhook (type: ${partnerType})`,
       metadata: { 
         zoho_partner_id: id,
