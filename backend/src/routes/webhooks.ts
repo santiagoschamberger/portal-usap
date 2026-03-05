@@ -9,15 +9,46 @@ import crypto from 'crypto';
 const router = Router();
 
 /**
+ * GET /api/webhooks/zoho/partner
+ * Verification endpoint - confirms the webhook URL is active
+ */
+router.get('/zoho/partner', (req, res) => {
+  res.status(200).json({
+    status: 'active',
+    message: 'Zoho partner webhook endpoint is active. Use POST to send webhook events.',
+    endpoint: 'POST /api/webhooks/zoho/partner'
+  });
+});
+
+/**
  * POST /api/webhooks/zoho/partner
  * Webhook for partner approval in Zoho CRM
- * Creates portal user when partner is approved
+ * Creates portal user only when Portal_Access is enabled (set to true/yes)
  */
 router.post('/zoho/partner', async (req, res) => {
   try {
-    const { id, VendorName, Email, Vendor_Type } = req.body;
+    const { id, VendorName, Email, Vendor_Type, Portal_Access, Allow_Portal_Access, Partner_Portal_Access } = req.body;
 
-    console.log('Partner webhook received:', { id, VendorName, Email, Vendor_Type });
+    console.log('Partner webhook received (full payload):', JSON.stringify(req.body, null, 2));
+
+    // Check if portal access is granted — supports multiple possible Zoho field names
+    const portalAccess = Portal_Access ?? Allow_Portal_Access ?? Partner_Portal_Access;
+    const isPortalAccessEnabled =
+      portalAccess === true ||
+      portalAccess === 'true' ||
+      portalAccess === 'Yes' ||
+      portalAccess === 'yes' ||
+      portalAccess === '1' ||
+      portalAccess === 1;
+
+    if (!isPortalAccessEnabled) {
+      console.log(`⚠️  Webhook received for ${Email} but Portal Access is not enabled (Portal_Access=${portalAccess}). Skipping account creation.`);
+      return res.status(200).json({
+        success: false,
+        message: 'Portal access not enabled for this vendor. Account creation skipped.',
+        portalAccess,
+      });
+    }
 
     // Map Zoho Vendor_Type to partner_type
     let partnerType = 'partner'; // default

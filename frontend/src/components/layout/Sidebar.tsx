@@ -101,7 +101,10 @@ export function Sidebar() {
 
   // Get user role from either user_metadata or direct role property
   const userRole = user?.user_metadata?.role || (user as any)?.role || ''
-  const isAdmin = userRole === 'admin'
+  // Only USA Payments internal admins (super_admin) see the admin panel section
+  const isAdmin = userRole === 'super_admin'
+  // Main partner accounts (admin) can manage sub-accounts
+  const isMainPartner = userRole === 'admin' || userRole === 'super_admin'
 
   const shouldShowItem = (item: NavItem) => {
     // Hide certain items for agents/ISOs
@@ -115,7 +118,9 @@ export function Sidebar() {
     }
     
     if (!item.roles) return true
-    return item.roles.includes(userRole)
+    // super_admin inherits all 'admin' permissions
+    const effectiveRole = userRole === 'super_admin' ? 'admin' : userRole
+    return item.roles.includes(userRole) || item.roles.includes(effectiveRole)
   }
 
   // Get dynamic label for leads based on agent status

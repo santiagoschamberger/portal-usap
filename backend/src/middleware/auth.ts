@@ -6,7 +6,7 @@ export interface AuthenticatedRequest extends Request {
     id: string;
     email: string;
     partner_id: string;
-    role: 'admin' | 'sub_account' | 'sub';
+    role: 'super_admin' | 'admin' | 'sub_account' | 'sub' | 'partner';
     first_name?: string;
     last_name?: string;
   };
@@ -18,7 +18,7 @@ export interface AuthenticatedRequest extends Request {
     id: string;
     email: string;
     partner_id: string;
-    role: 'admin' | 'sub_account' | 'sub';
+    role: 'super_admin' | 'admin' | 'sub_account' | 'sub' | 'partner';
     first_name?: string;
     last_name?: string;
   };
@@ -113,7 +113,7 @@ export const authenticateToken = async (
           : undefined;
 
     if (impersonateUserId && impersonateUserId !== actorUser.id) {
-      if (actorUser.role !== 'admin') {
+      if (actorUser.role !== 'admin' && actorUser.role !== 'super_admin') {
         res.status(403).json({
           error: 'Impersonation not allowed',
           message: 'Only admins can impersonate another user',
@@ -175,7 +175,8 @@ export const authenticateToken = async (
 };
 
 /**
- * Middleware to check if user has admin role
+ * Middleware to check if user has admin role (main partner account owner).
+ * Allows both 'admin' (main partner) and 'super_admin' (USA Payments internal admin).
  */
 export const requireAdmin = (
   req: AuthenticatedRequest,
@@ -190,10 +191,38 @@ export const requireAdmin = (
     return;
   }
 
-  if (req.user.role !== 'admin') {
+  if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
     res.status(403).json({ 
       error: 'Admin access required',
       message: 'This action requires admin privileges' 
+    });
+    return;
+  }
+
+  next();
+};
+
+/**
+ * Middleware to check if user has super_admin role.
+ * Only 'super_admin' (USA Payments internal admins) can pass this check.
+ */
+export const requireSuperAdmin = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): void => {
+  if (!req.user) {
+    res.status(401).json({ 
+      error: 'Authentication required',
+      message: 'Please authenticate first' 
+    });
+    return;
+  }
+
+  if (req.user.role !== 'super_admin') {
+    res.status(403).json({ 
+      error: 'Super admin access required',
+      message: 'This action requires USA Payments admin privileges' 
     });
     return;
   }

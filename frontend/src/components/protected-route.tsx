@@ -7,7 +7,7 @@ import { User } from '@/types'
 
 interface ProtectedRouteProps {
   children: ReactNode
-  allowedRoles?: ('admin' | 'user' | 'contact')[]
+  allowedRoles?: ('super_admin' | 'admin' | 'user' | 'contact')[]
   redirectTo?: string
 }
 
@@ -37,11 +37,13 @@ export function ProtectedRoute({
       // Check role-based access
       if (allowedRoles && allowedRoles.length > 0) {
         // Support both Supabase Auth format (user_metadata.role) and direct role property
-        const userRole = (user.user_metadata?.role || (user as any).role) as 'admin' | 'user' | 'contact' || 'user'
-        if (!allowedRoles.includes(userRole)) {
-          // User doesn't have required role
+        const userRole = (user.user_metadata?.role || (user as any).role) as string
+        // super_admin inherits all 'admin' permissions
+        const hasAccess = allowedRoles.includes(userRole as any) ||
+          (userRole === 'super_admin' && allowedRoles.includes('admin'))
+        if (!hasAccess) {
           console.log('Access denied - User role:', userRole, 'Required roles:', allowedRoles)
-          router.push('/dashboard') // Redirect to default dashboard
+          router.push('/dashboard')
           return
         }
       }
@@ -67,8 +69,10 @@ export function ProtectedRoute({
 
   if (allowedRoles && allowedRoles.length > 0) {
     // Support both Supabase Auth format (user_metadata.role) and direct role property
-    const userRole = (user.user_metadata?.role || (user as any).role) as 'admin' | 'user' | 'contact' || 'user'
-    if (!allowedRoles.includes(userRole)) {
+    const userRole = (user.user_metadata?.role || (user as any).role) as string
+    const hasAccess = allowedRoles.includes(userRole as any) ||
+      (userRole === 'super_admin' && allowedRoles.includes('admin'))
+    if (!hasAccess) {
       return null
     }
   }
@@ -79,7 +83,7 @@ export function ProtectedRoute({
 // Higher-order component for easier usage
 export function withAuth<P extends object>(
   Component: React.ComponentType<P>,
-  allowedRoles?: ('admin' | 'user' | 'contact')[]
+  allowedRoles?: ('super_admin' | 'admin' | 'user' | 'contact')[]
 ) {
   return function AuthenticatedComponent(props: P) {
     return (
@@ -94,27 +98,29 @@ export function withAuth<P extends object>(
 export function usePermissions() {
   const { user } = useAuthStore()
 
-  const hasRole = (role: 'admin' | 'user' | 'contact') => {
-    // Support both Supabase Auth format and direct role property
-    const userRole = user?.user_metadata?.role || (user as any)?.role
+  const userRole = (user?.user_metadata?.role || (user as any)?.role) as string | undefined
+
+  const hasRole = (role: 'super_admin' | 'admin' | 'user' | 'contact') => {
     return userRole === role
   }
 
-  const hasAnyRole = (roles: ('admin' | 'user' | 'contact')[]) => {
-    // Support both Supabase Auth format and direct role property
-    const userRole = (user?.user_metadata?.role || (user as any)?.role) as 'admin' | 'user' | 'contact'
-    return userRole ? roles.includes(userRole) : false
+  const hasAnyRole = (roles: ('super_admin' | 'admin' | 'user' | 'contact')[]) => {
+    return userRole ? roles.includes(userRole as any) : false
   }
 
-  const isAdmin = () => hasRole('admin')
+  // super_admin is a USA Payments internal admin (only 2 people)
+  const isSuperAdmin = () => hasRole('super_admin')
+  // admin = main partner account (can manage sub-accounts)
+  // super_admin also has all admin privileges
+  const isAdmin = () => hasRole('admin') || hasRole('super_admin')
   const isUser = () => hasRole('user')
   const isContact = () => hasRole('contact')
 
-  const canManageUsers = () => isAdmin()
-  const canSubmitReferrals = () => hasAnyRole(['admin', 'user'])
-  const canManageSubAccounts = () => hasAnyRole(['admin', 'user'])
-  const canViewCompensation = () => hasAnyRole(['admin', 'user'])
-  const canAccessAdminPanel = () => isAdmin()
+  const canManageUsers = () => isSuperAdmin()
+  const canSubmitReferrals = () => hasAnyRole(['super_admin', 'admin', 'user'])
+  const canManageSubAccounts = () => hasAnyRole(['super_admin', 'admin', 'user'])
+  const canViewCompensation = () => hasAnyRole(['super_admin', 'admin', 'user'])
+  const canAccessAdminPanel = () => isSuperAdmin()
 
   return {
     user,

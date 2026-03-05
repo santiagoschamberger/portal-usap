@@ -51,8 +51,8 @@ export const requireCanViewAllPartnerLeads = (
     return;
   }
 
-  // Admin users always have this permission
-  if (req.user.role === 'admin') {
+  // Admin users and super admins always have this permission
+  if (req.user.role === 'admin' || req.user.role === 'super_admin') {
     next();
     return;
   }
@@ -84,7 +84,7 @@ export const requireMainPartner = (
     return;
   }
 
-  if (req.user.role !== 'admin') {
+  if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
     res.status(403).json({ 
       error: 'Main partner access required',
       message: 'This action requires main partner (admin) privileges' 
@@ -137,8 +137,8 @@ export const requireCanManageSubAccount = (subAccountIdParam: string = 'id') => 
       return;
     }
 
-    // Only admins can manage sub-accounts
-    if (req.user.role !== 'admin') {
+    // Only admins and super admins can manage sub-accounts
+    if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
       res.status(403).json({ 
         error: 'Admin access required',
         message: 'Only main partners can manage sub-accounts' 

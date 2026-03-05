@@ -247,7 +247,7 @@ const filtered = useMemo(() => {
   }, [filtered, selectedDate]);
 
   return (
-    <ProtectedRoute allowedRoles={["admin"]}>
+    <ProtectedRoute allowedRoles={['super_admin']}>
       <DashboardLayout>
         <div className="min-h-screen">
           <div className="mx-auto max-w-7xl px-6 py-8">

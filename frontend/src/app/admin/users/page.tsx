@@ -7,7 +7,7 @@ import UserImpersonation from '@/components/admin/UserImpersonation'
 
 export default function AdminUsersPage() {
   return (
-    <ProtectedRoute allowedRoles={['admin']}>
+    <ProtectedRoute allowedRoles={['super_admin']}>
       <DashboardLayout>
         <div className="space-y-6">
           <div>

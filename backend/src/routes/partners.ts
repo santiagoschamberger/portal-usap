@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken, AuthenticatedRequest, requireAdmin } from '../middleware/auth';
+import { authenticateToken, AuthenticatedRequest, requireAdmin, requireSuperAdmin } from '../middleware/auth';
 import { supabase, supabaseAdmin } from '../config/database';
 import { zohoService } from '../services/zohoService';
 import { sendAccountActivationEmail } from '../services/accountActivationService';
@@ -997,7 +997,7 @@ router.post('/impersonate/:subAccountId', authenticateToken, requireAdmin, async
  * GET /api/partners/users/search
  * Search all users in the system (admin only)
  */
-router.get('/users/search', authenticateToken, requireAdmin, async (req: AuthenticatedRequest, res) => {
+router.get('/users/search', authenticateToken, requireSuperAdmin, async (req: AuthenticatedRequest, res) => {
   try {
     if (!req.user) {
       return res.status(401).json({ error: 'Authentication required' });
@@ -1067,7 +1067,7 @@ router.get('/users/search', authenticateToken, requireAdmin, async (req: Authent
  * Impersonate any user in the system (admin only)
  * This is a system-level admin feature for support and debugging
  */
-router.post('/impersonate-any/:userId', authenticateToken, requireAdmin, async (req: AuthenticatedRequest, res) => {
+router.post('/impersonate-any/:userId', authenticateToken, requireSuperAdmin, async (req: AuthenticatedRequest, res) => {
   try {
     if (!req.user) {
       return res.status(401).json({ error: 'Authentication required' });

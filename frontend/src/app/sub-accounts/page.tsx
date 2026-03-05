@@ -48,8 +48,9 @@ export default function SubAccountsPage() {
       return;
     }
 
-    // Only admins can access sub-accounts page
-    if (user?.role !== 'admin') {
+    // Only main partner admins and super admins can access sub-accounts page
+    const userRole = (user as any)?.role
+    if (userRole !== 'admin' && userRole !== 'super_admin') {
       toast.error('Access denied', {
         description: 'Only main partners can manage sub-accounts'
       });

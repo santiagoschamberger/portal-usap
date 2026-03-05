@@ -1,5 +1,6 @@
 // backend/src/routes/cliq.ts
 import express, { Request, Response } from "express";
+import { authenticateToken, requireSuperAdmin, AuthenticatedRequest } from '../middleware/auth';
 import {
   getCliqDeposits,
   getCliqMerchants,
@@ -9,7 +10,7 @@ import {
 const router = express.Router();
 
 // GET /api/cliq/merchants
-router.get("/cliq-merchants", async (req: Request, res: Response) => {
+router.get("/cliq-merchants", authenticateToken, requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const merchants = await getCliqMerchants();
     res.json(merchants);
@@ -22,7 +23,9 @@ router.get("/cliq-merchants", async (req: Request, res: Response) => {
 // GET /api/cliq/transactions
 router.get(
   "/cliq-transactions",
-  async (req: Request, res: Response): Promise<void> => {
+  authenticateToken,
+  requireSuperAdmin,
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { merchantNumber, fromDate, toDate, page, pageSize } =
         req.query as any;
@@ -51,7 +54,7 @@ router.get(
 );
 
 // GET /api/cliq/deposites
-router.get("/cliq-deposits", async (req: Request, res: Response) => {
+router.get("/cliq-deposits", authenticateToken, requireSuperAdmin, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { merchantNumber, year, month, day,toDate } = req.query as any;
 

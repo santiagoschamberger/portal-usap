@@ -1,13 +1,14 @@
 // backend/src/routes/payarc.ts
 import { Router } from 'express';
+import { authenticateToken, requireSuperAdmin } from '../middleware/auth';
 import {
   getPayarcTransactions,
-  getPayarcAccounts, // ✅ import real function
+  getPayarcAccounts,
 } from "../services/payarcService";
 
 const router = Router();
 
-router.get('/payarc-report', async (req, res) => {
+router.get('/payarc-report', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
    
     const from = req.query.from as string | undefined;
@@ -28,7 +29,7 @@ router.get('/payarc-report', async (req, res) => {
   }
 });
 
-router.get("/my-accounts", async (req, res) => {
+router.get("/my-accounts", authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const data = await getPayarcAccounts();
     return res.json(data); // returns array of accounts
