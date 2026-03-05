@@ -55,20 +55,49 @@ router.post('/zoho/partner', async (req, res) => {
       });
     }
 
-    console.log(`✅ Portal Access check passed (Portal_Access=${portalAccess ?? 'not in payload — Zoho workflow gate trusted'}). Proceeding with account creation.`);
+    console.log(`✅ Portal Access check passed (Portal_Access=${portalAccess ?? 'not in payload — Zoho workflow gate trusted'}). Proceeding.`);
 
     // Map Zoho Vendor_Type to partner_type
     let partnerType = 'partner'; // default
     if (Vendor_Type) {
       const vendorTypeLower = Vendor_Type.toLowerCase();
-      if (vendorTypeLower === 'agent') {
-        partnerType = 'agent';
-      } else if (vendorTypeLower === 'iso') {
-        partnerType = 'iso';
-      }
+      if (vendorTypeLower === 'agent') partnerType = 'agent';
+      else if (vendorTypeLower === 'iso') partnerType = 'iso';
     }
 
-    // Use the security definer function to create the partner and user
+    // Extract name parts for the email
+    const nameParts = VendorName?.split(' ') || ['', ''];
+    const firstName = nameParts[0] || 'Partner';
+    const lastName = nameParts.slice(1).join(' ') || '';
+    const redirectTo = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/reset-password`;
+
+    // ── Check if partner already exists (idempotency) ──────────────────────
+    // The webhook may fire multiple times for the same vendor (e.g. retries,
+    // or the partner was already created manually). Handle gracefully.
+    const { data: existingUser } = await supabaseAdmin
+      .from('users')
+      .select('id, partner_id')
+      .eq('email', Email.toLowerCase())
+      .single();
+
+    if (existingUser) {
+      console.log(`ℹ️  Partner ${Email} already exists. Re-sending activation email.`);
+
+      try {
+        await sendAccountActivationEmail({ email: Email, firstName, lastName, redirectTo });
+        console.log(`✅ Activation email re-sent to ${Email}`);
+      } catch (emailError) {
+        console.error('Failed to re-send activation email:', emailError);
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Partner already exists. Activation email re-sent.',
+        data: { email: Email, already_existed: true }
+      });
+    }
+
+    // ── Create new partner ─────────────────────────────────────────────────
     const { data, error } = await supabase.rpc('create_partner_with_user', {
       p_zoho_partner_id: id,
       p_name: VendorName,
@@ -76,6 +105,22 @@ router.post('/zoho/partner', async (req, res) => {
     });
 
     if (error) {
+      // 23505 = unique_violation (race condition — partner just got created).
+      // Return 200 so Zoho doesn't retry indefinitely.
+      if (error.code === '23505' || error.message?.includes('duplicate') || error.message?.includes('already exists')) {
+        console.log(`ℹ️  Duplicate detected for ${Email} during creation (race condition). Sending activation email.`);
+        try {
+          await sendAccountActivationEmail({ email: Email, firstName, lastName, redirectTo });
+        } catch (emailError) {
+          console.error('Failed to send activation email after duplicate:', emailError);
+        }
+        return res.status(200).json({
+          success: true,
+          message: 'Partner already exists. Activation email sent.',
+          data: { email: Email, already_existed: true }
+        });
+      }
+
       console.error('Error creating partner via function:', error);
       return res.status(500).json({
         error: 'Failed to create partner',
@@ -89,45 +134,31 @@ router.post('/zoho/partner', async (req, res) => {
         .from('partners')
         .update({ partner_type: partnerType })
         .eq('id', data[0].partner_id);
-      
       console.log(`✅ Partner type set to: ${partnerType}`);
     }
-    
-    // Log activity (using correct activity_log column names)
+
+    // Log activity
     await supabaseAdmin.from('activity_log').insert({
       entity_type: 'partner',
       entity_id: data[0].partner_id,
       user_id: data[0].user_id,
       action: 'partner_created',
       description: `Partner ${VendorName} created via Zoho webhook (type: ${partnerType})`,
-      metadata: { 
-        zoho_partner_id: id,
-        partner_type: partnerType
-      }
+      metadata: { zoho_partner_id: id, partner_type: partnerType }
     });
 
-    // Send welcome email with account activation link
+    // Send activation email
     try {
-      // Extract first and last name from VendorName
-      const nameParts = VendorName?.split(' ') || ['', ''];
-      const firstName = nameParts[0] || 'Partner';
-      const lastName = nameParts.slice(1).join(' ') || '';
-
-      await sendAccountActivationEmail({
-        email: Email,
-        firstName,
-        lastName,
-        redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/reset-password`
-      });
-      console.log(`✅ Welcome email sent to ${Email}`);
+      await sendAccountActivationEmail({ email: Email, firstName, lastName, redirectTo });
+      console.log(`✅ Activation email sent to ${Email}`);
     } catch (emailError) {
-      console.error('Failed to send welcome email:', emailError);
-      // Don't fail the webhook - partner was created successfully
+      console.error('Failed to send activation email:', emailError);
+      // Don't fail the webhook — partner was created successfully
     }
-    
+
     return res.status(201).json({
       success: true,
-      message: 'Partner created successfully. Welcome email sent.',
+      message: 'Partner created successfully. Activation email sent.',
       data: {
         partner_id: data[0].partner_id,
         user_id: data[0].user_id,
