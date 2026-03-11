@@ -327,10 +327,10 @@ router.post('/sync', authenticateToken, async (req: AuthenticatedRequest, res) =
           email: zohoDeal.Contact_Name?.Email || null,
           phone: zohoDeal.Contact_Name?.Phone || null,
           company: accountName,
-          amount: parseFloat(zohoDeal.Amount || '0'),
+          amount: parseFloat(zohoDeal.Approved_Monthly_Volume || '0'),
           stage: localStage,
           close_date: zohoDeal.Closing_Date || null, // Keep for backward compatibility
-          approval_date: zohoDeal.Approval_Time_Stamp || null, // Map from Zoho Approval Time Stamp field
+          approval_date: zohoDeal.Approval_Time_Stamp || null,
           probability: zohoDeal.Probability || 0,
           lead_source: zohoDeal.Lead_Source || 'zoho_sync',
           zoho_sync_status: 'synced',

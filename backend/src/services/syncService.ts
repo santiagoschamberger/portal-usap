@@ -397,9 +397,9 @@ class SyncService {
             email: null, // Would need to add if available in Zoho
             phone: null, // Would need to add if available in Zoho
             company: zohoDeal.Business_Name || zohoDeal.Deal_Name,
-            amount: 0, // Default to 0 as requested
+            amount: parseFloat(zohoDeal.Approved_Monthly_Volume || '0'),
             stage: localStage,
-            approval_date: zohoDeal.Approval_Time_Stamp || null, // Map from Zoho Approval Time Stamp field
+            approval_date: zohoDeal.Approval_Time_Stamp || null,
             lead_source: zohoDeal.Lead_Source || 'zoho_sync',
             zoho_sync_status: 'synced',
             last_sync_at: new Date().toISOString(),
