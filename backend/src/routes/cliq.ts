@@ -4,6 +4,7 @@ import {
   getCliqDeposits,
   getCliqMerchants,
   getCliqTransactions,
+  getTotalVolumeActiveMerchants,
 } from "../services/cliqService";
 
 const router = express.Router();
@@ -72,6 +73,24 @@ router.get("/cliq-deposits", async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error("Error fetching CLIQ Deposits:", err?.message);
     res.status(500).json({ error: "Failed to fetch CLIQ Deposits" });
+  }
+});
+
+router.get("/total-volume", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { year, month, day ,toDate} = req.query as any;
+
+    const result = await getTotalVolumeActiveMerchants(
+      Number(year),
+      Number(month),
+      Number(day),
+      toDate
+    );
+
+    res.json(result);
+  } catch (err: any) {
+    console.error("Error fetching CLIQ total volume:", err?.message);
+    res.status(500).json({ error: "Failed to fetch CLIQ total volume" });
   }
 });
 

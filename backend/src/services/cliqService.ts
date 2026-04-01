@@ -10,7 +10,7 @@ const CLIQ_API_URL = process.env.CLIQ_API_URL || "https://portal.cliq.com";
 
 const cliqApi = axios.create({
   baseURL: `${CLIQ_API_URL}/api`,
-  timeout: 30000,
+  timeout: 120000,
 });
 
 cliqApi.interceptors.request.use((config) => {
@@ -77,9 +77,9 @@ export interface CliqTransactionFilter {
 
 export interface CliqDepositsFilter {
   merchantNumber: string;
-  year?: string; // 'YYYY-MM-DD'
-  month: string;
-  day: string;
+  year?: number; // 'YYYY-MM-DD'
+  month: number;
+  day: number;
   toDate?: string; // 'YYYY-MM-DD'
 }
 
@@ -98,6 +98,7 @@ export async function getCliqTransactions(
     const res = await cliqApi.get(
       `/v1/merchants/${encodeURIComponent(merchantNumber)}/transactions`,
       {
+        timeout: 120000, // ⬅ 2 minutes
         params: { start_date:fromDate, end_date:adjustedToDate, page, pageSize },
       }
     );
@@ -140,7 +141,10 @@ export async function getCliqDeposits(
   const res = await cliqApi.get(
     `/v1/merchants/${encodeURIComponent(
       merchantNumber
-    )}/deposits/${year}/${month}/${day}`
+    )}/deposits/${year}/${month}/${day}?end_date${toDate}`,
+    {
+      timeout: 120000, // override here
+    }
   );
 
   const raw = res.data;
@@ -149,5 +153,83 @@ export async function getCliqDeposits(
     deposits: Array.isArray(raw?.deposits) ? raw.deposits : [],
     adjustments: Array.isArray(raw?.adjustments) ? raw.adjustments : [],
     totals: raw?.totals ?? null,
+  };
+}
+
+export async function getTotalVolumeActiveMerchants(
+  year: number,
+  month: number,
+  day: number,
+  toDate: any
+): Promise<{
+  totalVolume: number;
+  merchantCount: number;
+  processedCount: number;
+  failedMerchants: string[];
+}> {
+  const merchantResponse: any = await getCliqMerchants();
+
+  const merchants = Array.isArray(merchantResponse)
+    ? merchantResponse
+    : Array.isArray(merchantResponse?.data)
+    ? merchantResponse.data
+    : [];
+
+  const activeMerchants = merchants.filter(
+    (m: any) => m.active === "Yes" || m.status === "Active"
+  );
+
+  let totalVolume = 0;
+  let processedCount = 0;
+  const failedMerchants: string[] = [];
+
+  const batchSize = 10; // try 5 first, can increase to 10 later
+
+  for (let i = 0; i < activeMerchants.length; i += batchSize) {
+    const batch = activeMerchants.slice(i, i + batchSize);
+
+    const results = await Promise.allSettled(
+      batch.map((m: any) =>
+        getCliqDeposits({
+          merchantNumber: m.mid,
+          year,
+          month,
+          day,
+          toDate
+        })
+      )
+    );
+
+    results.forEach((result, index) => {
+      const merchant = batch[index];
+
+      if (result.status === "fulfilled") {
+        const data = result.value;
+
+        let merchantTotal = 0;
+
+        if (data.totals?.monthly_total != null) {
+          merchantTotal = Number(data.totals.monthly_total) || 0;
+        } else {
+          merchantTotal = data.deposits.reduce(
+            (sum: number, d: any) => sum + (Number(d.amount) || 0),
+            0
+          );
+        }
+
+        totalVolume += merchantTotal;
+        processedCount++;
+      } else {
+        console.error(`Failed for merchant ${merchant.mid}:`, result.reason);
+        failedMerchants.push(merchant.mid);
+      }
+    });
+  }
+
+  return {
+    totalVolume,
+    merchantCount: activeMerchants.length,
+    processedCount,
+    failedMerchants,
   };
 }

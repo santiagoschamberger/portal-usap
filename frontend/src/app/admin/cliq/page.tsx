@@ -77,6 +77,11 @@ export default function CliqReportPage() {
   const [error, setError] = useState<string | null>(null);
   const [deposits, setDeposits] = useState<cliqDeposits[]>([]);
 
+  const [loadingVolume, setLoadingVolume] = useState(false);
+  const [totalVolume, setTotalVolume] = useState<number | null>(null);
+  const [volumeResult, setVolumeResult] = useState<any>(null);
+
+
   const fetchMerchants = async () => {
     try {
       setLoadingMerchants(true);
@@ -133,7 +138,7 @@ export default function CliqReportPage() {
       if (txResult.status === "fulfilled") {
         const rawBatches: any = txResult.value; // adjust if API nests under .data
 
-        console.log("transactions===>", rawBatches);
+        //console.log("transactions===>", rawBatches);
         setTransactions(rawBatches);
       } else {
         setTransactions([]);
@@ -289,6 +294,41 @@ export default function CliqReportPage() {
     return formatLayer3Rows(filteredRows);
   }, [transactions, selectedDate]);
 
+
+const handleGetTotalVolume = async () => {
+  try {
+    setLoadingVolume(true);
+    setError(null);
+    setTotalVolume(0);
+
+    if (!fromDate) {
+      setError("Please select a date first.");
+      return;
+    }   
+
+    const dt = new Date(fromDate);
+
+    const [year, month, day] = fromDate.split("-").map(Number);
+
+    console.log(`parameters = year=${year}&month=${month}&day=${day}`);
+
+    const res = await api.get(
+      `/api/cliq/total-volume?year=${year}&month=${month}&day=${day}&toDate${toDate}`,
+      {
+        timeout: 120000, // 2 minutes
+      }
+    );
+
+
+    setTotalVolume(Number(res.totalVolume || 0));
+    setVolumeResult(res);
+  } catch (err: any) {
+    setError(err.message || "Failed to fetch total volume");
+    //console.log("myError " + err.message);
+  } finally {
+    setLoadingVolume(false);
+  }
+};
   //  console.log('detailsData===>', detailRows);
 
   return (
@@ -354,6 +394,14 @@ export default function CliqReportPage() {
                 >
                   {loadingReport ? "Loading…" : "View Transactions"}
                 </button>
+
+                 <button
+                onClick={handleGetTotalVolume}
+                disabled={loadingVolume}
+                className="inline-flex min-w-[180px] items-center justify-center rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-red-400"
+              >
+                {loadingVolume ? "Calculating..." : "Calculate Total Volume"}
+              </button>
               </div>
             </div>
 
@@ -363,6 +411,15 @@ export default function CliqReportPage() {
                 {error}
               </div>
             )}
+
+            {totalVolume !== null && (
+                <div className="mt-4 rounded-md border bg-white p-2">
+                  <div className="text-sm text-gray-500">Total Volume</div>
+                  <div className="text-2xl font-semibold">
+                    ${totalVolume.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                </div>
+              )}
 
             {/* LAYER 1 – Monthly totals */}
             <section className="mb-6 rounded-2xl bg-white p-4 shadow-sm">
